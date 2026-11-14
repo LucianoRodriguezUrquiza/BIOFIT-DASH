@@ -45,3 +45,28 @@ No se modifica el firmware v2.2.5, ni la calibración de las Waveshare.
 - UP_IMPULSE es un candidato, no un salto confirmado. No hay lógica de JUMP ni de caminar/correr todavía.
 - No se ha compilado ni probado esta APK en el dispositivo real desde este entorno.
 - UniBLE se distribuye con licencia MIT en https://github.com/yoshidan/UniBLE
+
+
+## BIOFIT Input Engine - primera version experimental
+
+Incorporado: `Assets/BIOFIT/Scripts/BiofitInputEngine.cs`, invocado desde
+`BiofitBLEMonitor.cs` en el hilo principal. No hay cambios de firmware.
+
+- Registra candidatos desde `MOV_ON` de cada tracker, con minimo 300 ms
+  entre candidatos de un mismo pie.
+- Cuenta cambios izquierda-derecha y calcula una **cadencia tentativa**
+  usando diferencias entre recepciones BLE en el reloj del telefono
+  (no los `millis` independientes de los dos ESP32).
+- Muestra `QUIETO`, `MOVIMIENTO SIN CLASIFICAR`, `CAMINANDO (TENTATIVO)`
+  y `CORRIENDO (TENTATIVO)`. Los umbrales 55 y 150/min son solo
+  parametros de prototipo, no estan validados.
+- Los candidatos NO son pasos reales demostrados. La cantidad de `MOV_ON`
+  puede no coincidir con el numero de pasos, y el BLE puede tener latencia.
+- `UP_IMPULSE` se conserva como evento crudo, no se convierte a `JUMP`.
+
+La primera APK BLE de solo diagnostico sigue siendo valida y puede
+usarse sin instalar una nueva version. Si se desea ver la nueva seccion
+experimental, hacer `Fetch origin > Pull origin` con Unity cerrado,
+abrir el proyecto y volver a compilar la APK. Una futura validacion
+fijara umbrales y evaluara tasas de error con datos temporalmente
+alineados de ambos tobillos.
