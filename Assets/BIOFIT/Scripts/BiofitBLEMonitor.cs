@@ -61,18 +61,22 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         busy = true;
         try
         {
-            message = "Comprobando Bluetooth...";
+            // Android 12+ requiere BLUETOOTH_CONNECT antes de consultar
+            // BluetoothAdapter.isEnabled() (UniBLE.IsAvailableAsync).
+            // Si consultamos antes de pedir permiso puede devolver false
+            // aunque el Bluetooth este encendido.
+            message = "Solicitando permisos de Dispositivos cercanos...";
             IBleAdapter adapter = BleManager.Adapter;
-            if (!await adapter.IsAvailableAsync())
+            if (!await adapter.RequestPermissionAsync())
             {
-                message = "Bluetooth no disponible o desactivado.";
+                message = "Permiso Bluetooth denegado. En Android: Ajustes > Aplicaciones > BIOFIT-GAME-UNITY > Permisos > Dispositivos cercanos > Permitir. Luego cerra y abri la app.";
                 return;
             }
 
-            message = "Solicitando permisos Bluetooth...";
-            if (!await adapter.RequestPermissionAsync())
+            message = "Comprobando Bluetooth con permisos autorizados...";
+            if (!await adapter.IsAvailableAsync())
             {
-                message = "Permiso denegado. Habilita Dispositivos cercanos en Ajustes de Android.";
+                message = "Bluetooth no disponible o apagado. Activalo desde Android y volve a abrir la app.";
                 return;
             }
 
