@@ -24,6 +24,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly ConcurrentQueue<Packet> pending = new ConcurrentQueue<Packet>();
     private readonly Tracker left = new Tracker("IZQUIERDO", 1);
     private readonly Tracker right = new Tracker("DERECHO", 2);
+    private readonly BiofitInputEngine inputEngine = new BiofitInputEngine();
 
     private string message = "Iniciando...";
     private bool busy;
@@ -147,6 +148,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         {
             ReadEvent(packet);
         }
+        inputEngine.Update(Time.realtimeSinceStartup);
     }
 
     private void ReadEvent(Packet packet)
@@ -166,6 +168,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             case 3: state.upImpulses++; break;
             default: return;
         }
+
+        // Los millis de cada tracker no comparten origen: usamos
+        // tiempo local de recepcion del celular para la alternancia.
+        inputEngine.ProcessEvent(state.id, eventType, Time.realtimeSinceStartup);
 
         ushort sequence = U16(b, 4);
         uint millis = U32(b, 6);
@@ -229,6 +235,22 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         DrawTracker(right, x, ref y, textWidth);
         y += 25;
         GUI.Label(new Rect(x, y, textWidth, 95), "UP_IMPULSE = posible elevacion. Todavia no significa JUMP.", small);
+        y += 111;
+        GUI.Label(new Rect(x, y, textWidth, 62), "BIOFIT INPUT ENGINE (EXPERIMENTAL)", heading);
+        y += 70;
+        GUI.Label(new Rect(x, y, textWidth, 60),
+            "Actividad: " + inputEngine.Activity, normal);
+        y += 63;
+        GUI.Label(new Rect(x, y, textWidth, 60),
+            "Candidatos MOV_ON: Izq " + inputEngine.LeftCandidates +
+            "  |  Der " + inputEngine.RightCandidates, normal);
+        y += 63;
+        GUI.Label(new Rect(x, y, textWidth, 60),
+            "Alternancias: " + inputEngine.Alternations +
+            "   |   Cadencia estimada: " + inputEngine.EstimatedCadence.ToString("F0") + " /min", normal);
+        y += 70;
+        GUI.Label(new Rect(x, y, textWidth, 110),
+            "Aviso: los candidatos NO son pasos confirmados. Clasificacion preliminar; falta validar con pruebas.", small);
     }
 
     private void DrawTracker(Tracker tracker, float x, ref float y, float width)
