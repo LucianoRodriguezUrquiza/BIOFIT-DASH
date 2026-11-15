@@ -70,3 +70,42 @@ experimental, hacer `Fetch origin > Pull origin` con Unity cerrado,
 abrir el proyecto y volver a compilar la APK. Una futura validacion
 fijara umbrales y evaluara tasas de error con datos temporalmente
 alineados de ambos tobillos.
+
+
+## Proximo lote consolidado (todavia NO hace falta compilar)
+
+Esta actualizacion incluye TRES mejoras en una sola entrega:
+
+1. `BiofitInputEngine.cs`: candidatos MOV_ON, alternancia, cadencia,
+   clasificacion experimental (no pasos confirmados).
+2. `BiofitSessionLogger.cs`: en la misma pantalla BLE, botones
+   `INICIAR`, `FIN CAMINAR`, `FIN CORRER`, `COPIAR RESULTADOS`.
+   Guarda diferencias de contadores y el pico de cadencia estimada.
+   Evita reiniciar la APK entre etapas y permite pegar el reporte en un chat.
+3. `BiofitMovementLab.cs`: laboratorio 2D dentro de la misma escena y
+   conexion BLE. Para probarlo en PC sin sensores, al hacer la UNICA
+   actualizacion del repositorio:
+   - `BIOFIT > Agregar laboratorio 2D a DiagnosticoBLE` (una vez).
+   - `Play` en Unity, en pantalla `Game` hacer clic en
+     `ABRIR LABORATORIO 2D`.
+   - Pulsar `A` y `D` alternadamente = SIMULACION de inicio de movimiento
+     de tobillos; `ESPACIO` = SALTO ARTIFICIAL del personaje.
+   - `TAB` vuelve del laboratorio al diagnostico en Editor.
+   - A/D no sustituyen una prueba fisica; el salto de ESPACIO no valida
+     salto con IMU.
+
+El laboratorio usa el MISMO `BiofitBLEMonitor` de la escena.
+Se puede alternar entre vistas sin reconectar ni reiniciar las Waveshare.
+En Android usa los datos BLE reales para mover la representacion en funcion
+de la cadencia tentativa; el boton de salto es una entrada manual.
+El sistema de registro permite obtener un resumen textual copiable al finalizar
+varias actividades en una sola sesion.
+
+**Limitaciones:** estos scripts no han sido compilados ni probados en una
+APK real desde este entorno. La importacion y la simulacion en el Editor
+deben verificarse primero, y los clasificadores deben validarse
+experimentalmente en una futura prueba agrupada.
+
+Cuando el usuario decida actualizar, hacerlo con Unity cerrado y
+`Fetch origin > Pull origin` desde GitHub Desktop.
+**No recompilar Android por cada cambio menor.**
