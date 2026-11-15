@@ -64,6 +64,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         public byte expectedId;
         public byte[] bytes;
+        public long callbackTicks;
     }
 
     private async void Start()
@@ -143,10 +144,14 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 // El callback nativo puede llegar desde otro hilo.
                 if (bytes != null)
                 {
+                    // Captura ANTES de encolar: diferencia tiempo en
+                    // callback BLE vs procesamiento Unity en Update().
+                    long ticksAtCallback = System.Diagnostics.Stopwatch.GetTimestamp();
                     pending.Enqueue(new Packet
                     {
                         expectedId = id,
-                        bytes = (byte[])bytes.Clone()
+                        bytes = (byte[])bytes.Clone(),
+                        callbackTicks = ticksAtCallback
                     });
                 }
             });
@@ -192,6 +197,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         // Los millis de cada tracker no comparten origen: usamos
         // tiempo local de recepcion del celular para la alternancia.
         float receivedSeconds = Time.realtimeSinceStartup;
+        // Dos marcas independientes: llegada al callback BLE y lectura
+        // efectiva en Unity. Ambas son monotónicas para diagnóstico.
+        long ticksNow = System.Diagnostics.Stopwatch.GetTimestamp();
+        float queueDelayMs = (float)((ticksNow - packet.callbackTicks) *
+            1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        double callbackSeconds = packet.callbackTicks /
+            (double)System.Diagnostics.Stopwatch.Frequency;
         inputEngine.ProcessEvent(state.id, eventType, receivedSeconds);
 
         ushort sequence = U16(b, 4);
@@ -208,7 +220,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             BilateralJumpCandidate?.Invoke(jumpDetector.LastPairGapMs);
         }
         eventCapture.Record(receivedSeconds, state.id, eventType,
-            sequence, millis, gyroDps, verticalG, paired);
+            sequence, millis, gyroDps, verticalG, paired,
+            queueDelayMs, callbackSeconds);
 
         string eventName = eventType == 1 ? "MOV_ON" :
                            eventType == 2 ? "MOV_OFF" : "UP_IMPULSE";
@@ -318,26 +331,50 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
             "2. FIN CAMINAR", buttonStyle))
         {
-            sessionLogger.MarkStage("CAMINAR", left.movOn, left.movOff,
-                left.upImpulses, right.movOn, right.movOff, right.upImpulses,
-                jumpDetector.BilateralCandidates);
-            eventCapture.FinishStage("CAMINAR", Time.realtimeSinceStartup);
+            if (eventCapture.FinishStage("CAMINAR", Time.realtimeSinceStartup))
+            {
+                sessionLogger.MarkStage("CAMINAR", left.movOn, left.movOff,
+                    left.upImpulses, right.movOn, right.movOff, right.upImpulses,
+                    jumpDetector.BilateralCandidates);
+                message = "CAMINAR guardado. Siguiente etapa: " + eventCapture.Stage;
+            }
+            else
+            {
+                message = "Orden incorrecto. Etapa actual: " + eventCapture.Stage +
+                          ". Segui INICIAR > FIN CAMINAR > FIN CORRER > FIN SALTOS.";
+            }
         }
         y += 72;
         if (GUI.Button(new Rect(x, y, buttonWidth, 63), "3. FIN CORRER", buttonStyle))
         {
-            sessionLogger.MarkStage("CORRER", left.movOn, left.movOff,
-                left.upImpulses, right.movOn, right.movOff, right.upImpulses,
-                jumpDetector.BilateralCandidates);
-            eventCapture.FinishStage("CORRER", Time.realtimeSinceStartup);
+            if (eventCapture.FinishStage("CORRER", Time.realtimeSinceStartup))
+            {
+                sessionLogger.MarkStage("CORRER", left.movOn, left.movOff,
+                    left.upImpulses, right.movOn, right.movOff, right.upImpulses,
+                    jumpDetector.BilateralCandidates);
+                message = "CORRER guardado. Siguiente etapa: " + eventCapture.Stage;
+            }
+            else
+            {
+                message = "Orden incorrecto. Etapa actual: " + eventCapture.Stage +
+                          ". Segui INICIAR > FIN CAMINAR > FIN CORRER > FIN SALTOS.";
+            }
         }
         if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
             "4. FIN SALTOS", buttonStyle))
         {
-            sessionLogger.MarkStage("SALTOS", left.movOn, left.movOff,
-                left.upImpulses, right.movOn, right.movOff, right.upImpulses,
-                jumpDetector.BilateralCandidates);
-            eventCapture.FinishStage("SALTOS", Time.realtimeSinceStartup);
+            if (eventCapture.FinishStage("SALTOS", Time.realtimeSinceStartup))
+            {
+                sessionLogger.MarkStage("SALTOS", left.movOn, left.movOff,
+                    left.upImpulses, right.movOn, right.movOff, right.upImpulses,
+                    jumpDetector.BilateralCandidates);
+                message = "SALTOS guardado. Siguiente etapa: " + eventCapture.Stage;
+            }
+            else
+            {
+                message = "Orden incorrecto. Etapa actual: " + eventCapture.Stage +
+                          ". Segui INICIAR > FIN CAMINAR > FIN CORRER > FIN SALTOS.";
+            }
         }
         y += 72;
         if (GUI.Button(new Rect(x, y, buttonWidth, 63),
@@ -354,7 +391,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         }
         y += 76;
         GUI.Label(new Rect(x, y, width, 52),
-            "Registro: " + eventCapture.EventRows + " eventos | descartados: " +
+            "Etapa: " + eventCapture.Stage + " | Registro: " +
+            eventCapture.EventRows + " eventos | descartados: " +
             eventCapture.DroppedRows + " | maximo 1500 filas", small);
         y += 58;
         GUI.Label(new Rect(x, y, width, 120),
