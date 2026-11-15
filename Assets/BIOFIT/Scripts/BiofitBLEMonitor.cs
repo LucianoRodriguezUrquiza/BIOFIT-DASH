@@ -26,6 +26,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly Tracker right = new Tracker("DERECHO", 2);
     private readonly BiofitInputEngine inputEngine = new BiofitInputEngine();
     public BiofitInputEngine InputEngine => inputEngine;
+    private readonly BiofitBilateralJumpDetector jumpDetector = new BiofitBilateralJumpDetector();
+    public BiofitBilateralJumpDetector JumpDetector => jumpDetector;
 
     [SerializeField] private bool showDiagnostics = true;
     public bool ShowDiagnostics
@@ -187,6 +189,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         uint millis = U32(b, 6);
         float gyroDps = I16(b, 10) / 10f;
         float verticalG = I16(b, 12) / 1000f;
+        if (eventType == 3 &&
+            jumpDetector.ProcessImpulse(state.id, Time.realtimeSinceStartup, verticalG))
+        {
+            Debug.Log("BIOFIT: POSIBLE SALTO BILATERAL (NO CONFIRMADO), intervalo " +
+                      jumpDetector.LastPairGapMs.ToString("F0") + " ms");
+        }
 
         string eventName = eventType == 1 ? "MOV_ON" :
                            eventType == 2 ? "MOV_OFF" : "UP_IMPULSE";
@@ -248,6 +256,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         y += 25;
         GUI.Label(new Rect(x, y, textWidth, 95), "UP_IMPULSE = posible elevacion. Todavia no significa JUMP.", small);
         y += 111;
+        GUI.Label(new Rect(x, y, textWidth, 70),
+            "PARES UP: " + jumpDetector.BilateralCandidates +
+            " | Ultimo intervalo: " + jumpDetector.LastPairGapMs.ToString("F0") + " ms", normal);
+        y += 65;
+        GUI.Label(new Rect(x, y, textWidth, 77),
+            jumpDetector.LastStatus + " | filtro preliminar, NO salto real", small);
+        y += 83;
         GUI.Label(new Rect(x, y, textWidth, 62), "BIOFIT INPUT ENGINE (EXPERIMENTAL)", heading);
         y += 70;
         GUI.Label(new Rect(x, y, textWidth, 60),
@@ -275,22 +290,32 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         if (GUI.Button(new Rect(x, y, buttonWidth, 63), "1. INICIAR", buttonStyle))
         {
             sessionLogger.Begin(left.movOn, left.movOff, left.upImpulses,
-                right.movOn, right.movOff, right.upImpulses);
+                right.movOn, right.movOff, right.upImpulses, jumpDetector.BilateralCandidates);
             message = "Sesion iniciada: realiza la actividad y registra el final de cada etapa.";
         }
         if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
             "2. FIN CAMINAR", buttonStyle))
         {
             sessionLogger.MarkStage("CAMINAR", left.movOn, left.movOff,
-                left.upImpulses, right.movOn, right.movOff, right.upImpulses);
+                left.upImpulses, right.movOn, right.movOff, right.upImpulses,
+                jumpDetector.BilateralCandidates);
         }
         y += 72;
         if (GUI.Button(new Rect(x, y, buttonWidth, 63), "3. FIN CORRER", buttonStyle))
         {
             sessionLogger.MarkStage("CORRER", left.movOn, left.movOff,
-                left.upImpulses, right.movOn, right.movOff, right.upImpulses);
+                left.upImpulses, right.movOn, right.movOff, right.upImpulses,
+                jumpDetector.BilateralCandidates);
         }
         if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
+            "4. FIN SALTOS", buttonStyle))
+        {
+            sessionLogger.MarkStage("SALTOS", left.movOn, left.movOff,
+                left.upImpulses, right.movOn, right.movOff, right.upImpulses,
+                jumpDetector.BilateralCandidates);
+        }
+        y += 72;
+        if (GUI.Button(new Rect(x, y, width, 63),
             "COPIAR RESULTADOS", buttonStyle))
         {
             GUIUtility.systemCopyBuffer = sessionLogger.Report;
@@ -299,7 +324,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         y += 76;
         GUI.Label(new Rect(x, y, width, 120),
             sessionLogger.Started ? sessionLogger.LastMark :
-            "Para registrar varias etapas sin reiniciar la APK: INICIAR -> caminar -> FIN CAMINAR -> correr -> FIN CORRER -> COPIAR.",
+            "Registro combinado: INICIAR -> FIN CAMINAR -> FIN CORRER -> FIN SALTOS -> COPIAR.",
             small);
     }
 
