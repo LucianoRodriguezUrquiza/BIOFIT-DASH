@@ -95,6 +95,17 @@ public sealed class BiofitDashGame : MonoBehaviour
         roadOffset = 0f;
     }
 
+    private void ReturnToDiagnostics()
+    {
+        // Es el MISMO BiofitBLEMonitor, sin nuevo ConnectAsync:
+        // no se pierden las suscripciones ni los datos de la sesion.
+        if (monitor != null) monitor.ShowDiagnostics = true;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        Screen.orientation = ScreenOrientation.Portrait;
+#endif
+        Destroy(this);
+    }
+
     private void InitStyles()
     {
         if (heading != null) return;
@@ -153,8 +164,10 @@ public sealed class BiofitDashGame : MonoBehaviour
         GUI.Label(new Rect(42f, 145f, 638f, 58f),
             "El cubo avanza solo. ESPACIO o SALTAR para esquivar las puntas.",
             helper);
-        GUI.Label(new Rect(692f, 168f, 390f, 45f),
-            "Candidatos BLE: " + blePairsObserved +
+        GUI.Label(new Rect(692f, 168f, 390f, 52f),
+            "BLE: " + (monitor.BothTrackersConnected ? "2/2 conectados" :
+                          "esperando trackers") +
+            " | Pares: " + blePairsObserved +
             " | Intentos: " + bleJumpAttempts, helper);
 
         Draw(new Rect(34f, 223f, 1050f, 414f), new Color(0.13f, 0.24f, 0.37f));
@@ -210,13 +223,20 @@ public sealed class BiofitDashGame : MonoBehaviour
             GUI.Label(new Rect(380f, 358f, 350f, 68f), "PAUSA", center);
         }
 
-        if (GUI.Button(new Rect(40f, 654f, 410f, 59f),
+        if (GUI.Button(new Rect(40f, 654f, 315f, 59f),
             "SALTAR (TACTIL / ESPACIO)", control))
             Jump("BOTON TACTIL");
+        if (GUI.Button(new Rect(367f, 654f, 292f, 59f),
+            "DIAGNOSTICO BLE", control))
+        {
+            ReturnToDiagnostics();
+            GUI.matrix = prev;
+            return;
+        }
 
-        GUI.Label(new Rect(470f, 653f, 603f, 57f),
+        GUI.Label(new Rect(673f, 650f, 405f, 68f),
             "Ultima entrada: " + lastInput +
-            ". Los pares BLE NO prueban saltos reales.", helper);
+            ". Pares BLE: NO son saltos confirmados.", helper);
 
         GUI.matrix = prev;
     }
