@@ -411,10 +411,19 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         float buttonWidth = (width - 12f) * 0.5f;
         if (GUI.Button(new Rect(x, y, buttonWidth, 63), "1. INICIAR", buttonStyle))
         {
-            sessionLogger.Begin(left.movOn, left.movOff, left.upImpulses,
-                right.movOn, right.movOff, right.upImpulses, jumpDetector.BilateralCandidates);
-            eventCapture.Begin(Time.realtimeSinceStartup);
-            message = "Sesion iniciada: realiza la actividad y registra el final de cada etapa.";
+            if (gameCaptureActive)
+            {
+                message = "Ya hay un registro de BIOFIT DASH en curso. " +
+                          "Volvé al juego y presioná FINALIZAR para conservar los datos.";
+            }
+            else
+            {
+                sessionLogger.Begin(left.movOn, left.movOff, left.upImpulses,
+                    right.movOn, right.movOff, right.upImpulses, jumpDetector.BilateralCandidates);
+                eventCapture.Begin(Time.realtimeSinceStartup);
+                lastGameSummary = "";
+                message = "Sesion iniciada: realiza la actividad y registra el final de cada etapa.";
+            }
         }
         if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
             "2. FIN CAMINAR", buttonStyle))
