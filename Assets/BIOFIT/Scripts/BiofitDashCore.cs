@@ -36,6 +36,11 @@ public sealed class BiofitDashCore
     public bool Playing { get; private set; }
     public bool GameOver { get; private set; }
     public bool Paused { get; private set; }
+    /// <summary>
+    /// Diagnostico sin game-over para no detener una sesion fisica.
+    /// Solo desactiva la colision, mantiene obstaculos y puntos.
+    /// </summary>
+    public bool PracticeMode { get; set; }
     public float JumpAltitude { get; private set; }
     public float Distance { get; private set; }
     public float Speed { get; private set; }
@@ -120,7 +125,7 @@ public sealed class BiofitDashCore
                     BestObstaclesPassed = ObstaclesPassed;
             }
 
-            if (Collides(o))
+            if (!PracticeMode && Collides(o))
             {
                 GameOver = true;
                 Playing = false;
