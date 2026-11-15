@@ -259,3 +259,58 @@ vez la verificacion automatica del salto bilateral. Si pasa,
 probar brevemente `J` y `ESPACIO` en la pestaña Game (sin sensores).
 No generar APK todavia, salvo que se programe una futura sesion
 de validacion fisica combinada.
+
+
+## Diagnostico tras primer CSV Android real (15-11-2026)
+
+Primera sesion recibida (APK `BIOFIT_GAME_Prueba_Combinada_v0_2.apk`):
+- `INICIO` telefono 192.613 s, `FIN_SALTOS` 225.763 s:
+  **33,15 s** en el registro.
+- **83 EVENT** (47 izquierda, 36 derecha), **0 descartes**
+  por limite de memoria.
+- Resumen delta: izquierda MOV_ON=11, MOV_OFF=11, UP=25;
+  derecha MOV_ON=7, MOV_OFF=6, UP=23; pares nuevos de UP=0.
+- Secuencias de eventos recibidos continuas dentro del recorte:
+  izquierda 86..132, derecha 78..113. Esto NO prueba que nunca
+  se pierda un evento en otras sesiones.
+- Screenshot de laboratorio `PARES BILATERALES: 7` es
+  acumulado desde inicio de app; `PARES UP=0` del resumen
+  significa **cero pares nuevos desde INICIAR**, no contradiccion.
+- CSV solo incluyo `MARCA;INICIO` y `MARCA;FIN_SALTOS`.
+  Faltaron FIN_CAMINAR y FIN_CORRER, de modo que TODOS los
+  eventos de la captura fueron etiquetados `CAMINAR`.
+  No se pueden separar ni validar las tres actividades.
+- Anomalia temporal grave: `reloj_unity_procesado_s=208.720`
+  para dos eventos derecho con tiempo sensor 547837 y 548373 ms
+  (separados 536 ms reales del sensor), y otro sensor 549594 ms
+  (121? no, 1221 ms despues) llega en el mismo frame.
+  Intervalo global de sensor 1757 ms, registrado como 0 ms en Unity.
+  Esto sesga falsamente la cadencia y la correlacion de UP bilaterales.
+
+Implementacion de diagnostico para **proxima** compilacion Android:
+1. Se captura `Stopwatch.GetTimestamp()` en el callback BLE
+   ANTES de encolar el paquete y se calcula espera en cola Unity.
+2. El CSV ahora anade:
+   `espera_cola_unity_ms`,
+   `reloj_callback_monotonico_s`.
+   Este ultimo comparte origen **solo consigo mismo**; no
+   debe restarse directamente a `reloj_unity_procesado_s`.
+   Comparar intervalos dentro de cada columna y
+   `reloj_esp32_ms` dentro de cada placa.
+3. Los botones de etapa se validan en el orden obligatorio:
+   INICIAR > FIN CAMINAR > FIN CORRER > FIN SALTOS.
+   Si se intenta saltar una etapa se informa en pantalla y
+   NO se altera el registro.
+4. `BIOFIT > Verificar salto bilateral (sin APK)`
+   incorpora ahora **35** verificaciones sintéticas; las
+   nuevas pruebas revisan etapas y campos temporales.
+5. **No volver a pedir ensayos fisicos ni recompilar**
+   hasta preparar todos los ajustes del proximo lote.
+   Se necesita investigar retraso entre ESP32, callback
+   Android y proceso Unity antes de ajustar umbrales de clasificador.
+
+Precaucion: el firmware incluye `millis` por evento, pero
+estos relojes NO tienen origen comun. La causa exacta de
+agrupamiento puede ser transmision, BLE Android, callback o
+cola Unity. Los nuevos campos discriminan al menos la
+latencia de cola Unity vs latencia anterior.
