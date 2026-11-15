@@ -62,7 +62,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly BiofitEventCapture eventCapture = new BiofitEventCapture();
     private bool gameCaptureActive;
     private int gLeftOn, gRightOn, gLeftUp, gRightUp, gPairs;
-    private int gCompressed, gAlignedEvents;
+    private int gCompressed, gAlignedEvents, gNearMisses;
     private string lastGameSummary = "";
 
     public bool GameCaptureActive => gameCaptureActive;
@@ -78,6 +78,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public int ClockStatusLeft => timeAligner.LeftSamples;
     public int ClockStatusRight => timeAligner.RightSamples;
     public int AlignedEvents => alignedEvents;
+    public int NearMisses => jumpDetector.NearMisses;
+    public float LastNearMissGapMs => jumpDetector.LastNearMissGapMs;
     public bool ClockAlignmentReady
     {
         get
@@ -114,6 +116,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gPairs = jumpDetector.BilateralCandidates;
         gCompressed = TimeCompressedEvents;
         gAlignedEvents = alignedEvents;
+        gNearMisses = jumpDetector.NearMisses;
         lastGameSummary = "";
         eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
             MinUpG, PairWindowMs);
@@ -154,6 +157,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
             "\nESTIMACION_RELOJ=" + (ClockAlignmentReady ? "ACTIVA" : "INACTIVA") +
             " | EVENTOS_ALINEADOS=" + (alignedEvents - gAlignedEvents) +
+            "\nESTIMACION_STATUS: IZQ=" + ClockStatusLeft + " DER=" + ClockStatusRight +
+            " | PARES_CERCANOS_RECHAZADOS=" + (NearMisses - gNearMisses) +
             "\nTIEMPOS_COMPRIMIDOS=" + (TimeCompressedEvents - gCompressed) +
             " (acumulados desde inicio=" + TimeCompressedEvents + ")" +
             "\nNO son pasos ni saltos humanos confirmados.\n";
@@ -428,9 +433,14 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             // ReadEvent se ejecuta desde Update(), en el hilo principal.
             BilateralJumpCandidate?.Invoke(jumpDetector.LastPairGapMs);
         }
+        // La demora es SOLO el exceso respecto del mejor anclaje STATUS;
+        // no se interpreta como latencia BLE absoluta.
+        double relativeDelayMs = timeAligned ?
+            Math.Max(0d, (callbackSeconds - pairSeconds) * 1000d) : 0d;
         eventCapture.Record(receivedSeconds, state.id, eventType,
             sequence, millis, gyroDps, verticalG, paired,
-            queueDelayMs, callbackSeconds);
+            queueDelayMs, callbackSeconds, pairSeconds,
+            timeAligned, relativeDelayMs);
 
         string eventName = eventType == 1 ? "MOV_ON" :
                            eventType == 2 ? "MOV_OFF" : "UP_IMPULSE";
@@ -438,7 +448,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                           "   giro=" + gyroDps.ToString("F1") + " deg/s" +
                           "   Z=" + verticalG.ToString("+0.000;-0.000;0.000") + " g";
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log("BIOFIT " + state.name + " " + state.lastEvent);
+#endif
     }
 
     private static ushort U16(byte[] b, int i)
@@ -516,6 +528,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         GUI.Label(new Rect(x, y, textWidth, 77),
             jumpDetector.LastStatus + " | filtro preliminar, NO salto real", small);
         y += 83;
+        GUI.Label(new Rect(x, y, textWidth, 86),
+            "Reloj estimado: " + (ClockAlignmentReady ? "ACTIVO" : "ESPERANDO STATUS") +
+            " | STATUS izq/der: " + ClockStatusLeft + "/" + ClockStatusRight +
+            " | Casi pares: " + NearMisses, small);
+        y += 91;
         GUI.Label(new Rect(x, y, textWidth, 62), "BIOFIT INPUT ENGINE (EXPERIMENTAL)", heading);
         y += 70;
         GUI.Label(new Rect(x, y, textWidth, 60),
