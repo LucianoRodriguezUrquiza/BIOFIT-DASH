@@ -85,7 +85,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         if ((bleMode == 2 && foot != 1) ||
             (bleMode == 3 && foot != 2)) return;
         if (verticalG < singleMinG ||
-            eventSeconds - lastSingleEventSeconds < 1.20f)
+            eventSeconds - lastSingleEventSeconds < BiofitBilateralJumpDetector.SameAnkleRefractorySeconds)
             return;
 
         lastSingleEventSeconds = eventSeconds;
@@ -385,8 +385,7 @@ public sealed class BiofitDashGame : MonoBehaviour
 
         GUI.Label(new Rect(48f, 382f, 994f, 38f),
             experimentStatus + " | PARES: " + monitor.TotalPairs +
-            " | TIEMPOS COMPRIMIDOS: " + monitor.TimeCompressedEvents +
-            " | descartes CSV: " + monitor.DroppedEventCount, helper);
+            " | " + monitor.TransportSummary, helper);
         if (GUI.Button(new Rect(48f, 425f, 177f, 41f),
             "SOLO UP -", compact))
         {

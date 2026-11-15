@@ -17,14 +17,22 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     private const string ServiceUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0001";
     private const string EventUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0002";
-    // Ya presente en firmware V2: STATUS cada ~50ms, timestamp IMU.
+    // Firmware V2.2.6: STATUS nominal 100 ms; medir la tasa efectiva.
     private const string StatusUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0003";
 
+    private const string TransportUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0007";
+    private IBleCharacteristic leftTransport, rightTransport;
+    public int RejectedEvents { get; private set; }
+    public string TransportSummary => "Rechazos: " + RejectedEvents + " | cola=" + pendingCount + " dropApp=" + callbackDropped +
+        " | huecos seq: " + (left.gate.Missing + right.gate.Missing) +
+        " | duplicados/desorden: " + (left.gate.DuplicateOrReordered + right.gate.DuplicateOrReordered);
+    public string FirmwareSummary => "I " + left.transport + " / D " + right.transport;
     private IBleDevice leftDevice, rightDevice;
     // Mantener referencias de ambas suscripciones GATT durante toda la sesion.
     private IBleCharacteristic leftEvents, rightEvents;
     private IBleCharacteristic leftStatus, rightStatus;
 
+    private int pendingCount, callbackDropped;
     private readonly ConcurrentQueue<Packet> pending = new ConcurrentQueue<Packet>();
     private readonly Tracker left = new Tracker("IZQUIERDO", 1);
     private readonly Tracker right = new Tracker("DERECHO", 2);
@@ -166,6 +174,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " | PARES_CERCANOS_RECHAZADOS=" + (NearMisses - gNearMisses) +
             "\nTIEMPOS_COMPRIMIDOS=" + (TimeCompressedEvents - gCompressed) +
             " (acumulados desde inicio=" + TimeCompressedEvents + ")" +
+            "\n" + TransportSummary + "\n" + FirmwareSummary +
             "\nNO son pasos ni saltos humanos confirmados.\n";
         return true;
     }
@@ -195,6 +204,14 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         public double lastCallbackEventSeconds;
         public bool hasLastTimestamp;
         public int timeCompressed;
+        public readonly BiofitEventGate gate = new BiofitEventGate();
+        public string transport = "sin telemetria TX";
+        public bool hasStatus;
+        public uint lastStatusMs;
+        public int generation;
+        public readonly BiofitEventGate statusGate = new BiofitEventGate();
+        public double statusWindowStart, lastStatusCallback, statusHz, maxStatusGapMs;
+        public int statusInWindow;
         public Tracker(string name, byte id) { this.name = name; this.id = id; }
     }
 
@@ -204,6 +221,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         public byte[] bytes;
         public long callbackTicks;
         public bool isStatus;
+        public bool isTransport;
+        public bool reset;
+        public int generation;
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -269,7 +289,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             device.OnConnectionStateChanged += state =>
             {
                 tracker.connection = state.ToString();
-                if (state == BleConnectionState.Disconnected) tracker.moving = false;
+                if (state == BleConnectionState.Disconnected)
+                {
+                    System.Threading.Interlocked.Increment(ref tracker.generation);
+                    Enqueue(new Packet { expectedId = tracker.id, reset = true });
+                }
             };
 
             await device.ConnectAsync();
@@ -281,6 +305,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             else rightEvents = characteristic;
 
             byte id = tracker.id;
+            int generation = tracker.generation;
             await characteristic.SubscribeAsync(bytes =>
             {
                 // El callback nativo puede llegar desde otro hilo.
@@ -289,9 +314,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     // Captura ANTES de encolar: diferencia tiempo en
                     // callback BLE vs procesamiento Unity en Update().
                     long ticksAtCallback = System.Diagnostics.Stopwatch.GetTimestamp();
-                    pending.Enqueue(new Packet
+                    Enqueue(new Packet
                     {
                         expectedId = id,
+                        generation = generation,
                         bytes = (byte[])bytes.Clone(),
                         callbackTicks = ticksAtCallback
                     });
@@ -300,8 +326,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
             // El firmware ya emite STATUS con millis del sensor.
             // Se usa para aproximar los relojes sin reflashear placas.
-            // Si falla esta suscripcion, EVENT sigue funcionando
-            // exactamente como antes con timestamp del callback.
+            // Si falla STATUS, se conservan EVENT en CSV pero el juego espera reloj.
             try
             {
                 IBleCharacteristic status =
@@ -313,9 +338,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     if (bytes != null && bytes.Length >= 10)
                     {
                         long at = System.Diagnostics.Stopwatch.GetTimestamp();
-                        pending.Enqueue(new Packet
+                        Enqueue(new Packet
                         {
                             expectedId = id,
+                            generation = generation,
                             bytes = (byte[])bytes.Clone(),
                             callbackTicks = at,
                             isStatus = true
@@ -329,6 +355,20 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     ": " + statusError.Message);
             }
 
+            // Optional extension; older V2 firmware remains readable.
+            try
+            {
+                var transport = await service.GetCharacteristicAsync(TransportUuid);
+                if (id == 1) leftTransport = transport; else rightTransport = transport;
+                await transport.SubscribeAsync(bytes =>
+                {
+                    if (bytes != null) Enqueue(new Packet {
+                        expectedId = id, generation = generation, isTransport = true,
+                        bytes = (byte[])bytes.Clone(),
+                        callbackTicks = System.Diagnostics.Stopwatch.GetTimestamp() });
+                });
+            }
+            catch (Exception ex) { Debug.LogWarning("BIOFIT TX opcional: " + ex.Message); }
             tracker.connection = "CONECTADO - NOTIFICACIONES ACTIVAS";
         }
         catch (Exception ex)
@@ -338,12 +378,37 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         }
     }
 
+    private void Enqueue(Packet packet)
+    {
+        if (System.Threading.Interlocked.Increment(ref pendingCount) > 1024 && !packet.reset)
+        {
+            System.Threading.Interlocked.Decrement(ref pendingCount);
+            System.Threading.Interlocked.Increment(ref callbackDropped);
+            return;
+        }
+        pending.Enqueue(packet);
+    }
+
     private void Update()
     {
         int processed = 0;
         while (processed++ < 100 && pending.TryDequeue(out Packet packet))
         {
-            if (packet.isStatus) ReadStatus(packet);
+            System.Threading.Interlocked.Decrement(ref pendingCount);
+            Tracker tracker = packet.expectedId == 1 ? left : right;
+            if (packet.reset)
+            {
+                tracker.moving = false; tracker.hasLastTimestamp = false;
+                tracker.hasStatus = false; tracker.gate.Reset(); tracker.statusGate.Reset();
+                tracker.statusWindowStart = 0; tracker.lastStatusCallback = 0;
+                tracker.statusInWindow = 0; tracker.statusHz = 0;
+                inputEngine.ProcessEvent(packet.expectedId, 2, Time.realtimeSinceStartup);
+                timeAligner.Reset(packet.expectedId); jumpDetector.ClearPending();
+                continue;
+            }
+            if (packet.generation != tracker.generation) continue;
+            if (packet.isTransport) ReadTransport(packet);
+            else if (packet.isStatus) ReadStatus(packet);
             else ReadEvent(packet);
         }
         inputEngine.Update(Time.realtimeSinceStartup);
@@ -353,13 +418,49 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private void ReadStatus(Packet packet)
     {
         byte[] b = packet.bytes;
-        if (b == null || b.Length < 10 ||
+        if (b == null || b.Length != 20 ||
             b[0] != 2 || b[1] != packet.expectedId)
             return;
         double callbackSeconds = packet.callbackTicks /
             (double)System.Diagnostics.Stopwatch.Frequency;
-        timeAligner.ObserveStatus(packet.expectedId, U32(b, 6),
+        Tracker tracker = packet.expectedId == 1 ? left : right;
+        uint sensor = U32(b, 6);
+        if (tracker.hasStatus && unchecked((int)(sensor - tracker.lastStatusMs)) < 0)
+        {
+            tracker.gate.Reset(); tracker.statusGate.Reset(); tracker.hasLastTimestamp = false;
+            jumpDetector.ClearPending();
+        }
+        tracker.statusGate.ObserveSequence(U16(b,4));
+        if (tracker.lastStatusCallback > 0)
+            tracker.maxStatusGapMs = Math.Max(tracker.maxStatusGapMs,
+                (callbackSeconds - tracker.lastStatusCallback) * 1000d);
+        tracker.lastStatusCallback = callbackSeconds;
+        if (tracker.statusWindowStart == 0) tracker.statusWindowStart = callbackSeconds;
+        tracker.statusInWindow++;
+        double span = callbackSeconds - tracker.statusWindowStart;
+        if (span >= 1d)
+        {
+            tracker.statusHz = tracker.statusInWindow / span;
+            tracker.statusInWindow = 0; tracker.statusWindowStart = callbackSeconds;
+        }
+        tracker.lastStatusMs = sensor; tracker.hasStatus = true;
+        timeAligner.ObserveStatus(packet.expectedId, sensor,
             callbackSeconds);
+    }
+
+    private void ReadTransport(Packet packet)
+    {
+        byte[] b = packet.bytes;
+        if (b.Length != 20 || b[0] != 1 || b[1] != packet.expectedId) return;
+        Tracker tracker = packet.expectedId == 1 ? left : right;
+        tracker.transport = "qMax=" + U16(b,8) + " drop=" + U16(b,10) +
+            " edadMax=" + U16(b,12) + " notifyMax=" + U16(b,14) +
+            " cicloMax=" + U16(b,16) + " err=" + U16(b,18) +
+            " rxHz=" + tracker.statusHz.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) +
+            " rxGapMax=" + tracker.maxStatusGapMs.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) +
+            " statusGap=" + tracker.statusGate.Missing;
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, packet.expectedId,
+            "TX " + tracker.transport);
     }
 
     private void ReadEvent(Packet packet)
@@ -392,7 +493,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         double callbackSeconds = packet.callbackTicks /
             (double)System.Diagnostics.Stopwatch.Frequency;
         float eventSeconds = receivedSeconds - queueDelayMs * 0.001f;
-        inputEngine.ProcessEvent(state.id, eventType, eventSeconds);
+
 
         ushort sequence = U16(b, 4);
         uint millis = U32(b, 6);
@@ -431,10 +532,24 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             jumpDetector.ClearPending();
             previousUsedAlignedTime = timeAligned;
         }
-        bool paired = eventType == 3 &&
+        bool sequenceValid = state.gate.ObserveSequence(sequence);
+        int firmwareQueueMs = (b[3] & 0x80) != 0 ? U16(b,14) : 0;
+        string rejection = BiofitEventGate.Rejection(sequenceValid, timeAligned,
+            callbackSeconds, pairSeconds, queueDelayMs, firmwareQueueMs);
+        bool fresh = rejection.Length == 0;
+        if (!fresh)
+        {
+            RejectedEvents++;
+            eventCapture.RecordDiagnostic(receivedSeconds, state.id,
+                "RECHAZO_" + rejection + " seq=" + sequence + " fwQueueMs=" + firmwareQueueMs);
+        }
+        else inputEngine.ProcessEvent(state.id, eventType,
+            eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
+        bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 &&
             jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG);
-        if (eventType == 3)
-            AnkleUpCandidate?.Invoke(state.id, verticalG, eventSeconds);
+        if (fresh && eventType == 3)
+            AnkleUpCandidate?.Invoke(state.id, verticalG,
+                eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
 
         if (paired)
         {
@@ -504,7 +619,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         // incluso en pantallas Android mas bajas.
         diagnosticsScroll = GUI.BeginScrollView(
             new Rect(18f, 18f, width - 36f, height - 36f),
-            diagnosticsScroll, new Rect(0f, 0f, width - 80f, 2230f),
+            diagnosticsScroll, new Rect(0f, 0f, width - 80f, 2550f),
             false, true);
         float x = 20f;
         float y = 16f;
@@ -669,5 +784,6 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "MOV_ON: " + tracker.movOn + "    MOV_OFF: " + tracker.movOff +
             "    UP: " + tracker.upImpulses, normal); y += 59;
         GUI.Label(new Rect(x, y, width, 104), tracker.lastEvent, small); y += 104;
+        GUI.Label(new Rect(x, y, width, 95), tracker.transport + " (maximos desde arranque, ms)", small); y += 100;
     }
 }

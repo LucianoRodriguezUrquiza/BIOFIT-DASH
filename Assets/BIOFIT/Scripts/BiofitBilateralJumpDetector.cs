@@ -56,7 +56,8 @@ public sealed class BiofitBilateralJumpDetector
     public bool ProcessImpulse(byte trackerId, double eventSeconds, float verticalG)
     {
         if ((trackerId != 1 && trackerId != 2) ||
-            double.IsNaN(eventSeconds) || double.IsInfinity(eventSeconds))
+            double.IsNaN(eventSeconds) || double.IsInfinity(eventSeconds) ||
+            float.IsNaN(verticalG) || float.IsInfinity(verticalG))
             return false;
 
         if (verticalG < MinimumVerticalGThreshold)

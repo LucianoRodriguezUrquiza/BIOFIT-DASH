@@ -25,6 +25,9 @@ public sealed class BiofitClockAligner
         public double BestOffset = 0d;
         public bool HasBest;
         public int Samples;
+        public uint LastSensor;
+        public double SensorSeconds;
+        public bool HasSensor;
     }
 
     private readonly Clock left = new Clock();
@@ -59,16 +62,19 @@ public sealed class BiofitClockAligner
             double.IsNaN(callbackSeconds) || double.IsInfinity(callbackSeconds))
             return;
 
-        double offset = callbackSeconds - sensorMillis * 0.001d;
-
-        // Un tracker reiniciado tendra millis~0 y cambiara mucho el
-        // desfase: eliminar cualquier ancla anterior.
-        if (state.HasBest && Math.Abs(offset - state.BestOffset) > 15d)
+        // Signed modular difference unwraps millis at 49.7 days.
+        // STATUS is ordered within one GATT connection; backward time means reboot.
+        int delta = state.HasSensor ? unchecked((int)(sensorMillis - state.LastSensor)) : 0;
+        if (state.HasSensor && delta < 0)
         {
-            state.Recent.Clear();
-            state.HasBest = false;
-            state.Samples = 0;
+            Reset(trackerId);
+            state = GetClock(trackerId);
         }
+        else if (state.HasSensor && delta == 0) return; // duplicate is not an anchor
+        state.SensorSeconds = state.HasSensor ? state.SensorSeconds + delta * 0.001d : sensorMillis * 0.001d;
+        state.LastSensor = sensorMillis;
+        state.HasSensor = true;
+        double offset = callbackSeconds - state.SensorSeconds;
 
         state.Recent.Add(new Observation
         {
@@ -102,20 +108,26 @@ public sealed class BiofitClockAligner
         double callbackSeconds, out double alignedSeconds)
     {
         alignedSeconds = callbackSeconds;
-        if (!IsReady(callbackSeconds)) return false;
+
 
         Clock state = GetClock(trackerId);
-        if (state == null || !state.HasBest) return false;
+        if (state == null || !Ready(state, callbackSeconds)) return false;
 
-        double estimate = sensorMillis * 0.001d + state.BestOffset;
-        // Un evento no puede ocurrir 0,15 s en el futuro respecto del
-        // callback; se toleran <5 s de retardo por colas BLE.
-        if (estimate > callbackSeconds + 0.15d ||
-            callbackSeconds - estimate > 5d)
-            return false;
+        double estimate = state.SensorSeconds +
+            unchecked((int)(sensorMillis - state.LastSensor)) * 0.001d + state.BestOffset;
+        // Preserve old estimates so the freshness gate can reject them.
+        if (estimate > callbackSeconds + 0.15d) return false;
 
         alignedSeconds = estimate;
         return true;
+    }
+
+    public void Reset(byte id)
+    {
+        Clock state = GetClock(id);
+        if (state == null) return;
+        state.Recent.Clear(); state.HasBest = false; state.HasSensor = false;
+        state.Samples = 0; state.LastCallback = -10000d;
     }
 
     private static bool Ready(Clock state, double nowSeconds)

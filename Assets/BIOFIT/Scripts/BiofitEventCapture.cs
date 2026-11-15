@@ -56,9 +56,18 @@ public sealed class BiofitEventCapture
         return true;
     }
 
+    public void RecordDiagnostic(float phoneSeconds, byte id, string detail)
+    {
+        if (!Recording) return;
+        if (rows.Count >= MaxRows) { DroppedRows++; return; }
+        rows.Add("DIAG;" + stage + ";" + phoneSeconds.ToString("F3", invariant) +
+            ";" + id + ";" + detail.Replace(';', ',').Replace('\n', ' ') + ";;;;;;;;;;");
+    }
+
     public void RecordGameAction(string action, float phoneSeconds)
     {
-        if (!Recording || !gameMode || rows.Count >= MaxRows) return;
+        if (!Recording || !gameMode) return;
+        if (rows.Count >= MaxRows) { DroppedRows++; return; }
         // Misma cabecera de 12 columnas; este evento proviene de Unity,
         // NO del sensor. Las columnas de la IMU quedan vacias.
         if (action != "SALTO_MANUAL" && action != "PAR_BLE_DETECTADO" &&
