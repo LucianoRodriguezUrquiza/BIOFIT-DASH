@@ -109,6 +109,9 @@ public static class BiofitVerificarDash
                 "La etapa debe actualizarse al marcar CAMINAR", ref checks);
             recorder.Record(11.1f, 1, 3, 10, 12345, 28f, 0.33f, false, 4f, 10f);
             recorder.RecordGameAction("PAR_BLE_DETECTADO", 11.2f);
+            recorder.RecordGameConfig(11.25f, 0.12f, 180f);
+            Assert(recorder.Csv.Contains("UP=0.12g_PAIR=180ms"),
+                "El CSV debe registrar ajustes de deteccion", ref checks);
             Assert(recorder.EventRows == 1 &&
                    recorder.Csv.Contains("PAR_BLE_DETECTADO") &&
                    recorder.Csv.Contains("espera_cola_unity_ms"),
