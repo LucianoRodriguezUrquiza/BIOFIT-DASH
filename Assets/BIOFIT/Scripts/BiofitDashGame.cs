@@ -219,7 +219,9 @@ public sealed class BiofitDashGame : MonoBehaviour
                                    "BLE_SOLO_DERECHO";
                 monitor.RecordGameAction(action);
                 monitor.RecordSingleFootConfig(singleMinG);
-                lastInput = modeLabel;
+                lastInput = "Modo BLE: " + (bleMode == 0 ? "OFF" :
+                    bleMode == 1 ? "BILATERAL" :
+                    bleMode == 2 ? "SOLO IZQUIERDO" : "SOLO DERECHO");
             }
         }
 
@@ -237,11 +239,15 @@ public sealed class BiofitDashGame : MonoBehaviour
             game.PracticeMode = !game.PracticeMode;
             if (game.GameOver) ResetGame();
         }
-        GUI.Label(new Rect(692f, 168f, 390f, 52f),
+        GUI.Label(new Rect(692f, 160f, 395f, 66f),
             "BLE: " + (monitor.BothTrackersConnected ? "2/2 conectados" :
                           "esperando trackers") +
-            " | Pares: " + blePairsObserved +
-            " | Intentos: " + bleJumpAttempts, helper);
+            " | reloj: " + (monitor.ClockAlignmentReady ? "IMU estimado" :
+                                                     "sin ancla STATUS") +
+            "\nSTATUS: " + monitor.ClockStatusLeft + "/" +
+            monitor.ClockStatusRight + " | Pares: " + blePairsObserved +
+            " | Casi pares: " + monitor.NearMisses +
+            "\nIntentos de salto BLE: " + bleJumpAttempts, helper);
 
         Draw(new Rect(34f, 223f, 1050f, 414f), new Color(0.13f, 0.24f, 0.37f));
 
