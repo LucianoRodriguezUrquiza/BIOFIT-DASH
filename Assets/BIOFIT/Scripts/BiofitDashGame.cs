@@ -142,7 +142,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             new Color(0.11f, 0.18f, 0.28f));
 
         GUI.Label(new Rect(40f, 26f, 590f, 60f),
-            "BIOFIT DASH  |  PROTOTIPO", heading);
+            "BIOFIT DASH", heading);
         GUI.Label(new Rect(44f, 91f, 550f, 38f),
             "Puntos: " + game.ObstaclesPassed +
             "    Mejor: " + game.BestObstaclesPassed +
