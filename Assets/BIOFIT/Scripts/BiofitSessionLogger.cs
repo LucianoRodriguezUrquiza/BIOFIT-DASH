@@ -9,7 +9,7 @@ public sealed class BiofitSessionLogger
 {
     private struct Mark
     {
-        public int leftOn, leftOff, leftUp, rightOn, rightOff, rightUp;
+        public int leftOn, leftOff, leftUp, rightOn, rightOff, rightUp, pairs;
     }
 
     private readonly List<string> entries = new List<string>();
@@ -40,20 +40,20 @@ public sealed class BiofitSessionLogger
             maxCadence = estimatedCadence;
     }
 
-    public void Begin(int lOn, int lOff, int lUp, int rOn, int rOff, int rUp)
+    public void Begin(int lOn, int lOff, int lUp, int rOn, int rOff, int rUp, int bilateralPairs)
     {
         entries.Clear();
-        last = Capture(lOn, lOff, lUp, rOn, rOff, rUp);
+        last = Capture(lOn, lOff, lUp, rOn, rOff, rUp, bilateralPairs);
         started = true;
         maxCadence = 0f;
         entries.Add("INICIO - punto de referencia de contadores");
     }
 
     public void MarkStage(string name, int lOn, int lOff, int lUp,
-        int rOn, int rOff, int rUp)
+        int rOn, int rOff, int rUp, int bilateralPairs)
     {
         if (!started) return;
-        Mark current = Capture(lOn, lOff, lUp, rOn, rOff, rUp);
+        Mark current = Capture(lOn, lOff, lUp, rOn, rOff, rUp, bilateralPairs);
         string line = name +
             " | IZQ ON=" + Diff(current.leftOn, last.leftOn) +
             " OFF=" + Diff(current.leftOff, last.leftOff) +
@@ -61,6 +61,8 @@ public sealed class BiofitSessionLogger
             " | DER ON=" + Diff(current.rightOn, last.rightOn) +
             " OFF=" + Diff(current.rightOff, last.rightOff) +
             " UP=" + Diff(current.rightUp, last.rightUp) +
+            " | PARES UP=" + Diff(current.pairs, last.pairs) +
+            " (NO confirmados)" +
             " | pico cadencia estimada=" + maxCadence.ToString("F0") + "/min";
         entries.Add(line);
         last = current;
@@ -70,12 +72,12 @@ public sealed class BiofitSessionLogger
     private static int Diff(int now, int before) => System.Math.Max(0, now - before);
 
     private static Mark Capture(int lOn, int lOff, int lUp,
-        int rOn, int rOff, int rUp)
+        int rOn, int rOff, int rUp, int bilateralPairs)
     {
         return new Mark
         {
             leftOn=lOn, leftOff=lOff, leftUp=lUp,
-            rightOn=rOn, rightOff=rOff, rightUp=rUp
+            rightOn=rOn, rightOff=rOff, rightUp=rUp, pairs=bilateralPairs
         };
     }
 }
