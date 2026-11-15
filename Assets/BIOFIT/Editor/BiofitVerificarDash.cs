@@ -201,9 +201,9 @@ public static class BiofitVerificarDash
             Assert(clock.IsReady(1001.0d),
                 "Ocho STATUS o mas de ambos trackers preparan estimacion temporal",
                 ref checks);
-            Assert(clock.TryMapEvent(1, 102000u, 1004.00d,
+            Assert(clock.TryMapEvent(1, 102000u, 1002.40d,
                 out double leftAligned) &&
-                   clock.TryMapEvent(2, 502070u, 1004.20d,
+                   clock.TryMapEvent(2, 502070u, 1002.77d,
                 out double rightAligned),
                 "Las marcas IMU alineadas sobreviven al batching BLE",
                 ref checks);
