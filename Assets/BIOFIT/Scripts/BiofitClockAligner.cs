@@ -108,7 +108,9 @@ public sealed class BiofitClockAligner
     {
         return state.HasBest &&
             state.Recent.Count >= MinimumSamples &&
-            nowSeconds - state.LastCallback >= 0d &&
+            // Una notificacion EVENT puede haberse encolado justo antes
+            // que STATUS aunque se procese despues; tolerar 100 ms.
+            nowSeconds - state.LastCallback >= -0.10d &&
             nowSeconds - state.LastCallback <= MaxSampleAgeSeconds;
     }
 
