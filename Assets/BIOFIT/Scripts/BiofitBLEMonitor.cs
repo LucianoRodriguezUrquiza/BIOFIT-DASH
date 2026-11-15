@@ -36,6 +36,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         set => showDiagnostics = value;
     }
     private readonly BiofitSessionLogger sessionLogger = new BiofitSessionLogger();
+    private readonly BiofitEventCapture eventCapture = new BiofitEventCapture();
 
     private string message = "Iniciando...";
     private bool busy;
@@ -183,18 +184,22 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
         // Los millis de cada tracker no comparten origen: usamos
         // tiempo local de recepcion del celular para la alternancia.
-        inputEngine.ProcessEvent(state.id, eventType, Time.realtimeSinceStartup);
+        float receivedSeconds = Time.realtimeSinceStartup;
+        inputEngine.ProcessEvent(state.id, eventType, receivedSeconds);
 
         ushort sequence = U16(b, 4);
         uint millis = U32(b, 6);
         float gyroDps = I16(b, 10) / 10f;
         float verticalG = I16(b, 12) / 1000f;
-        if (eventType == 3 &&
-            jumpDetector.ProcessImpulse(state.id, Time.realtimeSinceStartup, verticalG))
+        bool paired = eventType == 3 &&
+            jumpDetector.ProcessImpulse(state.id, receivedSeconds, verticalG);
+        if (paired)
         {
             Debug.Log("BIOFIT: POSIBLE SALTO BILATERAL (NO CONFIRMADO), intervalo " +
                       jumpDetector.LastPairGapMs.ToString("F0") + " ms");
         }
+        eventCapture.Record(receivedSeconds, state.id, eventType,
+            sequence, millis, gyroDps, verticalG, paired);
 
         string eventName = eventType == 1 ? "MOV_ON" :
                            eventType == 2 ? "MOV_OFF" : "UP_IMPULSE";
@@ -291,6 +296,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         {
             sessionLogger.Begin(left.movOn, left.movOff, left.upImpulses,
                 right.movOn, right.movOff, right.upImpulses, jumpDetector.BilateralCandidates);
+            eventCapture.Begin(Time.realtimeSinceStartup);
             message = "Sesion iniciada: realiza la actividad y registra el final de cada etapa.";
         }
         if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
@@ -299,6 +305,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             sessionLogger.MarkStage("CAMINAR", left.movOn, left.movOff,
                 left.upImpulses, right.movOn, right.movOff, right.upImpulses,
                 jumpDetector.BilateralCandidates);
+            eventCapture.FinishStage("CAMINAR", Time.realtimeSinceStartup);
         }
         y += 72;
         if (GUI.Button(new Rect(x, y, buttonWidth, 63), "3. FIN CORRER", buttonStyle))
@@ -306,6 +313,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             sessionLogger.MarkStage("CORRER", left.movOn, left.movOff,
                 left.upImpulses, right.movOn, right.movOff, right.upImpulses,
                 jumpDetector.BilateralCandidates);
+            eventCapture.FinishStage("CORRER", Time.realtimeSinceStartup);
         }
         if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
             "4. FIN SALTOS", buttonStyle))
@@ -313,15 +321,26 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             sessionLogger.MarkStage("SALTOS", left.movOn, left.movOff,
                 left.upImpulses, right.movOn, right.movOff, right.upImpulses,
                 jumpDetector.BilateralCandidates);
+            eventCapture.FinishStage("SALTOS", Time.realtimeSinceStartup);
         }
         y += 72;
-        if (GUI.Button(new Rect(x, y, width, 63),
-            "COPIAR RESULTADOS", buttonStyle))
+        if (GUI.Button(new Rect(x, y, buttonWidth, 63),
+            "COPIAR RESUMEN", buttonStyle))
         {
             GUIUtility.systemCopyBuffer = sessionLogger.Report;
-            message = "Reporte copiado. Podes pegarlo en el chat cuando quieras.";
+            message = "Resumen copiado al portapapeles del celular.";
+        }
+        if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
+            "COPIAR CSV", buttonStyle))
+        {
+            GUIUtility.systemCopyBuffer = eventCapture.Csv;
+            message = "CSV BLE copiado. Pegalo en un archivo de texto o en el chat.";
         }
         y += 76;
+        GUI.Label(new Rect(x, y, width, 52),
+            "Registro: " + eventCapture.EventRows + " eventos | descartados: " +
+            eventCapture.DroppedRows + " | maximo 1500 filas", small);
+        y += 58;
         GUI.Label(new Rect(x, y, width, 120),
             sessionLogger.Started ? sessionLogger.LastMark :
             "Registro combinado: INICIAR -> FIN CAMINAR -> FIN CORRER -> FIN SALTOS -> COPIAR.",
