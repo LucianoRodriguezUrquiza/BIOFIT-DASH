@@ -16,7 +16,13 @@ public sealed class BiofitDashGame : MonoBehaviour
     private readonly BiofitDashCore game = new BiofitDashCore();
 
     private BiofitBLEMonitor monitor;
-    private bool bleJumpEnabled;
+    // OFF=0, bilateral=1, unilateral izquierdo=2, unilateral derecho=3.
+    // Los modos 2 y 3 sirven para diagnosticar la cadena BLE, NO saltos reales.
+    private int bleMode;
+    private float singleMinG = 0.45f;
+    private float lastSingleEventSeconds = -10000f;
+    private int singleCandidates;
+    private int singleJumps;
     private int blePairsObserved;
     private int bleJumpAttempts;
     private string lastInput = "ESPACIO o boton SALTAR";
@@ -42,12 +48,16 @@ public sealed class BiofitDashGame : MonoBehaviour
     {
         if (monitor == null) monitor = GetComponent<BiofitBLEMonitor>();
         monitor.BilateralJumpCandidate += OnCandidatePair;
+        monitor.AnkleUpCandidate += OnSingleCandidate;
     }
 
     private void OnDisable()
     {
         if (monitor != null)
+        {
             monitor.BilateralJumpCandidate -= OnCandidatePair;
+            monitor.AnkleUpCandidate -= OnSingleCandidate;
+        }
     }
 
     private void OnDestroy()
@@ -60,12 +70,34 @@ public sealed class BiofitDashGame : MonoBehaviour
     {
         blePairsObserved++;
         monitor.RecordGameAction("PAR_BLE_DETECTADO");
-        if (!bleJumpEnabled || !monitor.BothTrackersConnected) return;
+        if (bleMode != 1 || !monitor.BothTrackersConnected) return;
         bleJumpAttempts++;
         lastInput = "PAR BLE EXPERIMENTAL (" + gapMs.ToString("F0") + " ms)";
         bool jumped = game.Jump();
         monitor.RecordGameAction(jumped ?
             "SALTO_BLE_REALIZADO" : "SALTO_BLE_NO_REALIZADO");
+    }
+
+    private void OnSingleCandidate(byte foot, float verticalG,
+        float eventSeconds)
+    {
+        if (!monitor.BothTrackersConnected || bleMode < 2) return;
+        if ((bleMode == 2 && foot != 1) ||
+            (bleMode == 3 && foot != 2)) return;
+        if (verticalG < singleMinG ||
+            eventSeconds - lastSingleEventSeconds < 1.20f)
+            return;
+
+        lastSingleEventSeconds = eventSeconds;
+        singleCandidates++;
+        monitor.RecordGameAction("UP_SOLO_CANDIDATO");
+        bool jumped = game.Jump();
+        if (jumped) singleJumps++;
+        lastInput = "UP SOLO " + (foot == 1 ? "IZQ" : "DER") +
+            " (" + verticalG.ToString("F2") + " g)" +
+            (jumped ? " SALTO" : " NO DISPONIBLE");
+        monitor.RecordGameAction(jumped ?
+            "SALTO_SOLO_REALIZADO" : "SALTO_SOLO_NO_REALIZADO");
     }
 
     private void Update()
@@ -167,17 +199,27 @@ public sealed class BiofitDashGame : MonoBehaviour
             "REINICIAR (R)", control))
             ResetGame();
 
+        string modeLabel = bleMode == 0 ? "BLE: OFF (TOCAR PARA ACTIVAR)" :
+            bleMode == 1 ? "BLE: BILATERAL (EXPERIMENTAL)" :
+            bleMode == 2 ? "BLE: SOLO IZQ (DIAGNOSTICO)" :
+                           "BLE: SOLO DER (DIAGNOSTICO)";
         if (GUI.Button(new Rect(692f, 105f, 388f, 51f),
-            bleJumpEnabled ? "SALTAR POR BLE: SI (EXPERIMENTAL)" :
-                             "SALTAR POR BLE: NO", control))
+            modeLabel, compact))
         {
-            if (!bleJumpEnabled && !monitor.BothTrackersConnected)
+            int next = (bleMode + 1) % 4;
+            if (next != 0 && !monitor.BothTrackersConnected)
                 lastInput = "No se habilito BLE: faltan trackers";
             else
             {
-                bleJumpEnabled = !bleJumpEnabled;
-                monitor.RecordGameAction(bleJumpEnabled ?
-                    "BLE_ACTIVADO" : "BLE_DESACTIVADO");
+                bleMode = next;
+                lastSingleEventSeconds = -10000f;
+                string action = bleMode == 0 ? "BLE_MODO_APAGADO" :
+                    bleMode == 1 ? "BLE_ACTIVADO" :
+                    bleMode == 2 ? "BLE_SOLO_IZQUIERDO" :
+                                   "BLE_SOLO_DERECHO";
+                monitor.RecordGameAction(action);
+                monitor.RecordSingleFootConfig(singleMinG);
+                lastInput = modeLabel;
             }
         }
 
@@ -188,6 +230,13 @@ public sealed class BiofitDashGame : MonoBehaviour
             showTestPanel ? "OCULTAR PANEL DE PRUEBAS" :
                             "MOSTRAR PANEL DE PRUEBAS", compact))
             showTestPanel = !showTestPanel;
+        if (GUI.Button(new Rect(364f, 178f, 293f, 42f),
+            game.PracticeMode ? "PRACTICA SIN COLISION: SI" :
+                                "PRACTICA SIN COLISION: NO", compact))
+        {
+            game.PracticeMode = !game.PracticeMode;
+            if (game.GameOver) ResetGame();
+        }
         GUI.Label(new Rect(692f, 168f, 390f, 52f),
             "BLE: " + (monitor.BothTrackersConnected ? "2/2 conectados" :
                           "esperando trackers") +
@@ -275,7 +324,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     /// </summary>
     private void DrawExperimentPanel()
     {
-        Draw(new Rect(38f, 231f, 1037f, 190f),
+        Draw(new Rect(38f, 231f, 1037f, 249f),
             new Color(0.085f, 0.14f, 0.22f, 0.93f));
 
         if (GUI.Button(new Rect(47f, 238f, 224f, 42f),
@@ -327,9 +376,26 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (GUI.Button(new Rect(853f, 338f, 120f, 39f),
             "PAR +", compact)) monitor.AdjustPairWindow(+0.02f);
 
-        GUI.Label(new Rect(48f, 386f, 994f, 30f),
-            experimentStatus + "  |  PARES: " + monitor.TotalPairs +
-            "  |  descartes CSV: " + monitor.DroppedEventCount, helper);
+        GUI.Label(new Rect(48f, 382f, 994f, 38f),
+            experimentStatus + " | PARES: " + monitor.TotalPairs +
+            " | TIEMPOS COMPRIMIDOS: " + monitor.TimeCompressedEvents +
+            " | descartes CSV: " + monitor.DroppedEventCount, helper);
+        if (GUI.Button(new Rect(48f, 425f, 177f, 41f),
+            "SOLO UP -", compact))
+        {
+            singleMinG = Mathf.Max(0.25f, singleMinG - 0.05f);
+            monitor.RecordSingleFootConfig(singleMinG);
+        }
+        GUI.Label(new Rect(244f, 432f, 396f, 35f),
+            "Umbral solo un pie: " + singleMinG.ToString("F2") + " g", helper);
+        if (GUI.Button(new Rect(659f, 425f, 174f, 41f),
+            "SOLO UP +", compact))
+        {
+            singleMinG = Mathf.Min(1.00f, singleMinG + 0.05f);
+            monitor.RecordSingleFootConfig(singleMinG);
+        }
+        GUI.Label(new Rect(845f, 426f, 210f, 45f),
+            "Solo: " + singleCandidates + " | salto: " + singleJumps, helper);
     }
 
     private static void Draw(Rect rect, Color color)
