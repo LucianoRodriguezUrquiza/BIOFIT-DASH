@@ -493,3 +493,82 @@ IMPORTANTE: los gestos de elevacion desde sentado no
 prueban saltos reales. La prueba permite detectar
 problemas de sensor, BLE, calidad temporal y respuesta
 del juego con el menor numero razonable de ensayos.
+
+
+## Diagnostico de primer ensayo BLE + DASH y siguiente revision v0.4 (15-11-2026)
+
+**Sesion Android real v0.3 enviada por usuario:**
+- `IZQ MOV_ON=21 UP=69`; `DER MOV_ON=6 UP=58`.
+- `PARES UP=0`; `EVENTOS=181`; `DESCARTADOS=0`
+  (esta ultima cifra NO certifica ausencia de pérdidas en toda la ruta).
+- Umbral `0,12g` y ventana `180ms`.
+- Registro `APP;DASH;358.953;;BLE_ACTIVADO` confirma que el usuario
+  activó el salto BLE. No existen `PAR_BLE_DETECTADO` ni
+  `SALTO_BLE_REALIZADO` posteriores: por eso el cubo no saltó.
+- Intervalos de recepcion muy superiores a 180ms incluso al levantar
+  ambos pies: CAMINAR 233ms, CORRER 234ms, ELEVACION 235ms,
+  DASH 567ms, 568ms. Son impulsos cercanos, no pares físicos
+  verificados.
+- Compresion temporal PROBADA: dos UP derecho en tiempos de
+  ESP32 `3540104` y `3541069` difieren **965ms**, aunque
+  Unity recibe ambos cerca de 382,678-382,679s y sus callbacks
+  difieren ~25ms. Por tanto, el reloj del callback **no basta** para
+  inferir tiempo fisico de cada evento. La demora de cola Unity es
+  generalmente 0-34ms, por lo que el problema ocurre antes o durante
+  la llegada de notificaciones; NO se conoce aun si es por firmware,
+  enlace BLE o pila Android.
+- `UP_IMPULSE` aun no equivale a paso o salto. Ensanchar la ventana
+  a 400/600ms sin control puede confundir marcha alternada con salto.
+
+**Correcciones agrupadas v0.4, sin cambios de firmware:**
+1. `BiofitClockAligner` se suscribe opcionalmente a STATUS BLE
+   (UUID `...0003`, paquete de 20bytes; tiempo IMU en bytes 6..9).
+   Estima el desfase de cada reloj ESP32 usando observaciones de
+   callback de baja latencia. Es una estimacion probabilistica,
+   NO sincronizacion exacta ni garantía de latencia BLE uniforme.
+   Si STATUS falla, mantiene el procesamiento de callback anterior.
+2. El detector bilateral recuerda los ultimos 16 UP por pie y
+   permite emparejamiento de notificaciones fuera de orden sin
+   reutilizar pulsos. Conserva umbral 0,12g, ventana 180ms,
+   antirrebote 320ms y cooldown bilateral 900ms.
+3. El CSV permite diagnosticar compresion de intervalos temporal:
+   resumen `TIEMPOS_COMPRIMIDOS`, `EVENTOS_ALINEADOS` y
+   `ESTIMACION_RELOJ`. No confundir eventos entregados con
+   simultaneidad fisiologica verdadera.
+4. **MODO PRACTICA SIN COLISION**: el cubo no termina la partida;
+   se puede grabar, caminar o elevar pies sin reiniciar el juego.
+5. Control de juego BLE con cuatro modos mediante el mismo boton:
+   `OFF -> BILATERAL EXP -> SOLO IZQ DIAG ->
+   SOLO DER DIAG -> OFF`.
+   En modo SOLO, un UP superior al umbral configurable inicia un
+   salto demo tras cooldown 1,2s, incluso si nunca se forma un par.
+   Esto permite aislar BLE/Unity/juego de la sincronizacion. NO es
+   deteccion de salto real, y puede reaccionar a caminar.
+6. Ajuste `SOLO UP +/-` desde panel (inicial 0,45g, rango
+   0,25..1,00g). La configuracion y los comandos se anotan en CSV.
+7. Actualizada `BIOFIT > Verificar BIOFIT DASH (sin APK)`:
+   **51 verificaciones sintéticas** previstas en la nueva rama:
+   incluye modo practica, controles CSV, sincronizacion aproximada,
+   desorden BLE y rechazo de paso alternado a 270ms.
+   Hasta que el usuario ejecute la prueba en Unity y no haya errores,
+   la revision NO ESTA COMPILADA/VALIDADA en Android.
+
+**Protocolo de próxima y unica prueba tras pasar las 51 pruebas:**
+- Exportar APK **v0.4**, una sola compilacion.
+- Conectar 2/2 sensores; entrar DASH, activar
+  `PRACTICA SIN COLISION: SI`.
+- Marcar INICIAR / QUIETO unos segundos / ELEVACION.
+- Probar 5-8 elevaciones sentadas en `BILATERAL EXP`, sin modificar
+  inicialmente umbrales. Observar `PARES`, saltos y
+  `TIEMPOS COMPRIMIDOS`.
+- Sin detener la sesion: cambiar a `SOLO IZQ DIAG` y levantar solo
+  el pie izquierdo unas 3-5 veces, luego `SOLO DER DIAG` con el
+  derecho. Estos modos sirven para identificar si los impulsos llegan
+  a animar el cubo independientemente del par.
+- Finalizar y copiar una sola vez; anotar observacion de respuesta
+  visual real frente al movimiento. NO repetir CAMINAR/CORRER de
+  v0.3 salvo que el diagnostico posterior lo requiera.
+- Enviar CSV; decidir si hay que intervenir en firmware para
+  reducir batching de notificaciones y/o añadir protocolo de sync
+  de tiempo robusto (reloj RTT). Hasta entonces el estimador de
+  STATUS es experimental.
