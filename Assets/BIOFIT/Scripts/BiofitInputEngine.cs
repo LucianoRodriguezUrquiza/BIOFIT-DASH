@@ -1,14 +1,11 @@
-using System;
 using System.Collections.Generic;
 
 /// <summary>
 /// BIOFIT GAME - interpretacion experimental de eventos de dos tobillos.
-/// Esta clase NO estima desplazamiento fisico, NO confirma saltos
-/// y NO equivale a un podometro validado.
-///
-/// Recibe eventos BLE en el hilo principal y utiliza un reloj COMUN
-/// (Time.realtimeSinceStartup en Unity), nunca los millis de cada ESP32
-/// que tienen origen diferente.
+/// Los candidatos MOV_ON NO son pasos validados. Cadencia y actividad
+/// solo se calculan cuando existe una cadena RECIENTE y CONSECUTIVA
+/// de alternancias entre ambos tobillos.
+/// El tiempo es el reloj compartido del telefono, no los millis de ESP32.
 /// </summary>
 public sealed class BiofitInputEngine
 {
@@ -24,18 +21,19 @@ public sealed class BiofitInputEngine
         }
     }
 
+    // Parametros experimentales: se ajustaran tras validar datos reales.
     private const float SameFootMinIntervalSeconds = 0.30f;
-    private const float RecentWindowSeconds = 8f;
-    private const float CadenceTimeoutSeconds = 2.5f;
-    private const float MinAlternationSeconds = 0.18f;
     private const float MaxAlternationSeconds = 1.50f;
+    private const float MinAlternationSeconds = 0.18f;
+    private const float CadenceTimeoutSeconds = 1.50f;
+    private const float RecentActivitySeconds = 1.50f;
+    private const int RequiredIntervals = 3;   // 4 eventos consecutivos A-D-A-D.
+    private const int MaxRunCandidates = 12;   // ritmos recientes, no toda la sesion.
 
-    private readonly List<Candidate> recent = new List<Candidate>(32);
+    private readonly List<Candidate> alternatingRun = new List<Candidate>(MaxRunCandidates);
     private float lastLeft = -10000f;
     private float lastRight = -10000f;
     private float lastAny = -10000f;
-    private int lastSide;
-
     private bool leftMoving;
     private bool rightMoving;
 
@@ -49,7 +47,6 @@ public sealed class BiofitInputEngine
     {
         if (trackerId != 1 && trackerId != 2) return;
 
-        // MOV_OFF: fin del episodio de movimiento de ese tracker.
         if (eventType == 2)
         {
             if (trackerId == 1) leftMoving = false;
@@ -57,17 +54,15 @@ public sealed class BiofitInputEngine
             return;
         }
 
-        // UP_IMPULSE es una candidata de impulso vertical, no un paso.
+        // No considerar cada impulso UP como un paso.
         if (eventType != 1) return;
 
         if (trackerId == 1) leftMoving = true;
         else rightMoving = true;
 
         float previous = trackerId == 1 ? lastLeft : lastRight;
-
-        // Debounce: no contar dos inicios casi consecutivos del mismo tobillo.
-        // Esta proteccion NO garantiza un paso por cada candidato.
-        if (arrivalSeconds - previous < SameFootMinIntervalSeconds) return;
+        if (arrivalSeconds - previous < SameFootMinIntervalSeconds)
+            return;  // rebote de mismo tobillo
 
         if (trackerId == 1)
         {
@@ -79,54 +74,64 @@ public sealed class BiofitInputEngine
             lastRight = arrivalSeconds;
             RightCandidates++;
         }
-
-        if (lastSide != 0 && lastSide != trackerId)
-            Alternations++;
-
-        lastSide = trackerId;
         lastAny = arrivalSeconds;
-        recent.Add(new Candidate(trackerId, arrivalSeconds));
+
+        if (alternatingRun.Count > 0)
+        {
+            Candidate previousCandidate = alternatingRun[alternatingRun.Count - 1];
+            float dt = arrivalSeconds - previousCandidate.seconds;
+
+            // Una repeticion A-A o D-D invalida inmediatamente la cadena.
+            // Un intervalo demasiado corto o largo tambien la corta.
+            if (previousCandidate.side == trackerId ||
+                dt < MinAlternationSeconds || dt > MaxAlternationSeconds)
+            {
+                alternatingRun.Clear();
+            }
+            else
+            {
+                // Solo contabilizar una alternancia temporalmente valida.
+                Alternations++;
+            }
+        }
+
+        // La candidata actual inicia una nueva cadena cuando hubo un corte.
+        alternatingRun.Add(new Candidate(trackerId, arrivalSeconds));
+        if (alternatingRun.Count > MaxRunCandidates)
+            alternatingRun.RemoveAt(0);
     }
 
     public void Update(float nowSeconds)
     {
-        // Ventana movil: solo secuencias recientes para estimar ritmo.
-        for (int i = recent.Count - 1; i >= 0; i--)
-        {
-            if (nowSeconds - recent[i].seconds > RecentWindowSeconds)
-                recent.RemoveAt(i);
-        }
+        EstimatedCadence = 0f;
 
-        EstimatedCadence = 0;
-        if (recent.Count >= 4 && nowSeconds - lastAny <= CadenceTimeoutSeconds)
+        // No revivir una caminata pasada tras segundos quieto.
+        if (alternatingRun.Count >= RequiredIntervals + 1 &&
+            nowSeconds - lastAny <= CadenceTimeoutSeconds)
         {
-            float intervalSum = 0f;
-            int validIntervals = 0;
-
-            for (int i = 1; i < recent.Count; i++)
+            float sum = 0f;
+            int count = 0;
+            for (int i = 1; i < alternatingRun.Count; i++)
             {
-                if (recent[i].side == recent[i - 1].side) continue;
-                float dt = recent[i].seconds - recent[i - 1].seconds;
-                if (dt >= MinAlternationSeconds && dt <= MaxAlternationSeconds)
-                {
-                    intervalSum += dt;
-                    validIntervals++;
-                }
+                float dt = alternatingRun[i].seconds - alternatingRun[i - 1].seconds;
+                // Cada intervalo de la cadena fue validado en ProcessEvent.
+                sum += dt;
+                count++;
             }
 
-            if (validIntervals >= 3)
-                EstimatedCadence = 60f * validIntervals / intervalSum;
+            if (count >= RequiredIntervals && sum > 0f)
+                EstimatedCadence = 60f * count / sum;
         }
 
-        // Clasificacion exploratoria: requiere alternancia y cadencia.
-        // Nunca se debe presentar como caminata/carrera validada.
+        // Una sucesion unilateral puede indicar movimiento, no caminar.
+        bool recentMovement = nowSeconds - lastAny <= RecentActivitySeconds ||
+                              leftMoving || rightMoving;
+
         if (EstimatedCadence >= 150f)
             Activity = "CORRIENDO (TENTATIVO)";
         else if (EstimatedCadence >= 55f)
             Activity = "CAMINANDO (TENTATIVO)";
-        else if (leftMoving || rightMoving)
-            Activity = "MOVIMIENTO SIN CLASIFICAR";
         else
-            Activity = "QUIETO";
+            Activity = recentMovement ? "MOVIMIENTO SIN CLASIFICAR" : "QUIETO";
     }
 }
