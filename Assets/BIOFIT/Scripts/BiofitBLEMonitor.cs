@@ -17,6 +17,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     private const string ServiceUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0001";
     private const string EventUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0002";
+    // Ya presente en firmware V2: STATUS cada ~50ms, timestamp IMU.
+    private const string StatusUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0003";
 
     private IBleDevice leftDevice, rightDevice;
     private IBleCharacteristic leftEvents, rightEvents;
@@ -27,6 +29,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly BiofitInputEngine inputEngine = new BiofitInputEngine();
     public BiofitInputEngine InputEngine => inputEngine;
     private readonly BiofitBilateralJumpDetector jumpDetector = new BiofitBilateralJumpDetector();
+    private readonly BiofitClockAligner timeAligner = new BiofitClockAligner();
+    private bool previousUsedAlignedTime;
+    private int alignedEvents;
     public BiofitBilateralJumpDetector JumpDetector => jumpDetector;
 
     /// <summary>
@@ -69,6 +74,18 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public int TimeCompressedEvents => left.timeCompressed + right.timeCompressed;
     public int LeftTimeCompressed => left.timeCompressed;
     public int RightTimeCompressed => right.timeCompressed;
+    public int ClockStatusLeft => timeAligner.LeftSamples;
+    public int ClockStatusRight => timeAligner.RightSamples;
+    public int AlignedEvents => alignedEvents;
+    public bool ClockAlignmentReady
+    {
+        get
+        {
+            double now = System.Diagnostics.Stopwatch.GetTimestamp() /
+                (double)System.Diagnostics.Stopwatch.Frequency;
+            return timeAligner.IsReady(now);
+        }
+    }
 
     public void AdjustJumpThreshold(float deltaG)
     {
@@ -132,6 +149,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " | DESCARTADOS=" + eventCapture.DroppedRows +
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
             " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
+            "\nESTIMACION_RELOJ=" + (ClockAlignmentReady ? "ACTIVA" : "INACTIVA") +
+            " | EVENTOS_ALINEADOS=" + alignedEvents +
             "\nTIEMPOS_COMPRIMIDOS=" + TimeCompressedEvents +
             " (IZQ=" + left.timeCompressed + ", DER=" +
             right.timeCompressed + ")" +
@@ -172,6 +191,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         public byte expectedId;
         public byte[] bytes;
         public long callbackTicks;
+        public bool isStatus;
     }
 
     private async void Start()
@@ -263,6 +283,35 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 }
             });
 
+            // El firmware ya emite STATUS con millis del sensor.
+            // Se usa para aproximar los relojes sin reflashear placas.
+            // Si falla esta suscripcion, EVENT sigue funcionando
+            // exactamente como antes con timestamp del callback.
+            try
+            {
+                IBleCharacteristic status =
+                    await service.GetCharacteristicAsync(StatusUuid);
+                await status.SubscribeAsync(bytes =>
+                {
+                    if (bytes != null && bytes.Length >= 10)
+                    {
+                        long at = System.Diagnostics.Stopwatch.GetTimestamp();
+                        pending.Enqueue(new Packet
+                        {
+                            expectedId = id,
+                            bytes = (byte[])bytes.Clone(),
+                            callbackTicks = at,
+                            isStatus = true
+                        });
+                    }
+                });
+            }
+            catch (Exception statusError)
+            {
+                Debug.LogWarning("BIOFIT STATUS opcional " + tracker.name +
+                    ": " + statusError.Message);
+            }
+
             tracker.connection = "CONECTADO - NOTIFICACIONES ACTIVAS";
         }
         catch (Exception ex)
@@ -277,10 +326,23 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         int processed = 0;
         while (processed++ < 100 && pending.TryDequeue(out Packet packet))
         {
-            ReadEvent(packet);
+            if (packet.isStatus) ReadStatus(packet);
+            else ReadEvent(packet);
         }
         inputEngine.Update(Time.realtimeSinceStartup);
         sessionLogger.ObserveCadence(inputEngine.EstimatedCadence);
+    }
+
+    private void ReadStatus(Packet packet)
+    {
+        byte[] b = packet.bytes;
+        if (b == null || b.Length < 10 ||
+            b[0] != 2 || b[1] != packet.expectedId)
+            return;
+        double callbackSeconds = packet.callbackTicks /
+            (double)System.Diagnostics.Stopwatch.Frequency;
+        timeAligner.ObserveStatus(packet.expectedId, U32(b, 6),
+            callbackSeconds);
     }
 
     private void ReadEvent(Packet packet)
@@ -336,8 +398,24 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
         float gyroDps = I16(b, 10) / 10f;
         float verticalG = I16(b, 12) / 1000f;
+        // Emparejamiento por tiempo IMU si ambos STATUS tienen anclas
+        // recientes. Fallback al tiempo del callback cuando no las hay.
+        // Nunca mezclar relojes distintos dentro de un mismo par.
+        double pairSeconds = callbackSeconds;
+        bool timeAligned = timeAligner.TryMapEvent(state.id, millis,
+            callbackSeconds, out double mappedEventSeconds);
+        if (timeAligned)
+        {
+            pairSeconds = mappedEventSeconds;
+            alignedEvents++;
+        }
+        if (timeAligned != previousUsedAlignedTime)
+        {
+            jumpDetector.ClearPending();
+            previousUsedAlignedTime = timeAligned;
+        }
         bool paired = eventType == 3 &&
-            jumpDetector.ProcessImpulse(state.id, eventSeconds, verticalG);
+            jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG);
         if (eventType == 3)
             AnkleUpCandidate?.Invoke(state.id, verticalG, eventSeconds);
 
