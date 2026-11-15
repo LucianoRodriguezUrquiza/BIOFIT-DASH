@@ -21,7 +21,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private const string StatusUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0003";
 
     private IBleDevice leftDevice, rightDevice;
+    // Mantener referencias de ambas suscripciones GATT durante toda la sesion.
     private IBleCharacteristic leftEvents, rightEvents;
+    private IBleCharacteristic leftStatus, rightStatus;
 
     private readonly ConcurrentQueue<Packet> pending = new ConcurrentQueue<Packet>();
     private readonly Tracker left = new Tracker("IZQUIERDO", 1);
@@ -298,6 +300,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             {
                 IBleCharacteristic status =
                     await service.GetCharacteristicAsync(StatusUuid);
+                if (tracker.id == 1) leftStatus = status;
+                else rightStatus = status;
                 await status.SubscribeAsync(bytes =>
                 {
                     if (bytes != null && bytes.Length >= 10)
