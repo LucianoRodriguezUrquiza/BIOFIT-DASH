@@ -270,24 +270,26 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             default: return;
         }
 
-        // Los millis de cada tracker no comparten origen: usamos
-        // tiempo local de recepcion del celular para la alternancia.
+        // Los relojes millis de las dos ESP32 NO son comparables.
+        // Para el clasificador tomamos el instante del CALLBACK BLE,
+        // corrigiendo solo el tiempo de espera en la cola de Unity.
+        // Esto NO corrige demoras/batching previos dentro de Android BLE.
         float receivedSeconds = Time.realtimeSinceStartup;
-        // Dos marcas independientes: llegada al callback BLE y lectura
-        // efectiva en Unity. Ambas son monotónicas para diagnóstico.
         long ticksNow = System.Diagnostics.Stopwatch.GetTimestamp();
         float queueDelayMs = (float)((ticksNow - packet.callbackTicks) *
             1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        if (queueDelayMs < 0f) queueDelayMs = 0f;
         double callbackSeconds = packet.callbackTicks /
             (double)System.Diagnostics.Stopwatch.Frequency;
-        inputEngine.ProcessEvent(state.id, eventType, receivedSeconds);
+        float eventSeconds = receivedSeconds - queueDelayMs * 0.001f;
+        inputEngine.ProcessEvent(state.id, eventType, eventSeconds);
 
         ushort sequence = U16(b, 4);
         uint millis = U32(b, 6);
         float gyroDps = I16(b, 10) / 10f;
         float verticalG = I16(b, 12) / 1000f;
         bool paired = eventType == 3 &&
-            jumpDetector.ProcessImpulse(state.id, receivedSeconds, verticalG);
+            jumpDetector.ProcessImpulse(state.id, eventSeconds, verticalG);
         if (paired)
         {
             Debug.Log("BIOFIT: POSIBLE SALTO BILATERAL (NO CONFIRMADO), intervalo " +
