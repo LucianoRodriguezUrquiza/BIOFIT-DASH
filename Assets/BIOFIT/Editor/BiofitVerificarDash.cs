@@ -72,6 +72,73 @@ public static class BiofitVerificarDash
                 survive.ObstaclesPassed == 0,
                 "La mejor puntuacion persiste al reiniciar", ref checks);
 
+            // La siguiente APK debe permitir variar parametros sin recompilar.
+            var tune = new BiofitBilateralJumpDetector();
+            Assert(System.Math.Abs(tune.MinimumVerticalGThreshold - 0.12f) < 0.001f &&
+                   System.Math.Abs(tune.MaxPairGapWindowSeconds - 0.18f) < 0.001f,
+                "Se conservan los umbrales por defecto", ref checks);
+            tune.SetThresholds(0.30f, 0.15f);
+            Assert(System.Math.Abs(tune.MinimumVerticalGThreshold - 0.30f) < 0.001f &&
+                   System.Math.Abs(tune.MaxPairGapWindowSeconds - 0.15f) < 0.001f,
+                "Se pueden modificar los umbrales sin cambiar firmware", ref checks);
+            Assert(!tune.ProcessImpulse(1, 5.00f, 0.25f),
+                "Una aceleracion inferior al nuevo umbral se rechaza", ref checks);
+            Assert(tune.WeakRejected == 1,
+                "El nuevo umbral se aplica realmente", ref checks);
+            tune.SetThresholds(0.01f, 10f);
+            Assert(System.Math.Abs(tune.MinimumVerticalGThreshold - 0.08f) < 0.001f &&
+                   System.Math.Abs(tune.MaxPairGapWindowSeconds - 0.40f) < 0.001f,
+                "Los ajustes fuera de rango se limitan", ref checks);
+            tune.SetThresholds(0.60f, 0.01f);
+            Assert(System.Math.Abs(tune.MinimumVerticalGThreshold - 0.50f) < 0.001f &&
+                   System.Math.Abs(tune.MaxPairGapWindowSeconds - 0.12f) < 0.001f,
+                "Los limites opuestos tambien se aplican", ref checks);
+
+            // Una sola grabacion con etiquetas de reposo, marcha,
+            // carrera, elevacion y juego, incluyendo acciones de Unity.
+            var recorder = new BiofitEventCapture();
+            Assert(recorder.BeginGame(10f) && recorder.Recording &&
+                   recorder.Stage == "QUIETO",
+                "Iniciar la grabacion experimental desde Dash", ref checks);
+            Assert(!recorder.BeginGame(10.1f),
+                "No sobrescribir accidentalmente una grabacion activa", ref checks);
+            Assert(!recorder.FinishStage("CAMINAR", 10.2f),
+                "No confundir la captura libre con la guiada", ref checks);
+            Assert(recorder.MarkGameStage("CAMINAR", 11f) &&
+                   recorder.Stage == "CAMINAR",
+                "La etapa debe actualizarse al marcar CAMINAR", ref checks);
+            recorder.Record(11.1f, 1, 3, 10, 12345, 28f, 0.33f, false, 4f, 10f);
+            recorder.RecordGameAction("PAR_BLE_DETECTADO", 11.2f);
+            Assert(recorder.EventRows == 1 &&
+                   recorder.Csv.Contains("PAR_BLE_DETECTADO") &&
+                   recorder.Csv.Contains("espera_cola_unity_ms"),
+                "CSV de juego combina eventos BLE, callback y acciones Unity",
+                ref checks);
+            Assert(recorder.MarkGameStage("CORRER", 12f) &&
+                   recorder.MarkGameStage("ELEVACION", 13f) &&
+                   recorder.MarkGameStage("DASH", 14f),
+                "Las etapas fisicas se pueden agrupar en una sesion", ref checks);
+            Assert(recorder.FinishGame(15f) && !recorder.Recording,
+                "FIN JUEGO debe cerrar la grabacion", ref checks);
+            Assert(recorder.Csv.Contains("FIN_JUEGO") &&
+                   recorder.Csv.Contains("ETAPA_ELEVACION") &&
+                   recorder.Csv.Contains("ETAPA_DASH"),
+                "El CSV incluye todas las marcas temporales de la sesion",
+                ref checks);
+            string[] csvLines = recorder.Csv.Split('\n');
+            int columnCount = csvLines[0].TrimEnd('\r').Split(';').Length;
+            bool columnsAreAligned = true;
+            for (int line = 1; line < csvLines.Length; line++)
+            {
+                if (csvLines[line].Length == 0 || csvLines[line][0] == '#') continue;
+                if (csvLines[line].TrimEnd('\r').Split(';').Length != columnCount)
+                    columnsAreAligned = false;
+            }
+            Assert(columnsAreAligned && columnCount == 12,
+                "Los registros BLE, Unity y MARCA tienen 12 columnas", ref checks);
+            Assert(!recorder.MarkGameStage("CAMINAR", 16f),
+                "No se permiten marcas tras finalizar", ref checks);
+
             EditorUtility.DisplayDialog("BIOFIT DASH",
                 checks + " pruebas sinteticas superadas.\n\n" +
                 "Primer juego: avance automatico, salto, colision, " +
