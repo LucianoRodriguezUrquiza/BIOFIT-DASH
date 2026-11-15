@@ -360,3 +360,44 @@ Importante:
 - Sigue pendiente analizar el agrupamiento temporal de eventos
   constatado en el ultimo CSV de Android. No confiar aun en la
   clasificacion biomecanica.
+
+
+## BIOFIT DASH desde la misma APK de diagnostico (15-11-2026)
+
+El primer Dash fue probado visualmente en Unity: el usuario mostro
+cubo, punta, puntuacion y mejor puntuacion=6, con salto manual.
+La fase siguiente no requiere cargar otra escena ni firmware.
+
+**Cambios de integracion:**
+- La escena `DiagnosticoBLE` sigue siendo la entrada (indice 0).
+- Dentro de ella aparece el boton `JUGAR BIOFIT DASH (PROTOTIPO)`.
+- El boton agrega `BiofitDashGame` al MISMO objeto con
+  `BiofitBLEMonitor`, sin destruir ni duplicar la conexion GATT:
+  conserva contadores, sesiones y CSV del monitor.
+- Dash incluye boton `DIAGNOSTICO BLE` para volver a la pantalla
+  de datos y continuar la misma sesion.
+- En la pantalla Dash aparece el estado BLE (`2/2 conectados`
+  o `esperando trackers`), los pares recibidos y los intentos de salto.
+- `SALTAR POR BLE: NO` es el valor inicial; cuando se activa
+  `SI (EXPERIMENTAL)` los pares `UP_IMPULSE` pueden saltar en el juego,
+  pero siguen siendo candidatos no confirmados y la llegada BLE puede
+  tener retardos/paquetes agrupados.
+- Correccion de GUI.matrix al cambiar de vista; titulo abreviado
+  para no cortarse a resoluciones menores.
+
+**Prueba en Unity Editor SIN otra APK:**
+1. `Fetch origin`, `Pull origin`, abrir Unity.
+2. Abrir `Assets/BIOFIT/Scenes/DiagnosticoBLE`, no `BiofitDash`.
+3. Play -> Game -> `JUGAR BIOFIT DASH (PROTOTIPO)`.
+   Salto por barra espaciadora, avanzar automaticamente,
+   boton `DIAGNOSTICO BLE` para volver.
+4. En Editor solo comprueba navegacion y juego; BLE real solo Android.
+5. Tras esta prueba, preparar una SOLA APK combinada con
+   `DiagnosticoBLE` como primera/única escena si se desea.
+   No hace falta añadir una segunda escena de Dash al build.
+
+**Validacion pendiente antes de declararlo terminado:** comprobar
+que Android conecta dos trackers, cambia de vista sin desconectarlos,
+puede habilitar salto BLE para ensayos controlados y exporta CSV con
+las marcas de callback y cola añadidas a la version previa.
+No atribuir falsas detecciones a saltos reales.
