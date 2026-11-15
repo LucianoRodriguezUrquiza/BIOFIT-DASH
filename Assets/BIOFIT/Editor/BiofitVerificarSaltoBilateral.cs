@@ -80,6 +80,34 @@ public static class BiofitVerificarSaltoBilateral
                 invalido.RightUpCandidates == 0,
                 "IDs fuera de 1 y 2 no deben contaminar registros", ref checks);
 
+            // Captura CSV: etapas, valores y comparacion entre relojes.
+            var capture = new BiofitEventCapture();
+            capture.Begin(0.90f);
+            capture.Record(1.00f, 1, 3, 1, 1000, 12.2f, 0.32f, false);
+            capture.Record(1.06f, 2, 3, 2, 1060, 11.7f, 0.38f, true);
+            capture.FinishStage("CAMINAR", 1.50f);
+            capture.Record(2.00f, 1, 1, 3, 1100, 10.0f, 0.05f, false);
+            capture.FinishStage("CORRER", 2.60f);
+            capture.FinishStage("SALTOS", 3.20f);
+            Assert(capture.EventRows == 3,
+                "La captura debe registrar las tres notificaciones BLE", ref checks);
+            Assert(!capture.Recording,
+                "FIN SALTOS debe cerrar la captura", ref checks);
+            Assert(capture.Csv.Contains("FIN_SALTOS") &&
+                   capture.Csv.Contains("CAMINAR") &&
+                   capture.Csv.Contains("CORRER"),
+                "El CSV debe conservar las marcas de actividad", ref checks);
+            Assert(capture.Csv.Contains("0.320") &&
+                   capture.Csv.Contains("par_bilateral"),
+                "El CSV debe exportar aceleracion y candidatos bilaterales",
+                ref checks);
+
+            var session = new BiofitSessionLogger();
+            session.Begin(0, 0, 0, 0, 0, 0, 0);
+            session.MarkStage("SALTOS", 0, 0, 2, 0, 0, 3, 1);
+            Assert(session.Report.Contains("PARES UP=1"),
+                "El resumen debe incluir candidatos bilaterales", ref checks);
+
             EditorUtility.DisplayDialog("BIOFIT - Salto bilateral",
                 checks + " verificaciones sinteticas superadas.\n\n" +
                 "El codigo reconoce pares de UP con umbral y antirrebote.\n" +
