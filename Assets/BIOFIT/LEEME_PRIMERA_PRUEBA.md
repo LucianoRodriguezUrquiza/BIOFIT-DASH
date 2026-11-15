@@ -401,3 +401,95 @@ que Android conecta dos trackers, cambia de vista sin desconectarlos,
 puede habilitar salto BLE para ensayos controlados y exporta CSV con
 las marcas de callback y cola añadidas a la version previa.
 No atribuir falsas detecciones a saltos reales.
+
+
+## BIOFIT DASH - paquete de UNA SOLA prueba fisica (2026-11-15)
+
+El usuario confirmo que desde `DiagnosticoBLE` funciona el boton
+`JUGAR BIOFIT DASH (PROTOTIPO)` y que `DIAGNOSTICO BLE` vuelve a
+la pantalla de sensores. La jugabilidad manual en Editor tambien
+ha sido confirmada; NO pedir mas validaciones repetidas de teclado.
+
+Esta revision consolida antes de compilar Android:
+1. Una unica conexion BLE de ambos tobillos compartida por diagnostico
+   y juego (sin duplicar suscripciones GATT).
+2. Salto BLE opcional, **OFF por defecto**. Solo se puede activar
+   con los **dos trackers conectados**. Los pares son candidatos,
+   NO saltos biomecanicos confirmados.
+3. Desde el juego: boton `MOSTRAR/OCULTAR PANEL DE PRUEBAS`.
+   Panel con `1. INICIAR REGISTRO`, `2. FINALIZAR`,
+   `3. COPIAR REGISTRO`.
+4. Actividades con botones de marca: `QUIETO`, `CAMINAR`,
+   `CORRER`, `ELEVACION`, `DASH`. Una captura completa.
+5. Sensibilidad BLE ajustable SIN recompilar:
+   `UP - / UP +` en pasos de 0,02 g (rango 0,08-0,50 g),
+   `PAR - / PAR +` en pasos de 20 ms (rango 120-400 ms).
+   Valores iniciales 0,12 g y 180 ms. Cada cambio se anota
+   en el CSV, para no perder trazabilidad.
+6. Clasificador usa el reloj del **callback BLE**, aproximado
+   como tiempo Unity actual menos espera en la cola Unity.
+   CSV conserva `reloj_unity_procesado_s`, el valor crudo
+   `reloj_callback_monotonico_s`, demora de cola
+   `espera_cola_unity_ms` y millis independientes de ESP32.
+   **NO** corrige los retrasos previos a callbacks BLE del SO,
+   NI sincroniza relojes de ambos trackers.
+7. El CSV registra `APP` para salto manual, pares detectados,
+   intentos de salto BLE y activacion/desactivacion del modo,
+   y `CONFIG` para los umbrales, ademas de `EV` de IMU.
+   Todas las filas regulares tienen 12 columnas separadas
+   por punto y coma.
+
+### Ultima verificacion SIN APK
+- Cerrar Unity, `Fetch origin` y `Pull origin` en GitHub Desktop.
+- Abrir Unity y entrar a `BIOFIT > Verificar BIOFIT DASH (sin APK)`.
+- Resultado esperado: **35 pruebas sinteticas superadas**.
+- El antiguo `BIOFIT > Verificar salto bilateral (sin APK)`
+  conserva sus **35** pruebas, ya aprobadas; no hace falta
+  repetirlas.
+- Si la prueba nueva falla o hay errores rojos en Console,
+  corregir el codigo ANTES de una nueva compilacion Android.
+
+### Compilar UNA sola APK
+- Desde `File > Build Profiles > Android`, verificar Active.
+- Poner `BIOFIT/Scenes/DiagnosticoBLE` marcada en la
+  primera posicion (escena 0).
+- Puede desmarcarse la escena secundaria `BiofitDash`
+  y `SampleScene`; la vista del juego se abre por el boton
+  en la misma escena `DiagnosticoBLE`.
+- `Build App Bundle (Google Play)` OFF. Elegir `Build`
+  y guardar como `BIOFIT_GAME_DASH_BLE_v0_3.apk`.
+- No necesita reflashear ni recalibrar firmware, mientras
+  ambas Waveshare conserven sus ejes y funcionen.
+- Verificar version/certificado al actualizar la APK anterior;
+  si Android no permite instalar encima, investigar el error
+  y solo despues considerar desinstalar la version anterior.
+
+### Una sesion Android de validacion combinada
+1. Encender BLE, desconectar nRF Connect, alimentar placas.
+2. Abrir APK, autorizar dispositivos cercanos,
+   verificar `CONECTADO - NOTIFICACIONES ACTIVAS` en ambas.
+3. Entrar a `JUGAR BIOFIT DASH`. Comprobar `2/2 conectados`.
+4. `MOSTRAR PANEL` > `INICIAR REGISTRO`.
+5. En `QUIETO`, estar quieto alrededor de 10 s.
+   Marcar `CAMINAR`, caminar en el lugar 10-15 s.
+   Marcar `CORRER`, movimiento mas rapido de 10-15 s
+   solo si resulta comodo. Marcar `ELEVACION`, sentado,
+   elevar ambos pies a la vez 5-8 veces sin salto de impacto.
+   Marcar `DASH`, activar `SALTAR POR BLE` y probar
+   algunos gestos bilaterales controlados cerca de obstaculos,
+   registrar si hay salto e intentos erroneos; salto manual
+   como control adicional.
+6. Terminar con `FINALIZAR` y `COPIAR REGISTRO`,
+   pegar resumen+CSV en un texto/nota UNA SOLA VEZ;
+   **guardar antes de cerrar app**.
+7. Enviar CSV junto con observacion visual simple:
+   si se movio el cubo al detectar el par y si hubo
+   falsos positivos/negativos.
+8. Dejar los parametros por defecto inicialmente. Solo
+   variar sensibilidad si realmente se necesita, porque
+   cada ajuste se registra y afecta la comparabilidad.
+
+IMPORTANTE: los gestos de elevacion desde sentado no
+prueban saltos reales. La prueba permite detectar
+problemas de sensor, BLE, calidad temporal y respuesta
+del juego con el menor numero razonable de ensayos.
