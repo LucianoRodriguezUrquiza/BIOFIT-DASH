@@ -189,6 +189,52 @@ public static class BiofitVerificarDash
             Assert(soloValid,
                 "Filas de diagnostico unilateral tienen 12 columnas", ref checks);
 
+            // Dos ESP32 sin reloj absoluto compartido: la recepcion
+            // STATUS permite una alineacion aproximada sin reflashear.
+            var clock = new BiofitClockAligner();
+            for (int i = 0; i < 12; i++)
+            {
+                double now = 1000d + i * 0.05d;
+                clock.ObserveStatus(1, (uint)(100000 + i * 50), now + 0.02d);
+                clock.ObserveStatus(2, (uint)(500000 + i * 50), now + 0.03d);
+            }
+            Assert(clock.IsReady(1001.0d),
+                "Ocho STATUS o mas de ambos trackers preparan estimacion temporal",
+                ref checks);
+            Assert(clock.TryMapEvent(1, 102000u, 1004.00d,
+                out double leftAligned) &&
+                   clock.TryMapEvent(2, 502070u, 1004.20d,
+                out double rightAligned),
+                "Las marcas IMU alineadas sobreviven al batching BLE",
+                ref checks);
+            Assert(Math.Abs(rightAligned - leftAligned - 0.08d) < 0.005d,
+                "Diferencia de reloj estimada de 80 ms aunque callbacks difieran",
+                ref checks);
+
+            var pairAligned = new BiofitBilateralJumpDetector();
+            Assert(!pairAligned.ProcessImpulse(2, rightAligned, 0.55f) &&
+                   pairAligned.ProcessImpulse(1, leftAligned, 0.62f),
+                "Emparejamiento inverso con reloj de IMU, no de callback",
+                ref checks);
+            var burst = new BiofitBilateralJumpDetector();
+            burst.ProcessImpulse(2, 1.00d, 0.45f);
+            burst.ProcessImpulse(2, 1.90d, 0.48f);
+            Assert(burst.ProcessImpulse(1, 1.06d, 0.60f),
+                "El buffer debe recordar un UP anterior al ultimo recibido",
+                ref checks);
+            var falseGait = new BiofitBilateralJumpDetector();
+            falseGait.ProcessImpulse(2, 1d, 0.45f);
+            Assert(!falseGait.ProcessImpulse(1, 1.27d, 0.50f),
+                "Pasos alternados separados 270 ms NO son par bilateral",
+                ref checks);
+            Assert(!clock.IsReady(1005d),
+                "Si se pierden STATUS, hay que desactivar la alineacion",
+                ref checks);
+            clock.ObserveStatus(1, 50u, 1010d);
+            Assert(clock.LeftSamples == 1,
+                "Al reiniciar una ESP32 deben borrarse anclas viejas",
+                ref checks);
+
             EditorUtility.DisplayDialog("BIOFIT DASH",
                 checks + " pruebas sinteticas superadas.\n\n" +
                 "Primer juego: avance automatico, salto, colision, " +
