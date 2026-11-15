@@ -62,6 +62,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly BiofitEventCapture eventCapture = new BiofitEventCapture();
     private bool gameCaptureActive;
     private int gLeftOn, gRightOn, gLeftUp, gRightUp, gPairs;
+    private int gCompressed, gAlignedEvents;
     private string lastGameSummary = "";
 
     public bool GameCaptureActive => gameCaptureActive;
@@ -111,6 +112,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gLeftOn = left.movOn; gRightOn = right.movOn;
         gLeftUp = left.upImpulses; gRightUp = right.upImpulses;
         gPairs = jumpDetector.BilateralCandidates;
+        gCompressed = TimeCompressedEvents;
+        gAlignedEvents = alignedEvents;
         lastGameSummary = "";
         eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
             MinUpG, PairWindowMs);
@@ -150,10 +153,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
             " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
             "\nESTIMACION_RELOJ=" + (ClockAlignmentReady ? "ACTIVA" : "INACTIVA") +
-            " | EVENTOS_ALINEADOS=" + alignedEvents +
-            "\nTIEMPOS_COMPRIMIDOS=" + TimeCompressedEvents +
-            " (IZQ=" + left.timeCompressed + ", DER=" +
-            right.timeCompressed + ")" +
+            " | EVENTOS_ALINEADOS=" + (alignedEvents - gAlignedEvents) +
+            "\nTIEMPOS_COMPRIMIDOS=" + (TimeCompressedEvents - gCompressed) +
+            " (acumulados desde inicio=" + TimeCompressedEvents + ")" +
             "\nNO son pasos ni saltos humanos confirmados.\n";
         return true;
     }
