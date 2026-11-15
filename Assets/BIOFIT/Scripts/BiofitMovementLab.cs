@@ -2,10 +2,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Laboratorio 2D dentro de la MISMA escena BLE.
-/// Cambia de vista sin cortar la conexion de las Waveshare.
-/// En Unity Editor, A/D simulan MOV_ON de cada tobillo;
-/// ESPACIO solo simula el salto del personaje (no un salto corporal).
+/// BIOFIT GAME: laboratorio 2D de entradas experimentales.
+/// Usa el mismo receptor BLE de la escena y no altera el firmware.
+/// En Editor, A/D simulan inicios de movimiento (NO pasos validados);
+/// ESPACIO simula exclusivamente el salto del personaje.
 /// </summary>
 [RequireComponent(typeof(BiofitBLEMonitor))]
 public sealed class BiofitMovementLab : MonoBehaviour
@@ -13,14 +13,23 @@ public sealed class BiofitMovementLab : MonoBehaviour
     private BiofitBLEMonitor monitor;
     private bool labVisible;
     private bool isJumping;
+
     private float jumpHeight;
     private float jumpVelocity;
-    private float obstacleX = 960f;
+    private float obstacleX = 830f;
     private int obstaclesPassed;
     private int collisions;
-    private float simulatedTime;
 
-    private GUIStyle large, textStyle, smallStyle, buttonStyle;
+    // Diagnostico de teclas separado del filtro biomecanico.
+    private int leftKeyPresses;
+    private int rightKeyPresses;
+    private string lastKeyStatus = "Aun no pulsaste A ni D";
+    private Vector2 scrollPosition;
+
+    private GUIStyle titleStyle;
+    private GUIStyle textStyle;
+    private GUIStyle smallStyle;
+    private GUIStyle buttonStyle;
 
     private void Awake()
     {
@@ -30,16 +39,23 @@ public sealed class BiofitMovementLab : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame)
+        if (Keyboard.current != null &&
+            Keyboard.current.tabKey.wasPressedThisFrame)
+        {
             SwitchView();
+        }
 
 #if UNITY_EDITOR
         if (labVisible && Keyboard.current != null)
         {
-            // Eventos artificiales exclusivos de Editor para probar logica sin sensores.
-            if (Keyboard.current.aKey.wasPressedThisFrame) SimulateStep(1);
-            if (Keyboard.current.dKey.wasPressedThisFrame) SimulateStep(2);
-            if (Keyboard.current.spaceKey.wasPressedThisFrame) SimulateJump();
+            // Solo una pulsacion al PRESIONAR la tecla.
+            // Soltar y pulsar otra vez; mantener no simula pasos nuevos.
+            if (Keyboard.current.aKey.wasPressedThisFrame)
+                SimulateFoot(1);
+            if (Keyboard.current.dKey.wasPressedThisFrame)
+                SimulateFoot(2);
+            if (Keyboard.current.spaceKey.wasPressedThisFrame)
+                SimulateJump();
         }
 #endif
 
@@ -58,31 +74,56 @@ public sealed class BiofitMovementLab : MonoBehaviour
             }
         }
 
+        // Avance continuo SOLO cuando se estima cadencia alternada.
+        // En Editor cada A/D aceptada tambien da un avance visible puntual.
         float cadence = monitor.InputEngine.EstimatedCadence;
-        float speed = Mathf.Clamp(cadence / 120f, 0f, 2.4f) * 250f;
+        float speed = Mathf.Clamp(cadence / 120f, 0f, 2.4f) * 190f;
         obstacleX -= speed * dt;
 
-        if (obstacleX < -60f)
+        if (obstacleX < -65f)
         {
-            obstacleX = 960f;
+            obstacleX = 830f;
             obstaclesPassed++;
         }
 
-        // Colision solo ilustrativa, no una medicion biomecanica.
-        if (speed > 0f && obstacleX < 280f && obstacleX > 210f &&
-            jumpHeight < 78f)
+        // Colision exclusivamente ilustrativa, no resultado biomecanico.
+        if (speed > 0f && obstacleX > 135f &&
+            obstacleX < 210f && jumpHeight < 78f)
         {
             collisions++;
-            obstacleX = 960f;
+            obstacleX = 830f;
         }
-        simulatedTime += dt;
     }
 
-    private void SimulateStep(byte side)
+    private void SimulateFoot(byte side)
     {
+        BiofitInputEngine engine = monitor.InputEngine;
+        int previousCandidates = side == 1 ?
+            engine.LeftCandidates : engine.RightCandidates;
+
         float now = Time.realtimeSinceStartup;
-        monitor.InputEngine.ProcessEvent(side, 1, now);
-        monitor.InputEngine.ProcessEvent(side, 2, now);
+        engine.ProcessEvent(side, 1, now);
+        engine.ProcessEvent(side, 2, now);
+
+        int currentCandidates = side == 1 ?
+            engine.LeftCandidates : engine.RightCandidates;
+        bool accepted = currentCandidates > previousCandidates;
+
+        if (side == 1) leftKeyPresses++;
+        else rightKeyPresses++;
+
+        lastKeyStatus = (side == 1 ? "A = IZQUIERDO" : "D = DERECHO") +
+            (accepted ? " | candidato aceptado" :
+                        " | ignorado por antirrebote (< 0,30 s)");
+
+        // Feedback visible de cada pulsacion, independientemente de que
+        // existan suficientes eventos para calcular una cadencia continua.
+        obstacleX -= 52f;
+        if (obstacleX < -65f)
+        {
+            obstacleX = 830f;
+            obstaclesPassed++;
+        }
     }
 
     private void SimulateJump()
@@ -96,93 +137,133 @@ public sealed class BiofitMovementLab : MonoBehaviour
     {
         labVisible = !labVisible;
         monitor.ShowDiagnostics = !labVisible;
+        scrollPosition = Vector2.zero;
+    }
+
+    private void InitializeStyles()
+    {
+        if (titleStyle != null) return;
+
+        titleStyle = new GUIStyle(GUI.skin.label)
+            { fontSize = 37, fontStyle = FontStyle.Bold, wordWrap = true };
+        textStyle = new GUIStyle(GUI.skin.label)
+            { fontSize = 28, wordWrap = true };
+        smallStyle = new GUIStyle(GUI.skin.label)
+            { fontSize = 23, wordWrap = true };
+        buttonStyle = new GUIStyle(GUI.skin.button)
+            { fontSize = 24, wordWrap = true };
+
+        titleStyle.normal.textColor = Color.white;
+        textStyle.normal.textColor = Color.white;
+        smallStyle.normal.textColor = new Color(0.86f, 0.92f, 1f);
     }
 
     private void OnGUI()
     {
-        float scale = Mathf.Max(0.65f, Screen.width / 1080f);
+        float scale = Mathf.Max(0.42f, Mathf.Min(
+            Screen.width / 1100f, Screen.height / 670f));
         GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
+
         float w = Screen.width / scale;
         float h = Screen.height / scale;
 
-        if (large == null)
-        {
-            large = new GUIStyle(GUI.skin.label)
-                { fontSize = 42, fontStyle = FontStyle.Bold, wordWrap = true };
-            textStyle = new GUIStyle(GUI.skin.label)
-                { fontSize = 28, wordWrap = true };
-            smallStyle = new GUIStyle(GUI.skin.label)
-                { fontSize = 23, wordWrap = true };
-            buttonStyle = new GUIStyle(GUI.skin.button)
-                { fontSize = 25, wordWrap = true };
-            large.normal.textColor = Color.white;
-            textStyle.normal.textColor = Color.white;
-            smallStyle.normal.textColor = Color.white;
-        }
+        InitializeStyles();
 
         if (!labVisible)
         {
-            if (GUI.Button(new Rect(22, h - 90, Mathf.Min(w - 44, 510), 63),
+            if (GUI.Button(new Rect(20, h - 90f,
+                Mathf.Min(w - 40f, 510f), 65f),
                 "ABRIR LABORATORIO 2D", buttonStyle))
+            {
                 SwitchView();
+            }
             return;
         }
 
-        GUI.Box(new Rect(10, 10, w - 20, h - 20), "");
-        GUI.Label(new Rect(35, 26, w - 70, 60),
-            "BIOFIT | LABORATORIO DE MOVIMIENTO", large);
+        GUI.Box(new Rect(8f, 8f, w - 16f, h - 16f), "");
 
-        if (GUI.Button(new Rect(35, 96, 350, 60),
+        // Todo el contenido esta en una pagina desplazable.
+        // Antes, la pista (pintada mas tarde) tapaba la informacion.
+        float contentWidth = Mathf.Max(600f, w - 65f);
+        float viewportWidth = w - 22f;
+        float viewportHeight = h - 22f;
+        scrollPosition = GUI.BeginScrollView(
+            new Rect(11f, 11f, viewportWidth, viewportHeight),
+            scrollPosition, new Rect(0f, 0f, contentWidth, 985f),
+            false, true);
+
+        float x = 20f;
+        float bodyW = contentWidth - 40f;
+
+        GUI.Label(new Rect(x, 12f, bodyW, 58f),
+            "BIOFIT | LABORATORIO DE MOVIMIENTO", titleStyle);
+
+        if (GUI.Button(new Rect(x, 79f, 358f, 59f),
             "VOLVER AL DIAGNOSTICO", buttonStyle))
+        {
+            GUI.EndScrollView();
             SwitchView();
+            return;
+        }
 
-        GUI.Label(new Rect(35, 171, w - 70, 70),
-            "Estado: " + monitor.InputEngine.Activity, textStyle);
-        GUI.Label(new Rect(35, 241, w - 70, 65),
-            "Cadencia ESTIMADA: " +
-            monitor.InputEngine.EstimatedCadence.ToString("F0") + "/min", textStyle);
-        GUI.Label(new Rect(35, 305, w - 70, 75),
-            "Candidatos izq: " + monitor.InputEngine.LeftCandidates +
-            "  |  der: " + monitor.InputEngine.RightCandidates +
-            "  |  alternancias: " + monitor.InputEngine.Alternations, smallStyle);
+        if (GUI.Button(new Rect(x + 375f, 79f, 305f, 59f),
+            "SALTO DE PRUEBA", buttonStyle))
+        {
+            SimulateJump();
+        }
 
-        const float trackHeight = 345f;
-        float trackTop = Mathf.Min(480f, h * 0.35f);
-        float trackWidth = w - 80f;
-        DrawSolid(new Rect(40, trackTop, trackWidth, trackHeight),
+        GUI.Label(new Rect(x, 153f, bodyW, 58f),
+            "PC: A = tobillo izquierdo | D = derecho | ESPACIO = salto manual", smallStyle);
+        GUI.Label(new Rect(x, 204f, bodyW, 48f),
+            "Teclas recibidas: A = " + leftKeyPresses +
+            "   D = " + rightKeyPresses, textStyle);
+        GUI.Label(new Rect(x, 253f, bodyW, 44f),
+            "Ultima tecla: " + lastKeyStatus, smallStyle);
+
+        BiofitInputEngine engine = monitor.InputEngine;
+        GUI.Label(new Rect(x, 300f, bodyW, 58f),
+            "Candidatos: izq " + engine.LeftCandidates +
+            " | der " + engine.RightCandidates +
+            " | alternancias " + engine.Alternations, textStyle);
+        GUI.Label(new Rect(x, 352f, bodyW, 58f),
+            "Cadencia estimada: " + engine.EstimatedCadence.ToString("F0") +
+            "/min | " + engine.Activity, smallStyle);
+
+        // PISTA: se dibuja debajo de todos los indicadores.
+        float trackTop = 427f;
+        float trackW = bodyW;
+        float trackH = 238f;
+        DrawSolid(new Rect(x, trackTop, trackW, trackH),
             new Color(0.12f, 0.20f, 0.32f));
-        float ground = trackTop + trackHeight - 70f;
 
-        DrawSolid(new Rect(40, ground, trackWidth, 8), new Color(0.50f, 0.69f, 0.84f));
+        float ground = trackTop + trackH - 50f;
+        DrawSolid(new Rect(x, ground, trackW, 7f),
+            new Color(0.55f, 0.73f, 0.87f));
 
-        // Personaje 2D esquematico (prototipo de motor, no arte final).
-        DrawSolid(new Rect(220, ground - 72f - jumpHeight, 72, 72),
+        // Cuadrado turquesa (personaje) y obstaculo salmon.
+        DrawSolid(new Rect(x + 145f, ground - 73f - jumpHeight, 73f, 73f),
             new Color(0.34f, 0.85f, 0.77f));
-        DrawSolid(new Rect(Mathf.Min(w-100f, obstacleX), ground-70, 48, 70),
+
+        float obstacleScreenX = x + Mathf.Min(trackW - 50f, obstacleX);
+        DrawSolid(new Rect(obstacleScreenX, ground - 68f, 48f, 68f),
             new Color(0.96f, 0.45f, 0.43f));
 
-        float y = trackTop + trackHeight + 30;
-        GUI.Label(new Rect(35, y, w - 70, 65),
-            "Obstaculos superados: " + obstaclesPassed + "  |  colisiones: " + collisions,
+        GUI.Label(new Rect(x, 682f, bodyW, 54f),
+            "Obstaculos superados: " + obstaclesPassed +
+            "   |   colisiones ilustrativas: " + collisions,
             textStyle);
-        y += 80;
-
-#if UNITY_EDITOR
-        GUI.Label(new Rect(35, y, w - 70, 115),
-            "SIMULACION EN PC: A = pie izquierdo, D = pie derecho (alternados). " +
-            "ESPACIO = salto de prueba. TAB = cambiar de vista.", smallStyle);
-#else
-        GUI.Label(new Rect(35, y, w - 70, 115),
-            "ANDROID: velocidad ilustrativa segun cadencia BLE. " +
-            "El boton SALTO es MANUAL; aun no detectamos saltos reales.", smallStyle);
-#endif
-        y += 122;
-        if (GUI.Button(new Rect(35, y, 320, 70), "SALTO DE PRUEBA", buttonStyle))
-            SimulateJump();
-        GUI.Label(new Rect(35, y + 84, w - 70, 140),
-            "Este laboratorio reutiliza la conexion BLE sin reiniciarla. " +
-            "La actividad y la velocidad son experimentales; no indican pasos confirmados.",
+        GUI.Label(new Rect(x, 746f, bodyW, 93f),
+            "PRUEBA: pulsá A, soltá, luego D, soltá, y repetí " +
+            "(aprox. una tecla cada 0,5 s). Cada tecla mueve el obstaculo " +
+            "un poco. Tras varios pares, deberia aparecer cadencia.",
             smallStyle);
+        GUI.Label(new Rect(x, 864f, bodyW, 102f),
+            "Importante: esto simula eventos de tobillo. Los candidatos " +
+            "no son pasos confirmados. El salto de ESPACIO no detecta " +
+            "un salto real con los sensores.",
+            smallStyle);
+
+        GUI.EndScrollView();
     }
 
     private static void DrawSolid(Rect rect, Color color)
