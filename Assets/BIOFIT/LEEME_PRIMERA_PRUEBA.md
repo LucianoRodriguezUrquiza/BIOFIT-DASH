@@ -572,3 +572,96 @@ del juego con el menor numero razonable de ensayos.
   reducir batching de notificaciones y/o añadir protocolo de sync
   de tiempo robusto (reloj RTT). Hasta entonces el estimador de
   STATUS es experimental.
+
+
+## BIOFIT DASH v0.4 - diagnostico de sincronizacion de dos tobillos (2026-11-15)
+
+### Evidencia que motivo el cambio
+En la APK v0.3, 181 notificaciones EVENT, 0 descartes CSV,
+IZQ 69 UP, DER 58 UP, pero 0 pares UP y 0 saltos BLE.
+Las separaciones de callbacks en ELEVACION fueron aprox.
+235-301 ms (umbral 180 ms); en DASH se observaron aprox.
+568-570 ms. El CSV tambien muestra notificaciones de un
+mismo sensor con intervalos IMU muy superiores al intervalo
+de callback: evidencia de agrupamiento temporal antes de Unity.
+No atribuir sin pruebas el cuello de botella a la IMU, BLE,
+Android o UniBLE.
+
+### Implementacion
+- Suscripcion a **STATUS** GATT V2, UUID f971...0003, paquete
+  binario de 20 bytes (p[0]=2, p[1]=ID, uint32 LE en p[6..9]).
+  Firmware envia STATUS aprox. cada 50 ms. Se retiene la
+  referencia a la caracteristica para ambas placas.
+- BiofitClockAligner estima por separado el desplazamiento
+  entre millis ESP32 y Stopwatch del callback, usando el
+  offset MINIMO de los ultimos 12 s de STATUS; requiere al
+  menos 8 muestras recientes por tracker. Metodo aproximado:
+  el offset queda contaminado por la menor demora BLE/Android
+  observada de cada placa. NO sincronizacion exacta ni
+  medicion absoluta de latencia; status puede perderse.
+- Cada UP puede usar la marca ESP32 alineada si AMBAS placas
+  tienen anclas recientes. Caso contrario recurre a tiempo
+  de callback; limpia candidatos al cambiar de dominio
+  temporal. Procesamiento por reloj double para no perder
+  precision.
+- BiofitBilateralJumpDetector conserva multiples pendientes
+  por tobillo, compara diferencias absolutas aunque la
+  entrega BLE este fuera de orden, rechaza g bajo, duplicados
+  del mismo tobillo, y pares dentro del cooldown. Reporta
+  tambien candidatos cercanos RECHAZADOS (>ventana y <1.2s).
+  No confirma un salto humano.
+- Nuevo CSV DE 15 COLUMNAS: las 12 anteriores mas
+  reloj_evento_estimado_s, reloj_alineado,
+  demora_relativa_estimacion_ms. La demora es EXCESO frente al
+  mejor STATUS observado, NO latencia BLE absoluta. Valores
+  vacios si no hay alineacion. APP/MARCA/CONFIG preservan
+  el mismo ancho.
+- Resumen: ESTIMACION_RELOJ, EVENTOS_ALINEADOS, STATUS por
+  tobillo, PARES_CERCANOS_RECHAZADOS y TIEMPOS_COMPRIMIDOS.
+  La pantalla tambien informa STATUS y casi-pares.
+- El juego incluye PRACTICA SIN COLISION: SI/NO y el
+  selector de control BLE ciclico:
+  OFF -> BILATERAL -> SOLO IZQ -> SOLO DER -> OFF.
+  El modo unilateral es un CONTROL DE DIAGNOSTICO, no
+  una prueba de saltos fisicos. Umbral unilateral inicial
+  0.45 g, ajustable desde el panel sin recompilar.
+
+### Compilacion unica para Android
+1. Cerrar Unity; GitHub Desktop > Fetch origin > Pull origin
+   (si el boton aparece).
+2. Abrir Unity. BIOFIT > Verificar BIOFIT DASH (sin APK):
+   resultado esperado **55 pruebas sinteticas superadas**.
+   Revisar Console: 0 errores rojos; la advertencia CS1998
+   sin await no impide compilar.
+3. Si falla una prueba NO compilar Android; informar el error.
+4. File > Build Profiles > Android Active; SOLO
+   BIOFIT/Scenes/DiagnosticoBLE marcada, escena 0.
+   Build App Bundle OFF; Build APK como
+   BIOFIT_GAME_DASH_BLE_v0_4.apk.
+5. Instalar en celular (si ya existe APK de mismo identificador
+   y firma, Android puede permitir actualizar sin desinstalar).
+
+### Una sola prueba corta; NO repetir caminar/correr
+1. Encender dos Waveshare, cerrar nRF Connect y abrir APK.
+   Esperar 2/2 conectados y **reloj: IMU estimado**.
+   Si queda 'sin ancla STATUS', registrar y NO suponer
+   que la sincronizacion funciona.
+2. JUGAR BIOFIT DASH > PRACTICA SIN COLISION: SI.
+   Mostrar panel; INICIAR REGISTRO; seleccionar DASH.
+3. Selector BLE -> SOLO IZQ. Mover/elevar el tobillo
+   izquierdo varias veces; ver si sube el contador 'Solo'
+   y si el cuadrado ejecuta algun salto.
+4. Selector BLE -> SOLO DER. Repetir con tobillo derecho.
+5. Selector BLE -> OFF y luego BILATERAL. Ejecutar
+   6-8 elevaciones simultaneas controladas desde una
+   postura comoda, sin saltos de impacto.
+6. Verificar si aparecen PARES, CASI PARES, INTENTOS,
+   y si salta el cubo. Dejar umbrales iniciales 0.12 g /
+   180 ms; si no funciona, probar una sola vez PAR+ hasta
+   300 ms y anotar en CSV.
+7. FINALIZAR, COPIAR REGISTRO y pegarlo en una nota.
+   Compartir el resumen y el CSV para evaluar:
+   (a) si STATUS estuvo disponible; (b) si relojes
+   se alinearon; (c) si hubieron pares; (d) respuesta
+   del juego; (e) falsos positivos caminando.
+8. No reflashear ni recalibrar firmware para esta prueba.
