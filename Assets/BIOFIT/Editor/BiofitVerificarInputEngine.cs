@@ -68,7 +68,7 @@ public static class BiofitVerificarInputEngine
                 "UP_IMPULSE aislado no debe contar como un MOV_ON");
 
             EditorUtility.DisplayDialog("BIOFIT Input Engine",
-                "7 verificaciones superadas.\n\n" +
+                "9 verificaciones superadas.\n\n" +
                 "La logica paso los casos sinteticos en Unity. " +
                 "Esto NO valida clasificacion real con las Waveshare.",
                 "Entendido");
