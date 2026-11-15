@@ -211,10 +211,15 @@ public static class BiofitVerificarDash
             Assert(clock.IsReady(1001.0d),
                 "Ocho STATUS o mas de ambos trackers preparan estimacion temporal",
                 ref checks);
-            Assert(clock.TryMapEvent(1, 102000u, 1002.40d,
-                out double leftAligned) &&
-                   clock.TryMapEvent(2, 502070u, 1002.77d,
-                out double rightAligned),
+            // Evaluar ambas llamadas por separado: el operador &&
+            // puede omitir la segunda y dejar rightAligned sin asignar.
+            double leftAligned = 0d;
+            double rightAligned = 0d;
+            bool mappedLeft = clock.TryMapEvent(1, 102000u, 1002.40d,
+                out leftAligned);
+            bool mappedRight = clock.TryMapEvent(2, 502070u, 1002.77d,
+                out rightAligned);
+            Assert(mappedLeft && mappedRight,
                 "Las marcas IMU alineadas sobreviven al batching BLE",
                 ref checks);
             Assert(Math.Abs(rightAligned - leftAligned - 0.08d) < 0.005d,
