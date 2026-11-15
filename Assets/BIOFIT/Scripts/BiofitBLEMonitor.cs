@@ -25,6 +25,14 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly Tracker left = new Tracker("IZQUIERDO", 1);
     private readonly Tracker right = new Tracker("DERECHO", 2);
     private readonly BiofitInputEngine inputEngine = new BiofitInputEngine();
+    public BiofitInputEngine InputEngine => inputEngine;
+
+    [SerializeField] private bool showDiagnostics = true;
+    public bool ShowDiagnostics
+    {
+        get => showDiagnostics;
+        set => showDiagnostics = value;
+    }
     private readonly BiofitSessionLogger sessionLogger = new BiofitSessionLogger();
 
     private string message = "Iniciando...";
@@ -207,6 +215,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDiagnostics) return;
         float scale = Mathf.Max(0.65f, Screen.width / 1080f);
         GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
         float width = Screen.width / scale;
