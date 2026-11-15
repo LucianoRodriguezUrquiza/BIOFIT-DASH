@@ -665,3 +665,58 @@ Android o UniBLE.
    se alinearon; (c) si hubieron pares; (d) respuesta
    del juego; (e) falsos positivos caminando.
 8. No reflashear ni recalibrar firmware para esta prueba.
+
+
+## BIOFIT DASH v0.5 — ajuste de anclas STATUS (2026-11-15)
+
+### Evidencia y limites
+- v0.4: izquierdo 23 UP sin salto unilateral; pico izquierdo
+  +0.442 g < umbral SOLO_UP=0.45 g. Es bloqueo de configuracion
+  unilateral, no ausencia de senal: probar SOLO_UP=0.35 g.
+- Derecho: 17 UP, 9 SALTO_SOLO_REALIZADO registrados; valida
+  el control BLE unilateral, no la discriminacion biomecanica.
+- Temporizacion: sucesivos EVENT se recibieron en tandas aprox.
+  cada 2 s, pese a tener marcas internas ESP32 entre ellas.
+  No queda identificado si la causa es firmware, radio BLE,
+  Android, la biblioteca o el procesamiento. La alineacion
+  temporal NO elimina ese retardo de interactividad.
+- STATUS total izq/der >300, reloj INACTIVO. Hipotesis:
+  ventana de 12 s tenia <8 STATUS recientes por tracker;
+  los contadores totales historicos NO probaban preparacion.
+  La nueva ventana de 32 s sigue requiriendo >=8 STATUS,
+  ahora visibles como recientes(32s). Maxima antiguedad
+  del ultimo STATUS: 4 s; no aceptar relojes sin STATUS vivo.
+  La alineacion es APROXIMADA, no sincronizacion de laboratorio.
+- Cambio NO afecta firmware, memoria de calibracion ni
+  configuracion del ESP32.
+
+### Validacion local ANTES de compilar
+Cerrar Unity, GitHub Desktop Fetch/Pull, abrir editor.
+Menu BIOFIT > Verificar BIOFIT DASH (sin APK).
+Resultado esperado: **58 pruebas sinteticas superadas**, 0 errores rojos.
+En particular prueba 8 STATUS/32 s con recepcion espaciada 2 s
+y rechazo del reloj caducado. Esto no sustituye la prueba real.
+
+### Siguiente APK y unica prueba fisica REDUCIDA
+Compilar solo si pasan pruebas:
+BIOFIT_GAME_DASH_BLE_v0_5.apk.
+Mantener marcada solo DiagnosticoBLE como escena inicial.
+
+1. Encender Waveshare, abrir APK, confirmar 2/2 conectados.
+   Anotar reloj y contador **recientes(32s)** tras ~40s.
+2. JUGAR BIOFIT DASH; PRACTICA SIN COLISION: SI;
+   INICIAR REGISTRO una sola vez, seleccionar ELEVACION.
+3. BLE SOLO IZQ; pulsar SOLO UP - DOS veces (0.45 -> 0.35 g).
+   Elevar SOLO pie izquierdo 5-6 veces, con >2s entre gestos;
+   observar saltos o intentos. No usar 'UP -' bilateral.
+4. Pulsar DASH en registro; cambiar BLE SOLO IZQ ->
+   SOLO DER -> OFF -> BILATERAL (TRES toques).
+   Dejar UP=0.12 g y PAR=180 ms.
+   Elevar ambos pies al mismo tiempo 6 veces.
+5. Si no hay pares, presionar PAR + SEIS veces para
+   subir a 300 ms y probar 4 elevaciones bilaterales mas.
+6. FINALIZAR una sola vez, COPIAR REGISTRO, guardar CSV.
+   Informar: saltos izq, saltos bilaterales, ancla STATUS
+   y si el cubo responde con retraso visible.
+7. No repetir la prueba derecha: ya hay evidencia de 9
+   saltos unilaterales en v0.4.
