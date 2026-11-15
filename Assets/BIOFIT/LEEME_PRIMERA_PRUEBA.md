@@ -161,3 +161,54 @@ verifica casos de logica, **no su validez biomecanica en datos reales**.
 
 No es necesario generar otra APK por este cambio. Se incorporara al
 proximo lote de compilacion de Android.
+
+
+## Siguiente lote consolidado: par bilateral + registro para futura APK
+
+Archivos nuevos:
+- `Scripts/BiofitBilateralJumpDetector.cs`: compara `UP_IMPULSE` de
+  izquierda/derecha por tiempo de llegada al mismo celular. Requiere
+  aceleracion vertical positiva de al menos +0,12 g por lado, intervalo
+  entre tobillos <= 180 ms, antirrebote por tobillo 320 ms y separacion
+  minima entre pares 900 ms. **Todos son parametros experimentales**.
+- `Scripts/BiofitEventCapture.cs`: guarda hasta 1500 filas BLE en memoria
+  para copiar como CSV delimitado por punto y coma desde la APK,
+  incluyendo hora relativa del telefono, `millis` por placa, secuencia,
+  tipo de evento, giro y Z. **Los relojes ESP32 no estan sincronizados**.
+- `Editor/BiofitVerificarSaltoBilateral.cs`: menu
+  `BIOFIT > Verificar salto bilateral (sin APK)`; ejecuta pruebas
+  sinteticas de coincidencia, rechazo de impulsos debiles, repeticiones,
+  cooldown y calidad del CSV. Estas pruebas NO sustituyen la validacion
+  fisica.
+
+Cambios de interfaz:
+- En `BiofitMovementLab.cs` (Unity Editor):
+  `A` / `D` = MOV_ON simulado, `Q` / `E` = UP aislados,
+  `J` = dos UP simultaneos artificiales; `ESPACIO` = salto MANUAL
+  del cubo. Q/E/J **no activan el salto del cubo**.
+- Pantalla diagnostica BLE: contadores de PARES UP y su ultimo intervalo,
+  siempre etiquetados como **posibles saltos, no confirmados**.
+- Una sola sesion Android permite pulsar:
+  `INICIAR` -> actividad caminar -> `FIN CAMINAR` ->
+  actividad correr -> `FIN CORRER` ->
+  actividad de prueba bilateral -> `FIN SALTOS` ->
+  `COPIAR RESUMEN` y/o `COPIAR CSV`.
+  Cada fin de etapa deja marcas en el CSV y el resumen muestra
+  deltas por tobillo, picos de cadencia y pares UP detectados.
+- Los datos solo viven en memoria durante la sesion, no son un archivo
+  permanente ni se suben automaticamente. El portapapeles Android
+  debera comprobarse durante la siguiente prueba en telefono.
+
+**ADVERTENCIAS:** las notificaciones de UP de dos tobillos pueden
+coincidir casualmente al caminar, sin salto real. Sin contacto con el suelo,
+sensores adicionales o validacion clinica no se debe afirmar confirmacion
+de salto. El clasificador aun es exploratorio. La distancia y el recorrido
+no se miden. No hay que saltar usando placas y cables sueltos; fijar
+adecuadamente los dispositivos antes de cualquier ensayo de impacto.
+
+Para probar en Unity sin una nueva APK: detener Play, guardar escena,
+cerrar Unity, `Fetch origin` y (si corresponde) `Pull origin`,
+reabrir proyecto, y usar `BIOFIT > Verificar salto bilateral (sin APK)`.
+Luego en `Game` abrir el laboratorio y pulsar Q/E/J si se desea.
+No volver a agregar el laboratorio a la escena si ya aparece en Inspector.
+**No generar APK Android hasta la proxima validacion combinada.**
