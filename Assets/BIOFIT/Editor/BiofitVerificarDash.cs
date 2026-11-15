@@ -142,6 +142,53 @@ public static class BiofitVerificarDash
             Assert(!recorder.MarkGameStage("CAMINAR", 16f),
                 "No se permiten marcas tras finalizar", ref checks);
 
+            // Regresion: el modo practica mantiene la adquisición
+            // y no obliga a reiniciar por chocar durante un registro.
+            var practice = new BiofitDashCore();
+            practice.PracticeMode = true;
+            practice.StartNewGame();
+            for (int i = 0; i < 800; i++)
+                practice.Step(0.02f);
+            Assert(practice.Playing && !practice.GameOver,
+                "En modo practica no debe aparecer FIN DEL JUEGO", ref checks);
+            Assert(practice.ObstaclesPassed > 0,
+                "El modo practica conserva obstaculos y puntos", ref checks);
+            practice.StartNewGame();
+            Assert(practice.PracticeMode && practice.ObstaclesPassed == 0,
+                "Reiniciar no debe borrar la configuracion de practica", ref checks);
+            practice.PracticeMode = false;
+            for (int i = 0; i < 800 && !practice.GameOver; i++)
+                practice.Step(0.02f);
+            Assert(practice.GameOver,
+                "Al salir de practica vuelven a funcionar colisiones", ref checks);
+
+            // Marcas del control exploratorio por un solo tobillo.
+            var solo = new BiofitEventCapture();
+            Assert(solo.BeginGame(50f),
+                "Puede iniciar una captura de diagnostico unilateral", ref checks);
+            solo.RecordGameAction("BLE_SOLO_IZQUIERDO", 51f);
+            solo.RecordSingleFootConfig(51.2f, 0.45f);
+            solo.RecordGameAction("UP_SOLO_CANDIDATO", 52f);
+            solo.RecordGameAction("SALTO_SOLO_REALIZADO", 52.1f);
+            solo.RecordGameAction("SALTO_SOLO_NO_REALIZADO", 53f);
+            Assert(solo.Csv.Contains("SOLO_UP=0.45g") &&
+                   solo.Csv.Contains("BLE_SOLO_IZQUIERDO") &&
+                   solo.Csv.Contains("SALTO_SOLO_REALIZADO"),
+                "El CSV conserva modo y sensibilidad unilateral", ref checks);
+            Assert(solo.FinishGame(54f), "Cierra sesion unilateral", ref checks);
+            string[] soloLines = solo.Csv.Split('\n');
+            int soloColumns = soloLines[0].TrimEnd('\r').Split(';').Length;
+            bool soloValid = soloColumns == 12;
+            for (int k = 1; k < soloLines.Length; k++)
+            {
+                if (soloLines[k].Length == 0 || soloLines[k][0] == '#')
+                    continue;
+                if (soloLines[k].TrimEnd('\r').Split(';').Length != soloColumns)
+                    soloValid = false;
+            }
+            Assert(soloValid,
+                "Filas de diagnostico unilateral tienen 12 columnas", ref checks);
+
             EditorUtility.DisplayDialog("BIOFIT DASH",
                 checks + " pruebas sinteticas superadas.\n\n" +
                 "Primer juego: avance automatico, salto, colision, " +
