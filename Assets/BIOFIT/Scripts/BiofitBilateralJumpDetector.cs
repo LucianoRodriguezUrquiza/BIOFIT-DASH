@@ -12,6 +12,22 @@ public sealed class BiofitBilateralJumpDetector
     public const float SameAnkleRefractorySeconds = 0.32f;
     public const float PairCooldownSeconds = 0.90f;
 
+    // Parametros modificables EN LA APK para evitar recompilar por cada ajuste.
+    // Valores iniciales identicos a las 35 pruebas sinteticas previas.
+    public float MinimumVerticalGThreshold { get; private set; } = MinimumVerticalG;
+    public float MaxPairGapWindowSeconds { get; private set; } = MaxPairGapSeconds;
+
+    public void SetThresholds(float minVerticalG, float maxPairWindowSeconds)
+    {
+        MinimumVerticalGThreshold = minVerticalG < 0.08f ? 0.08f :
+            minVerticalG > 0.50f ? 0.50f : minVerticalG;
+        MaxPairGapWindowSeconds = maxPairWindowSeconds < 0.12f ? 0.12f :
+            maxPairWindowSeconds > 0.40f ? 0.40f : maxPairWindowSeconds;
+        // Nunca arrastrar un UP pendiente entre configuraciones distintas.
+        pendingLeftSeconds = -10000f;
+        pendingRightSeconds = -10000f;
+    }
+
     private float lastLeftAccepted = -10000f;
     private float lastRightAccepted = -10000f;
     private float pendingLeftSeconds = -10000f;
@@ -32,10 +48,11 @@ public sealed class BiofitBilateralJumpDetector
         if (trackerId != 1 && trackerId != 2)
             return false;
 
-        if (verticalG < MinimumVerticalG)
+        if (verticalG < MinimumVerticalGThreshold)
         {
             WeakRejected++;
-            LastStatus = "Impulso insuficiente (< 0,12 g)";
+            LastStatus = "Impulso insuficiente (< " +
+                         MinimumVerticalGThreshold.ToString("F2") + " g)";
             return false;
         }
 
@@ -64,7 +81,7 @@ public sealed class BiofitBilateralJumpDetector
 
         float otherTime = trackerId == 1 ? pendingRightSeconds : pendingLeftSeconds;
         float gap = receivedSeconds - otherTime;
-        if (gap < 0f || gap > MaxPairGapSeconds)
+        if (gap < 0f || gap > MaxPairGapWindowSeconds)
         {
             LastStatus = "UP " + (trackerId == 1 ? "izquierdo" : "derecho") +
                          " aislado; esperando otro tobillo";
