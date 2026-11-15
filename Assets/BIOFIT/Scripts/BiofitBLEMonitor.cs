@@ -35,6 +35,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// </summary>
     public event Action<float> BilateralJumpCandidate;
 
+    // Se mantiene una unica instancia BLE mientras alternamos diagnostico y Dash.
+    public bool BothTrackersConnected =>
+        left.connection == "CONECTADO - NOTIFICACIONES ACTIVAS" &&
+        right.connection == "CONECTADO - NOTIFICACIONES ACTIVAS";
+
     [SerializeField] private bool showDiagnostics = true;
     public bool ShowDiagnostics
     {
@@ -280,6 +285,16 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
         GUI.Label(new Rect(x, y, textWidth, 64), "BIOFIT GAME | DIAGNOSTICO BLE", heading);
         y += 76;
+        if (GUI.Button(new Rect(x, y, textWidth, 65),
+            "JUGAR BIOFIT DASH (PROTOTIPO)", buttonStyle))
+        {
+            // No cambiamos de escena: el mismo monitor sigue suscrito a ambas
+            // placas y mantiene contadores, estado y CSV mientras jugamos.
+            if (GetComponent<BiofitDashGame>() == null)
+                gameObject.AddComponent<BiofitDashGame>();
+            showDiagnostics = false;
+        }
+        y += 80;
         GUI.Label(new Rect(x, y, textWidth, 86), message, small);
         y += 100;
 
