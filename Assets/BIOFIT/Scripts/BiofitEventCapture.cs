@@ -70,7 +70,7 @@ public sealed class BiofitEventCapture
             action != "SALTO_SOLO_REALIZADO" &&
             action != "SALTO_SOLO_NO_REALIZADO") return;
         rows.Add("APP;" + stage + ";" +
-            phoneSeconds.ToString("F3", invariant) + ";;" + action + ";;;;;;;");
+            phoneSeconds.ToString("F3", invariant) + ";;" + action + ";;;;;;;;;;");
     }
 
     public void RecordGameConfig(float phoneSeconds, float upThresholdG,
@@ -82,7 +82,7 @@ public sealed class BiofitEventCapture
             phoneSeconds.ToString("F3", invariant) +
             ";;UP=" + upThresholdG.ToString("F2", invariant) +
             "g_PAIR=" + pairWindowMs.ToString("F0", invariant) +
-            "ms;;;;;;;");
+            "ms;;;;;;;;;;");
     }
 
     /// <summary>Registra el umbral de un tobillo para pruebas de juego.</summary>
@@ -93,7 +93,7 @@ public sealed class BiofitEventCapture
         rows.Add("CONFIG;" + stage + ";" +
             phoneSeconds.ToString("F3", invariant) +
             ";;SOLO_UP=" + minVerticalG.ToString("F2", invariant) +
-            "g;;;;;;;");
+            "g;;;;;;;;;;");
     }
 
     public bool FinishGame(float phoneSeconds)
@@ -127,7 +127,9 @@ public sealed class BiofitEventCapture
     public void Record(float phoneSeconds, byte id, byte eventType,
         ushort sequence, uint sensorMilliseconds, float gyroDps,
         float verticalG, bool bilateralCandidate,
-        float unityQueueDelayMs = 0f, double callbackMonotonicSeconds = 0d)
+        float unityQueueDelayMs = 0f, double callbackMonotonicSeconds = 0d,
+        double estimatedEventSeconds = 0d, bool clockAligned = false,
+        double estimatedAgeMs = 0d)
     {
         if (!Recording) return;
         if (rows.Count >= MaxRows)
@@ -150,7 +152,10 @@ public sealed class BiofitEventCapture
                  verticalG.ToString("F3", invariant) + ";" +
                  (bilateralCandidate ? "1" : "0") + ";" +
                  unityQueueDelayMs.ToString("F1", invariant) + ";" +
-                 callbackMonotonicSeconds.ToString("F3", invariant));
+                 callbackMonotonicSeconds.ToString("F3", invariant) + ";" +
+                 (clockAligned ? estimatedEventSeconds.ToString("F3", invariant) : "") +
+                 ";" + (clockAligned ? "1" : "0") + ";" +
+                 (clockAligned ? estimatedAgeMs.ToString("F1", invariant) : ""));
         EventRows++;
     }
 
@@ -159,7 +164,7 @@ public sealed class BiofitEventCapture
         get
         {
             var sb = new StringBuilder(rows.Count * 85 + 200);
-            sb.AppendLine("tipo;etapa;reloj_unity_procesado_s;tracker_id;evento;reloj_esp32_ms;secuencia;giro_dps;acel_vertical_g;par_bilateral;espera_cola_unity_ms;reloj_callback_monotonico_s");
+            sb.AppendLine("tipo;etapa;reloj_unity_procesado_s;tracker_id;evento;reloj_esp32_ms;secuencia;giro_dps;acel_vertical_g;par_bilateral;espera_cola_unity_ms;reloj_callback_monotonico_s;reloj_evento_estimado_s;reloj_alineado;edad_estimada_evento_ms");
             foreach (string row in rows)
                 sb.AppendLine(row);
             sb.AppendLine("# filas_eventos=" + EventRows +
@@ -177,6 +182,6 @@ public sealed class BiofitEventCapture
             return;
         }
         rows.Add("MARCA;" + name + ";" +
-                 phoneSeconds.ToString("F3", invariant) + ";;;;;;;;;");
+                 phoneSeconds.ToString("F3", invariant) + ";;;;;;;;;;;;");
     }
 }
