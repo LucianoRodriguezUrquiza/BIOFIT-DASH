@@ -47,6 +47,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private string message = "Iniciando...";
     private bool busy;
     private GUIStyle heading, normal, small, buttonStyle;
+    private Vector2 diagnosticsScroll;
 
     private sealed class Tracker
     {
@@ -254,9 +255,15 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         }
 
         GUI.Box(new Rect(12, 12, width - 24, height - 24), "");
-        float x = 40;
-        float y = 28;
-        float textWidth = width - 75;
+        // Permite acceder a FIN CAMINAR/CORRER/SALTOS y COPIAR CSV
+        // incluso en pantallas Android mas bajas.
+        diagnosticsScroll = GUI.BeginScrollView(
+            new Rect(18f, 18f, width - 36f, height - 36f),
+            diagnosticsScroll, new Rect(0f, 0f, width - 80f, 2230f),
+            false, true);
+        float x = 20f;
+        float y = 16f;
+        float textWidth = width - 118f;
 
         GUI.Label(new Rect(x, y, textWidth, 64), "BIOFIT GAME | DIAGNOSTICO BLE", heading);
         y += 76;
@@ -293,6 +300,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "Aviso: los candidatos NO son pasos confirmados. Clasificacion preliminar; falta validar con pruebas.", small);
         y += 111;
         DrawSessionControls(x, y, textWidth);
+        GUI.EndScrollView();
     }
 
     private void DrawSessionControls(float x, float y, float width)
