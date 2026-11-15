@@ -68,6 +68,10 @@ public sealed class BiofitMovementLab : MonoBehaviour
 
     private void Update()
     {
+        // Evitar que el laboratorio y BIOFIT DASH consuman el mismo
+        // teclado simultaneamente dentro de DiagnosticoBLE.
+        if (GetComponent<BiofitDashGame>() != null) return;
+
         if (Keyboard.current != null &&
             Keyboard.current.tabKey.wasPressedThisFrame)
             SwitchView();
@@ -216,6 +220,9 @@ public sealed class BiofitMovementLab : MonoBehaviour
 
     private void OnGUI()
     {
+        // El laboratorio no debe dibujar su boton encima del juego Dash.
+        if (GetComponent<BiofitDashGame>() != null) return;
+
         // Toda la pista y el suelo caben en un lienzo virtual de 1120x740.
         // Se escala uniformemente para no ocultar los cuadrados bajo la pantalla.
         float scale = Mathf.Min(Screen.width / 1120f, Screen.height / 740f);
