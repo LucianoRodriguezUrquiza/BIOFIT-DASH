@@ -109,3 +109,28 @@ experimentalmente en una futura prueba agrupada.
 Cuando el usuario decida actualizar, hacerlo con Unity cerrado y
 `Fetch origin > Pull origin` desde GitHub Desktop.
 **No recompilar Android por cada cambio menor.**
+
+
+## Correccion de laboratorio 2D (teclado y presentacion)
+
+La primera version presentaba dos problemas de UX: A/D no tenian respuesta
+visible hasta estimar cadencia con varias alternancias, y la pista ocultaba
+los textos de cadencia y actividad.
+
+Actualizacion:
+- Las teclas `A` y `D` aparecen en contadores individuales de
+  **teclas recibidas**, separados de los candidatos aceptados por filtro.
+- Cada pulsacion mueve el obstaculo 52 unidades visuales en Editor,
+  sin esperar a que la cadencia sea calculable.
+- Repetir `A` y `D` alternadamente a ~0,5 s muestra tambien
+  candidatos, alternancia y cadencia experimental.
+- Los textos ya no se superponen con la pista: el laboratorio es
+  desplazable con la rueda del mouse y se puede maximizar la pestaña
+  Game haciendo doble clic.
+- `ESPACIO` solo salta con el cuadrado turquesa. El salto desde
+  Waveshare aun no esta implementado.
+
+Probar cambios SIN APK: detener Play, cerrar Unity, `Fetch origin` y
+`Pull origin` en GitHub Desktop, reabrir Unity, presionar Play.
+El componente `Biofit Movement Lab` que ya esta en la escena sigue
+vigente; no hay que crearlo nuevamente.
