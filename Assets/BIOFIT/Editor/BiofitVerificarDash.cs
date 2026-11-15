@@ -226,6 +226,33 @@ public static class BiofitVerificarDash
                 "Diferencia de reloj estimada de 80 ms aunque callbacks difieran",
                 ref checks);
 
+            // Regresion v0.4 real: STATUS llega aprox. cada 2 s en
+            // algunos Android. Con ventana de 12 s nunca juntabamos 8.
+            var sparse = new BiofitClockAligner();
+            for (int i = 0; i < 3; i++)
+            {
+                double t = 2000d + i * 2d;
+                sparse.ObserveStatus(1, (uint)(100000u + i * 2000u), t + 0.02d);
+                sparse.ObserveStatus(2, (uint)(500000u + i * 2000u), t + 0.03d);
+            }
+            Assert(!sparse.IsReady(2004.1d),
+                "No declarar reloj listo con menos de 8 STATUS por tracker",
+                ref checks);
+            for (int i = 3; i < 12; i++)
+            {
+                double t = 2000d + i * 2d;
+                sparse.ObserveStatus(1, (uint)(100000u + i * 2000u), t + 0.02d);
+                sparse.ObserveStatus(2, (uint)(500000u + i * 2000u), t + 0.03d);
+            }
+            Assert(sparse.LeftRecentSamples >= 8 &&
+                   sparse.RightRecentSamples >= 8 &&
+                   sparse.IsReady(2022.10d),
+                "STATUS espaciados cada 2 s permiten formar anclas en 32 s",
+                ref checks);
+            Assert(!sparse.IsReady(2027.0d),
+                "La sincronizacion caduca cuando STATUS deja de llegar",
+                ref checks);
+
             var pairAligned = new BiofitBilateralJumpDetector();
             Assert(!pairAligned.ProcessImpulse(2, rightAligned, 0.55f) &&
                    pairAligned.ProcessImpulse(1, leftAligned, 0.62f),
