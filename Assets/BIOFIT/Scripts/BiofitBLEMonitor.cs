@@ -25,10 +25,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly Tracker left = new Tracker("IZQUIERDO", 1);
     private readonly Tracker right = new Tracker("DERECHO", 2);
     private readonly BiofitInputEngine inputEngine = new BiofitInputEngine();
+    private readonly BiofitSessionLogger sessionLogger = new BiofitSessionLogger();
 
     private string message = "Iniciando...";
     private bool busy;
-    private GUIStyle heading, normal, small;
+    private GUIStyle heading, normal, small, buttonStyle;
 
     private sealed class Tracker
     {
@@ -149,6 +150,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             ReadEvent(packet);
         }
         inputEngine.Update(Time.realtimeSinceStartup);
+        sessionLogger.ObserveCadence(inputEngine.EstimatedCadence);
     }
 
     private void ReadEvent(Packet packet)
@@ -218,6 +220,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             heading.normal.textColor = Color.white;
             normal.normal.textColor = Color.white;
             small.normal.textColor = new Color(0.82f, 0.88f, 1f);
+            buttonStyle = new GUIStyle(GUI.skin.button) { fontSize = 24, wordWrap = true };
         }
 
         GUI.Box(new Rect(12, 12, width - 24, height - 24), "");
@@ -251,6 +254,44 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         y += 70;
         GUI.Label(new Rect(x, y, textWidth, 110),
             "Aviso: los candidatos NO son pasos confirmados. Clasificacion preliminar; falta validar con pruebas.", small);
+        y += 111;
+        DrawSessionControls(x, y, textWidth);
+    }
+
+    private void DrawSessionControls(float x, float y, float width)
+    {
+        GUI.Label(new Rect(x, y, width, 56), "REGISTRO DE PRUEBA COMBINADA", heading);
+        y += 58;
+        float buttonWidth = (width - 12f) * 0.5f;
+        if (GUI.Button(new Rect(x, y, buttonWidth, 63), "1. INICIAR", buttonStyle))
+        {
+            sessionLogger.Begin(left.movOn, left.movOff, left.upImpulses,
+                right.movOn, right.movOff, right.upImpulses);
+            message = "Sesion iniciada: realiza la actividad y registra el final de cada etapa.";
+        }
+        if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
+            "2. FIN CAMINAR", buttonStyle))
+        {
+            sessionLogger.MarkStage("CAMINAR", left.movOn, left.movOff,
+                left.upImpulses, right.movOn, right.movOff, right.upImpulses);
+        }
+        y += 72;
+        if (GUI.Button(new Rect(x, y, buttonWidth, 63), "3. FIN CORRER", buttonStyle))
+        {
+            sessionLogger.MarkStage("CORRER", left.movOn, left.movOff,
+                left.upImpulses, right.movOn, right.movOff, right.upImpulses);
+        }
+        if (GUI.Button(new Rect(x + buttonWidth + 12f, y, buttonWidth, 63),
+            "COPIAR RESULTADOS", buttonStyle))
+        {
+            GUIUtility.systemCopyBuffer = sessionLogger.Report;
+            message = "Reporte copiado. Podes pegarlo en el chat cuando quieras.";
+        }
+        y += 76;
+        GUI.Label(new Rect(x, y, width, 120),
+            sessionLogger.Started ? sessionLogger.LastMark :
+            "Para registrar varias etapas sin reiniciar la APK: INICIAR -> caminar -> FIN CAMINAR -> correr -> FIN CORRER -> COPIAR.",
+            small);
     }
 
     private void DrawTracker(Tracker tracker, float x, ref float y, float width)
