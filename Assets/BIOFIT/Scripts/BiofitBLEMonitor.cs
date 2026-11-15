@@ -64,12 +64,16 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         jumpDetector.SetThresholds(jumpDetector.MinimumVerticalGThreshold + deltaG,
             jumpDetector.MaxPairGapWindowSeconds);
+        eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
+            MinUpG, PairWindowMs);
     }
 
     public void AdjustPairWindow(float deltaSeconds)
     {
         jumpDetector.SetThresholds(jumpDetector.MinimumVerticalGThreshold,
             jumpDetector.MaxPairGapWindowSeconds + deltaSeconds);
+        eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
+            MinUpG, PairWindowMs);
     }
 
     /// <summary>Una sola sesion para reposo, marcha, carrera, elevacion y juego.</summary>
@@ -81,6 +85,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gLeftUp = left.upImpulses; gRightUp = right.upImpulses;
         gPairs = jumpDetector.BilateralCandidates;
         lastGameSummary = "";
+        eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
+            MinUpG, PairWindowMs);
         return true;
     }
 
@@ -108,6 +114,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "PARES UP=" + (jumpDetector.BilateralCandidates - gPairs) +
             " | EVENTOS=" + eventCapture.EventRows +
             " | DESCARTADOS=" + eventCapture.DroppedRows +
+            "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
+            " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
             "\nNO son pasos ni saltos humanos confirmados.\n";
         return true;
     }
