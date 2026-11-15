@@ -1,21 +1,39 @@
+using System;
+using System.Collections.Generic;
+
 /// <summary>
-/// BIOFIT GAME: detector EXPERIMENTAL de pares de UP_IMPULSE.
-/// Devuelve candidatos, NUNCA confirmaciones biomecanicas de salto.
-/// Usa un unico reloj local del telefono (segundos desde inicio).
-/// Las marcas millis de las ESP32 no se comparan entre placas.
+/// Detector EXPERIMENTAL de pares UP. Las marcas de tiempo deben estar
+/// expresadas en UN MISMO reloj del celular. Acepta cierto desorden de
+/// entrega BLE sin confundir una notificacion con un salto humano real.
 /// </summary>
 public sealed class BiofitBilateralJumpDetector
 {
-    // Parametros preliminares. Se ajustaran con una sola prueba fisica combinada.
     public const float MinimumVerticalG = 0.12f;
     public const float MaxPairGapSeconds = 0.18f;
     public const float SameAnkleRefractorySeconds = 0.32f;
     public const float PairCooldownSeconds = 0.90f;
 
-    // Parametros modificables EN LA APK para evitar recompilar por cada ajuste.
-    // Valores iniciales identicos a las 35 pruebas sinteticas previas.
     public float MinimumVerticalGThreshold { get; private set; } = MinimumVerticalG;
     public float MaxPairGapWindowSeconds { get; private set; } = MaxPairGapSeconds;
+
+    // Dos BLE independientes pueden entregar notificaciones por lotes.
+    // Guardamos candidatos recientes por pie y emparejamos el mas cercano
+    // en tiempo DEL SENSOR ALINEADO, no necesariamente el ultimo recibido.
+    private readonly List<double> pendingLeft = new List<double>(16);
+    private readonly List<double> pendingRight = new List<double>(16);
+    private double lastLeftAccepted = -10000d;
+    private double lastRightAccepted = -10000d;
+    private double lastPairSeconds = -10000d;
+
+    public int LeftUpCandidates { get; private set; }
+    public int RightUpCandidates { get; private set; }
+    public int BilateralCandidates { get; private set; }
+    public int WeakRejected { get; private set; }
+    public int RepeatedRejected { get; private set; }
+    public int NearMisses { get; private set; }
+    public float LastPairGapMs { get; private set; }
+    public float LastNearMissGapMs { get; private set; }
+    public string LastStatus { get; private set; } = "Sin impulsos suficientes";
 
     public void SetThresholds(float minVerticalG, float maxPairWindowSeconds)
     {
@@ -23,29 +41,22 @@ public sealed class BiofitBilateralJumpDetector
             minVerticalG > 0.50f ? 0.50f : minVerticalG;
         MaxPairGapWindowSeconds = maxPairWindowSeconds < 0.12f ? 0.12f :
             maxPairWindowSeconds > 0.40f ? 0.40f : maxPairWindowSeconds;
-        // Nunca arrastrar un UP pendiente entre configuraciones distintas.
-        pendingLeftSeconds = -10000f;
-        pendingRightSeconds = -10000f;
+        ClearPending();
     }
 
-    private float lastLeftAccepted = -10000f;
-    private float lastRightAccepted = -10000f;
-    private float pendingLeftSeconds = -10000f;
-    private float pendingRightSeconds = -10000f;
-    private float lastPairSeconds = -10000f;
-
-    public int LeftUpCandidates { get; private set; }
-    public int RightUpCandidates { get; private set; }
-    public int BilateralCandidates { get; private set; }
-    public int WeakRejected { get; private set; }
-    public int RepeatedRejected { get; private set; }
-    public float LastPairGapMs { get; private set; }
-    public string LastStatus { get; private set; } = "Sin impulsos suficientes";
-
-    /// <returns>true solamente si se detecto un par NUEVO de UP simultaneos.</returns>
-    public bool ProcessImpulse(byte trackerId, float receivedSeconds, float verticalG)
+    public void ClearPending()
     {
-        if (trackerId != 1 && trackerId != 2)
+        pendingLeft.Clear();
+        pendingRight.Clear();
+        lastLeftAccepted = -10000d;
+        lastRightAccepted = -10000d;
+    }
+
+    /// <param name="eventSeconds">Reloj compartido y monotónico, double.</param>
+    public bool ProcessImpulse(byte trackerId, double eventSeconds, float verticalG)
+    {
+        if ((trackerId != 1 && trackerId != 2) ||
+            double.IsNaN(eventSeconds) || double.IsInfinity(eventSeconds))
             return false;
 
         if (verticalG < MinimumVerticalGThreshold)
@@ -56,53 +67,79 @@ public sealed class BiofitBilateralJumpDetector
             return false;
         }
 
-        float lastSame = trackerId == 1 ? lastLeftAccepted : lastRightAccepted;
-        if (receivedSeconds - lastSame < SameAnkleRefractorySeconds)
+        double lastSame = trackerId == 1 ? lastLeftAccepted : lastRightAccepted;
+        // Eventos de un mismo sensor conservan orden de secuencia.
+        if (eventSeconds - lastSame < SameAnkleRefractorySeconds)
         {
             RepeatedRejected++;
             LastStatus = "Impulso repetido de un mismo tobillo";
             return false;
         }
 
-        // Un evento nuevo de la misma pierna no debe mantener un par viejo
-        // indefinidamente. Las parejas se comparan solo dentro de 180 ms.
         if (trackerId == 1)
         {
-            lastLeftAccepted = receivedSeconds;
-            pendingLeftSeconds = receivedSeconds;
+            lastLeftAccepted = eventSeconds;
             LeftUpCandidates++;
         }
         else
         {
-            lastRightAccepted = receivedSeconds;
-            pendingRightSeconds = receivedSeconds;
+            lastRightAccepted = eventSeconds;
             RightUpCandidates++;
         }
 
-        float otherTime = trackerId == 1 ? pendingRightSeconds : pendingLeftSeconds;
-        float gap = receivedSeconds - otherTime;
-        if (gap < 0f || gap > MaxPairGapWindowSeconds)
+        List<double> own = trackerId == 1 ? pendingLeft : pendingRight;
+        List<double> opposite = trackerId == 1 ? pendingRight : pendingLeft;
+
+        int bestIndex = -1;
+        double bestGap = double.PositiveInfinity;
+        for (int i = 0; i < opposite.Count; i++)
+        {
+            double gap = Math.Abs(eventSeconds - opposite[i]);
+            if (gap < bestGap)
+            {
+                bestGap = gap;
+                bestIndex = i;
+            }
+        }
+
+        if (bestIndex >= 0 && bestGap <= MaxPairGapWindowSeconds)
+        {
+            double otherTime = opposite[bestIndex];
+            opposite.RemoveAt(bestIndex);
+            double pairTime = Math.Max(eventSeconds, otherTime);
+
+            // Un mismo salto no puede aportar varios pares cercanos.
+            if (pairTime - lastPairSeconds < PairCooldownSeconds)
+            {
+                LastStatus = "Par descartado por tiempo de seguridad";
+                return false;
+            }
+
+            own.Clear();
+            lastPairSeconds = pairTime;
+            BilateralCandidates++;
+            LastPairGapMs = (float)(bestGap * 1000d);
+            LastStatus = "POSIBLE SALTO BILATERAL (NO CONFIRMADO)";
+            return true;
+        }
+
+        if (bestIndex >= 0 && bestGap < 1.2d)
+        {
+            NearMisses++;
+            LastNearMissGapMs = (float)(bestGap * 1000d);
+            LastStatus = "UP no emparejado: separacion " +
+                LastNearMissGapMs.ToString("F0") + " ms (maximo " +
+                (MaxPairGapWindowSeconds * 1000f).ToString("F0") + " ms)";
+        }
+        else
         {
             LastStatus = "UP " + (trackerId == 1 ? "izquierdo" : "derecho") +
                          " aislado; esperando otro tobillo";
-            return false;
         }
 
-        // Despues de un par, descartar ambos pendientes incluso si
-        // el cooldown sigue activo. No reutilizar viejos impulsos.
-        pendingLeftSeconds = -10000f;
-        pendingRightSeconds = -10000f;
-
-        if (receivedSeconds - lastPairSeconds < PairCooldownSeconds)
-        {
-            LastStatus = "Par descartado por tiempo de seguridad";
-            return false;
-        }
-
-        lastPairSeconds = receivedSeconds;
-        BilateralCandidates++;
-        LastPairGapMs = gap * 1000f;
-        LastStatus = "POSIBLE SALTO BILATERAL (NO CONFIRMADO)";
-        return true;
+        own.Add(eventSeconds);
+        if (own.Count > 16)
+            own.RemoveAt(0);
+        return false;
     }
 }
