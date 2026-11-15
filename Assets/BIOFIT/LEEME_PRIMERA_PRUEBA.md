@@ -720,3 +720,42 @@ Mantener marcada solo DiagnosticoBLE como escena inicial.
    y si el cubo responde con retraso visible.
 7. No repetir la prueba derecha: ya hay evidencia de 9
    saltos unilaterales en v0.4.
+
+
+## REQUISITO PRIORITARIO: latencia gestual de 1 a 1,5 s (observacion reportada, 2026-11-15)
+
+**Hecho observado por usuario**: elevacion del pie real produce salto del cubo
+aproximadamente 1–1,5 s despues; en ocasiones ocurre solo al terminar de
+elevar y volver a apoyar el pie. Demasiado lento para un plataformas reflexivo.
+Corregir **antes** de declarar jugabilidad validada. No confundir
+emparejamiento temporal STATUS con disminucion de latencia real.
+
+**Evidencia de CSV v0.4**: dos EVENT del tracker izquierdo con timestamps
+ESP32 606954 y 607736 ms, separados 782 ms, llegaron al callback monotónico
+Android 438939.820 y 438939.832 s, separados 12 ms. En tracker derecho
+timestamps ESP32 682334 y 683031 ms (697 ms) llegaron a callbacks
+439009.533 y 439009.556 s (23 ms). Hay compresion temporal severa
+PREVIA al callback de Unity; espera_colas_Unity ~2–32 ms en esos ejemplos.
+Diagnostico probable: buffering/agrupamiento de BLE o envio del firmware,
+no animacion o frame rate Unity. No atribuir con certeza a una capa
+particular sin instrumentacion.
+
+**Plan de diagnostico y accion, sin ensayos repetitivos**:
+1. Capturar timestamp del momento en que la QMI8658 genera UP_IMPULSE,
+   cuando el firmware encola ENVIA notify, cuando Android recibe callback
+   y cuando game.Jump() se ejecuta. Comparar intervalos con relojes
+   alineados; idealmente registrar secuencia, muestras y contadores de
+   overflow/cola y renderizar debug en una unica APK.
+2. Revisar frecuencia real de notify, intervalos y param BLE de conexion,
+   buffering, manejo de tareas y event queue en firmware y la biblioteca
+   UniBLE/Android. Verificar que no haya polling/flush cercano a 2 s.
+3. Inspeccionar si detector activa UP en despegue o aterrizaje; registrar
+   giro, aceleracion vertical y tiempo de cruce umbral. No confundir
+   retardo del detector con transporte.
+4. Si hay batching de origen firmware, corregir firmware (sin borrar NVS
+   de calibracion); si ocurre tras ESP32 notify, investigar Android/UniBLE.
+5. Meta orientativa: <100-150 ms desde gesto hasta salto visible, a
+   VALIDAR; no hacer promesas sin medicion.
+6. No compilar sucesivas APK por cada parametro. Consolidar
+   instrumentacion y medidas de mitigacion en una sola revision futura,
+   junto con las mejoras de sincronizacion existentes en v0.5.
