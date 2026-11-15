@@ -15,6 +15,7 @@ public sealed class BiofitEventCapture
     private string stage = "CAMINAR";
 
     public bool Recording { get; private set; }
+    public string Stage => stage;
     public int EventRows { get; private set; }
     public int DroppedRows { get; private set; }
 
@@ -29,9 +30,10 @@ public sealed class BiofitEventCapture
     }
 
     /// <summary>Marca fin de actividad y habilita la etapa siguiente.</summary>
-    public void FinishStage(string activity, float phoneSeconds)
+    public bool FinishStage(string activity, float phoneSeconds)
     {
-        if (!Recording) return;
+        // No permitir saltar etapas ni adjudicar la etiqueta incorrecta.
+        if (!Recording || stage != activity) return false;
         Mark("FIN_" + activity, phoneSeconds);
         switch (activity)
         {
@@ -42,11 +44,13 @@ public sealed class BiofitEventCapture
                 Recording = false;
                 break;
         }
+        return true;
     }
 
     public void Record(float phoneSeconds, byte id, byte eventType,
         ushort sequence, uint sensorMilliseconds, float gyroDps,
-        float verticalG, bool bilateralCandidate)
+        float verticalG, bool bilateralCandidate,
+        float unityQueueDelayMs = 0f, double callbackMonotonicSeconds = 0d)
     {
         if (!Recording) return;
         if (rows.Count >= MaxRows)
@@ -67,7 +71,9 @@ public sealed class BiofitEventCapture
                  sequence + ";" +
                  gyroDps.ToString("F1", invariant) + ";" +
                  verticalG.ToString("F3", invariant) + ";" +
-                 (bilateralCandidate ? "1" : "0"));
+                 (bilateralCandidate ? "1" : "0") + ";" +
+                 unityQueueDelayMs.ToString("F1", invariant) + ";" +
+                 callbackMonotonicSeconds.ToString("F3", invariant));
         EventRows++;
     }
 
@@ -76,7 +82,7 @@ public sealed class BiofitEventCapture
         get
         {
             var sb = new StringBuilder(rows.Count * 85 + 200);
-            sb.AppendLine("tipo;etapa;reloj_celular_s;tracker_id;evento;reloj_esp32_ms;secuencia;giro_dps;acel_vertical_g;par_bilateral");
+            sb.AppendLine("tipo;etapa;reloj_unity_procesado_s;tracker_id;evento;reloj_esp32_ms;secuencia;giro_dps;acel_vertical_g;par_bilateral;espera_cola_unity_ms;reloj_callback_monotonico_s");
             foreach (string row in rows)
                 sb.AppendLine(row);
             sb.AppendLine("# filas_eventos=" + EventRows +
@@ -94,6 +100,6 @@ public sealed class BiofitEventCapture
             return;
         }
         rows.Add("MARCA;" + name + ";" +
-                 phoneSeconds.ToString("F3", invariant) + ";;;;;;;");
+                 phoneSeconds.ToString("F3", invariant) + ";;;;;;;;;");
     }
 }
