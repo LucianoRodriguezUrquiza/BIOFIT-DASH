@@ -134,6 +134,28 @@ public static class BiofitVerificarSaltoBilateral
                    groundVirtualY + 7f < 740f,
                 "El cubo y la linea de suelo no deben quedar fuera de pantalla", ref checks);
 
+            // Proteccion contra registrar toda la prueba como CAMINAR
+            // si se pulsa directamente FIN SALTOS.
+            var secuencia = new BiofitEventCapture();
+            secuencia.Begin(1.00f);
+            Assert(!secuencia.FinishStage("SALTOS", 2.00f),
+                "No permitir finalizar SALTOS antes de CAMINAR", ref checks);
+            Assert(secuencia.Stage == "CAMINAR" && secuencia.Recording,
+                "Una marca fuera de orden debe conservar la etapa", ref checks);
+            Assert(secuencia.FinishStage("CAMINAR", 3.00f) &&
+                   secuencia.Stage == "CORRER",
+                "FIN CAMINAR debe preparar la etapa CORRER", ref checks);
+            Assert(secuencia.FinishStage("CORRER", 4.00f) &&
+                   secuencia.Stage == "SALTOS",
+                "FIN CORRER debe preparar la etapa SALTOS", ref checks);
+            Assert(secuencia.FinishStage("SALTOS", 5.00f) &&
+                   secuencia.Stage == "FINAL" && !secuencia.Recording,
+                "FIN SALTOS debe cerrar la captura", ref checks);
+            Assert(secuencia.Csv.Contains("espera_cola_unity_ms") &&
+                   secuencia.Csv.Contains("reloj_callback_monotonico_s"),
+                "CSV debe incluir marcas de callback y demora de procesamiento",
+                ref checks);
+
             EditorUtility.DisplayDialog("BIOFIT - Salto bilateral",
                 checks + " verificaciones sinteticas superadas.\n\n" +
                 "El codigo reconoce pares de UP con umbral y antirrebote.\n" +
