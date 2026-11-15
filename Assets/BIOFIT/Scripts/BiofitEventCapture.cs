@@ -13,6 +13,7 @@ public sealed class BiofitEventCapture
     private readonly List<string> rows = new List<string>(512);
     private readonly CultureInfo invariant = CultureInfo.InvariantCulture;
     private string stage = "CAMINAR";
+    private bool gameMode;
 
     public bool Recording { get; private set; }
     public string Stage => stage;
@@ -22,6 +23,7 @@ public sealed class BiofitEventCapture
     public void Begin(float phoneSeconds)
     {
         rows.Clear();
+        gameMode = false;
         stage = "CAMINAR";
         Recording = true;
         EventRows = 0;
@@ -29,11 +31,59 @@ public sealed class BiofitEventCapture
         Mark("INICIO", phoneSeconds);
     }
 
+    /// <summary>
+    /// Sesion libre del juego. Permite marcar varias actividades dentro de
+    /// una misma APK y una sola captura, sin alterar la prueba guiada antigua.
+    /// </summary>
+    public bool BeginGame(float phoneSeconds)
+    {
+        if (Recording) return false;
+        Begin(phoneSeconds);
+        gameMode = true;
+        stage = "QUIETO";
+        Mark("INICIO_JUEGO", phoneSeconds);
+        return true;
+    }
+
+    public bool MarkGameStage(string nextStage, float phoneSeconds)
+    {
+        if (!Recording || !gameMode) return false;
+        if (nextStage != "QUIETO" && nextStage != "CAMINAR" &&
+            nextStage != "CORRER" && nextStage != "ELEVACION" &&
+            nextStage != "DASH") return false;
+        stage = nextStage;
+        Mark("ETAPA_" + nextStage, phoneSeconds);
+        return true;
+    }
+
+    public void RecordGameAction(string action, float phoneSeconds)
+    {
+        if (!Recording || !gameMode || rows.Count >= MaxRows) return;
+        // Misma cabecera de 12 columnas; este evento proviene de Unity,
+        // NO del sensor. Las columnas de la IMU quedan vacias.
+        if (action != "SALTO_MANUAL" && action != "PAR_BLE_DETECTADO" &&
+            action != "SALTO_BLE_REALIZADO" &&
+            action != "SALTO_BLE_NO_REALIZADO" &&
+            action != "BLE_ACTIVADO" && action != "BLE_DESACTIVADO") return;
+        rows.Add("APP;" + stage + ";" +
+            phoneSeconds.ToString("F3", invariant) + ";;" + action + ";;;;;;;");
+    }
+
+    public bool FinishGame(float phoneSeconds)
+    {
+        if (!Recording || !gameMode) return false;
+        Mark("FIN_JUEGO", phoneSeconds);
+        stage = "FINAL";
+        Recording = false;
+        gameMode = false;
+        return true;
+    }
+
     /// <summary>Marca fin de actividad y habilita la etapa siguiente.</summary>
     public bool FinishStage(string activity, float phoneSeconds)
     {
         // No permitir saltar etapas ni adjudicar la etiqueta incorrecta.
-        if (!Recording || stage != activity) return false;
+        if (!Recording || gameMode || stage != activity) return false;
         Mark("FIN_" + activity, phoneSeconds);
         switch (activity)
         {
