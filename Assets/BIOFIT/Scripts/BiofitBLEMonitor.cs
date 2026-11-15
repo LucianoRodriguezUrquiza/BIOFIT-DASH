@@ -48,6 +48,77 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     }
     private readonly BiofitSessionLogger sessionLogger = new BiofitSessionLogger();
     private readonly BiofitEventCapture eventCapture = new BiofitEventCapture();
+    private bool gameCaptureActive;
+    private int gLeftOn, gRightOn, gLeftUp, gRightUp, gPairs;
+    private string lastGameSummary = "";
+
+    public bool GameCaptureActive => gameCaptureActive;
+    public int CapturedEventCount => eventCapture.EventRows;
+    public int DroppedEventCount => eventCapture.DroppedRows;
+    public string CaptureStage => eventCapture.Stage;
+    public float MinUpG => jumpDetector.MinimumVerticalGThreshold;
+    public float PairWindowMs => jumpDetector.MaxPairGapWindowSeconds * 1000f;
+    public int TotalPairs => jumpDetector.BilateralCandidates;
+
+    public void AdjustJumpThreshold(float deltaG)
+    {
+        jumpDetector.SetThresholds(jumpDetector.MinimumVerticalGThreshold + deltaG,
+            jumpDetector.MaxPairGapWindowSeconds);
+    }
+
+    public void AdjustPairWindow(float deltaSeconds)
+    {
+        jumpDetector.SetThresholds(jumpDetector.MinimumVerticalGThreshold,
+            jumpDetector.MaxPairGapWindowSeconds + deltaSeconds);
+    }
+
+    /// <summary>Una sola sesion para reposo, marcha, carrera, elevacion y juego.</summary>
+    public bool StartGameCapture()
+    {
+        if (!eventCapture.BeginGame(Time.realtimeSinceStartup)) return false;
+        gameCaptureActive = true;
+        gLeftOn = left.movOn; gRightOn = right.movOn;
+        gLeftUp = left.upImpulses; gRightUp = right.upImpulses;
+        gPairs = jumpDetector.BilateralCandidates;
+        lastGameSummary = "";
+        return true;
+    }
+
+    public bool MarkGameStage(string stage)
+    {
+        return gameCaptureActive &&
+            eventCapture.MarkGameStage(stage, Time.realtimeSinceStartup);
+    }
+
+    public void RecordGameAction(string action)
+    {
+        eventCapture.RecordGameAction(action, Time.realtimeSinceStartup);
+    }
+
+    public bool StopGameCapture()
+    {
+        if (!gameCaptureActive ||
+            !eventCapture.FinishGame(Time.realtimeSinceStartup)) return false;
+        gameCaptureActive = false;
+        lastGameSummary = "BIOFIT DASH | RESUMEN EXPERIMENTAL\n" +
+            "IZQ MOV_ON=" + (left.movOn - gLeftOn) +
+            " UP=" + (left.upImpulses - gLeftUp) + "\n" +
+            "DER MOV_ON=" + (right.movOn - gRightOn) +
+            " UP=" + (right.upImpulses - gRightUp) + "\n" +
+            "PARES UP=" + (jumpDetector.BilateralCandidates - gPairs) +
+            " | EVENTOS=" + eventCapture.EventRows +
+            " | DESCARTADOS=" + eventCapture.DroppedRows +
+            "\nNO son pasos ni saltos humanos confirmados.\n";
+        return true;
+    }
+
+    public bool CopyGameCapture()
+    {
+        if (gameCaptureActive || string.IsNullOrEmpty(lastGameSummary))
+            return false;
+        GUIUtility.systemCopyBuffer = lastGameSummary + "\n" + eventCapture.Csv;
+        return true;
+    }
 
     private string message = "Iniciando...";
     private bool busy;
