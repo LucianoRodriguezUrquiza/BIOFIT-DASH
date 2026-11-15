@@ -134,3 +134,30 @@ Probar cambios SIN APK: detener Play, cerrar Unity, `Fetch origin` y
 `Pull origin` en GitHub Desktop, reabrir Unity, presionar Play.
 El componente `Biofit Movement Lab` que ya esta en la escena sigue
 vigente; no hay que crearlo nuevamente.
+
+
+## Ajuste del clasificador tras simulacion A-D en Unity (2026-11-15)
+
+El usuario observo que la primera version podia seguir indicando CAMINANDO
+o CORRIENDO despues de pasar de A-D-A-D a pulsar solo A o solo D.
+**Causa:** retenia alternancias antiguas dentro de una ventana temporal;
+las pulsaciones de un solo pie prolongaban la vida de esa cadencia.
+
+Correccion:
+- La cadena de alternancias debe ser consecutiva y temporalmente valida.
+- Un candidato repetido del mismo lado (A-A / D-D), o una pausa mayor
+  que 1,50 s entre candidatos, corta inmediatamente la cadena.
+- Se necesitan 4 candidatos consecutivos alternando (3 intervalos)
+  para estimar cadencia provisional.
+- Solo un lado repetido -> MOVIMIENTO SIN CLASIFICAR, no caminar/correr.
+- Sin candidatos recientes -> QUIETO. Los umbrales de cadencia siguen
+  siendo experimentales, NO validados con personas.
+
+Autocomprobacion sintetica, sin Android ni tobilleras:
+`BIOFIT > Verificar Input Engine (sin APK)`.
+El menu ejecuta comprobaciones de patrones alternados, unilaterales,
+pausas, inactividad e impulsos UP aislados. Un resultado satisfactorio
+verifica casos de logica, **no su validez biomecanica en datos reales**.
+
+No es necesario generar otra APK por este cambio. Se incorporara al
+proximo lote de compilacion de Android.
