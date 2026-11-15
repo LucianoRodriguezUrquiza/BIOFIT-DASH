@@ -69,6 +69,18 @@ public sealed class BiofitEventCapture
             phoneSeconds.ToString("F3", invariant) + ";;" + action + ";;;;;;;");
     }
 
+    public void RecordGameConfig(float phoneSeconds, float upThresholdG,
+        float pairWindowMs)
+    {
+        if (!Recording || !gameMode) return;
+        if (rows.Count >= MaxRows) { DroppedRows++; return; }
+        rows.Add("CONFIG;" + stage + ";" +
+            phoneSeconds.ToString("F3", invariant) +
+            ";;UP=" + upThresholdG.ToString("F2", invariant) +
+            "g_PAIR=" + pairWindowMs.ToString("F0", invariant) +
+            "ms;;;;;;;");
+    }
+
     public bool FinishGame(float phoneSeconds)
     {
         if (!Recording || !gameMode) return false;
