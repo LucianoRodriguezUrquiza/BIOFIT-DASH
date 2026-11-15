@@ -203,14 +203,17 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         public bool isStatus;
     }
 
+#if UNITY_ANDROID && !UNITY_EDITOR
     private async void Start()
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
         await ConnectBothAsync();
-#else
-        message = "Vista previa. La conexion BLE se prueba en una APK Android, no en Play de Windows.";
-#endif
     }
+#else
+    private void Start()
+    {
+        message = "Vista previa. La conexion BLE se prueba en una APK Android, no en Play de Windows.";
+    }
+#endif
 
     private async Task ConnectBothAsync()
     {
