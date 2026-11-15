@@ -43,7 +43,12 @@ dotnet run --project tests/ReceiverRegression
 python tools/analyze_latency.py registro.txt
 ```
 
-Se añadieron workflows GitHub Actions para estas pruebas y para compilar ambos sketch con Arduino-ESP32 3.3.5 y GFX Library for Arduino. El intento local de instalar el core quedó bloqueado por la descarga de índices desde Arduino CLI. Consultar el estado real del workflow antes de usar el firmware. Unity Editor/Android y hardware no están disponibles en este entorno.
+Resultados confirmados en GitHub Actions:
+
+- [Firmware: ambos roles compilados y contrato aprobado](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-Firmware/actions/runs/43765893874), código `9b3afb7ef69d96f0f4bdc8bb99ecaf883ac4c583`. Arduino-ESP32 3.3.5 + GFX Library for Arduino 1.6.9; FQBN `esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`. Izquierdo: 743563 bytes de programa y 35664 bytes de variables globales. **Compilación real, sin cargar ninguna placa.**
+- [C#: pruebas de lógica y receptor aprobadas](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/43765921339), código `36f16a549acf4cecc2ce72035a791cd232bfabc6`.
+
+El intento local de instalar el core quedó bloqueado por la descarga de índices desde Arduino CLI; la compilación remota anterior sí terminó correctamente. Unity Editor/Android y hardware no están disponibles en este entorno. Las actualizaciones posteriores de este informe no cambian los fuentes compilados.
 
 ## Una sola compilación Android y una sesión posterior
 
