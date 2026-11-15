@@ -35,6 +35,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// </summary>
     public event Action<float> BilateralJumpCandidate;
 
+    /// <summary>
+    /// Evento UP crudo para CONTROL DE DIAGNOSTICO UNILATERAL.
+    /// NO implica elevacion ni salto humano confirmado.
+    /// Los callbacks llegan al hilo principal desde ReadEvent().
+    /// </summary>
+    public event Action<byte, float, float> AnkleUpCandidate;
+
     // Se mantiene una unica instancia BLE mientras alternamos diagnostico y Dash.
     public bool BothTrackersConnected =>
         left.connection == "CONECTADO - NOTIFICACIONES ACTIVAS" &&
@@ -59,6 +66,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public float MinUpG => jumpDetector.MinimumVerticalGThreshold;
     public float PairWindowMs => jumpDetector.MaxPairGapWindowSeconds * 1000f;
     public int TotalPairs => jumpDetector.BilateralCandidates;
+    public int TimeCompressedEvents => left.timeCompressed + right.timeCompressed;
+    public int LeftTimeCompressed => left.timeCompressed;
+    public int RightTimeCompressed => right.timeCompressed;
 
     public void AdjustJumpThreshold(float deltaG)
     {
@@ -116,6 +126,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " | DESCARTADOS=" + eventCapture.DroppedRows +
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
             " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
+            "\nTIEMPOS_COMPRIMIDOS=" + TimeCompressedEvents +
+            " (IZQ=" + left.timeCompressed + ", DER=" +
+            right.timeCompressed + ")" +
             "\nNO son pasos ni saltos humanos confirmados.\n";
         return true;
     }
@@ -141,6 +154,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         public string lastEvent = "Todavia no hay eventos";
         public bool moving;
         public int movOn, movOff, upImpulses;
+        public uint lastSensorEventMs;
+        public double lastCallbackEventSeconds;
+        public bool hasLastTimestamp;
+        public int timeCompressed;
         public Tracker(string name, byte id) { this.name = name; this.id = id; }
     }
 
@@ -294,10 +311,30 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
         ushort sequence = U16(b, 4);
         uint millis = U32(b, 6);
+
+        // Evidencia de buffering/diferencia temporal, NO medida de
+        // latencia absoluta: comparar intervalos del MISMO tracker.
+        // El reloj millis se genera al detectar el evento en la ESP32.
+        if (state.hasLastTimestamp)
+        {
+            double sensorInterval = unchecked(millis - state.lastSensorEventMs) * 0.001;
+            double callbackInterval = callbackSeconds - state.lastCallbackEventSeconds;
+            if (sensorInterval >= 0.15 && sensorInterval <= 4.0 &&
+                callbackInterval >= 0.0 &&
+                callbackInterval + 0.15 < sensorInterval)
+                state.timeCompressed++;
+        }
+        state.lastSensorEventMs = millis;
+        state.lastCallbackEventSeconds = callbackSeconds;
+        state.hasLastTimestamp = true;
+
         float gyroDps = I16(b, 10) / 10f;
         float verticalG = I16(b, 12) / 1000f;
         bool paired = eventType == 3 &&
             jumpDetector.ProcessImpulse(state.id, eventSeconds, verticalG);
+        if (eventType == 3)
+            AnkleUpCandidate?.Invoke(state.id, verticalG, eventSeconds);
+
         if (paired)
         {
             Debug.Log("BIOFIT: POSIBLE SALTO BILATERAL (NO CONFIRMADO), intervalo " +
