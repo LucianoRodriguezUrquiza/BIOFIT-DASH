@@ -64,7 +64,11 @@ public sealed class BiofitEventCapture
         if (action != "SALTO_MANUAL" && action != "PAR_BLE_DETECTADO" &&
             action != "SALTO_BLE_REALIZADO" &&
             action != "SALTO_BLE_NO_REALIZADO" &&
-            action != "BLE_ACTIVADO" && action != "BLE_DESACTIVADO") return;
+            action != "BLE_ACTIVADO" && action != "BLE_DESACTIVADO" &&
+            action != "BLE_SOLO_IZQUIERDO" && action != "BLE_SOLO_DERECHO" &&
+            action != "BLE_MODO_APAGADO" && action != "UP_SOLO_CANDIDATO" &&
+            action != "SALTO_SOLO_REALIZADO" &&
+            action != "SALTO_SOLO_NO_REALIZADO") return;
         rows.Add("APP;" + stage + ";" +
             phoneSeconds.ToString("F3", invariant) + ";;" + action + ";;;;;;;");
     }
@@ -79,6 +83,17 @@ public sealed class BiofitEventCapture
             ";;UP=" + upThresholdG.ToString("F2", invariant) +
             "g_PAIR=" + pairWindowMs.ToString("F0", invariant) +
             "ms;;;;;;;");
+    }
+
+    /// <summary>Registra el umbral de un tobillo para pruebas de juego.</summary>
+    public void RecordSingleFootConfig(float phoneSeconds, float minVerticalG)
+    {
+        if (!Recording || !gameMode) return;
+        if (rows.Count >= MaxRows) { DroppedRows++; return; }
+        rows.Add("CONFIG;" + stage + ";" +
+            phoneSeconds.ToString("F3", invariant) +
+            ";;SOLO_UP=" + minVerticalG.ToString("F2", invariant) +
+            "g;;;;;;;");
     }
 
     public bool FinishGame(float phoneSeconds)
