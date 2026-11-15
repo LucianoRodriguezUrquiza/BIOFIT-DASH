@@ -314,3 +314,49 @@ estos relojes NO tienen origen comun. La causa exacta de
 agrupamiento puede ser transmision, BLE Android, callback o
 cola Unity. Los nuevos campos discriminan al menos la
 latencia de cola Unity vs latencia anterior.
+
+
+## BIOFIT DASH - primer videojuego jugable 2D (fase Editor, 15-11-2026)
+
+El proyecto incorpora un juego ORIGINAL de avance automatico estilo
+plataformas rítmicas, sin copiar recursos ni niveles de Geometry Dash.
+
+Archivos:
+- `Scripts/BiofitDashCore.cs`: avance automatico, salto con gravedad,
+  obstáculos, colisiones, puntos, mejor puntuacion y pausa/reinicio.
+- `Scripts/BiofitDashGame.cs`: interfaz 2D de Unity con salto por
+  ESPACIO, boton tactil, opcion de pares BLE experimental (OFF por
+  defecto), y vista escalada a distintas resoluciones.
+- `Editor/BiofitPrepararDash.cs`: comando de menu para crear/abrir
+  `Assets/BIOFIT/Scenes/BiofitDash.unity`, manteniendo intacta
+  `DiagnosticoBLE.unity`; agrega Dash a la lista de escenas.
+- `Editor/BiofitVerificarDash.cs`: 18 comprobaciones sinteticas
+  del motor de juego, independientes de Android.
+
+Para probar en Windows:
+1. Detener Play, guardar y cerrar Unity.
+2. GitHub Desktop > Fetch origin > Pull origin.
+3. Abrir proyecto en Unity Hub.
+4. Menu `BIOFIT > Verificar BIOFIT DASH (sin APK)`.
+   Debe informar **18 pruebas sinteticas superadas**.
+5. Menu `BIOFIT > Crear o abrir BIOFIT DASH (primer juego)`.
+   Ese comando CREA la escena si no existe y la abre.
+6. Presionar `Play`, luego elegir `Game`.
+   `ESPACIO` o boton SALTAR = salto; `R` = reiniciar;
+   `P` = pausa. El mundo avanza automaticamente.
+7. El modo `SALTAR POR BLE` queda OFF hasta que se valide
+   la temporizacion real. En Editor no se conecta BLE Android.
+
+Importante:
+- NO es necesario volver a calibrar/reprogramar las Waveshare.
+- Las 35 verificaciones del salto bilateral corresponden a la
+  etapa ANTERIOR y no incluyen estas 18 nuevas verificaciones.
+- Si funcionan estas pruebas de Editor, antes de compilar Android
+  hay que integrar el acceso al juego desde el menu de la app
+  (o establecer la escena del juego como entrada). No generar
+  APK adicional solo para comprobar la vista en Windows.
+- El detector de pares BLE es EXPERIMENTAL y los `UP_IMPULSE`
+  no equivalen necesariamente a saltos reales.
+- Sigue pendiente analizar el agrupamiento temporal de eventos
+  constatado en el ultimo CSV de Android. No confiar aun en la
+  clasificacion biomecanica.
