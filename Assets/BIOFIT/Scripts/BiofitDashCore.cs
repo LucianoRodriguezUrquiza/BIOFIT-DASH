@@ -71,7 +71,7 @@ public sealed class BiofitDashCore
 
     public bool Jump()
     {
-        if (!Playing || GameOver || Paused || JumpAltitude > 0.001f)
+        if (!Playing || GameOver || Paused || JumpAltitude > 0.001f || velocityY > 0f)
             return false;
         velocityY = 575f;
         SuccessfulJumps++;
