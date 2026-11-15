@@ -56,6 +56,14 @@ public sealed class BiofitMovementLab : MonoBehaviour
                 SimulateFoot(2);
             if (Keyboard.current.spaceKey.wasPressedThisFrame)
                 SimulateJump();
+            // Q y E generan UP aislados; J genera un par bilateral artificial.
+            // NO mueven al cubo: todavia no hemos validado salto fisico.
+            if (Keyboard.current.qKey.wasPressedThisFrame)
+                SimulateUp(1);
+            if (Keyboard.current.eKey.wasPressedThisFrame)
+                SimulateUp(2);
+            if (Keyboard.current.jKey.wasPressedThisFrame)
+                SimulatePairUps();
         }
 #endif
 
@@ -126,6 +134,19 @@ public sealed class BiofitMovementLab : MonoBehaviour
         }
     }
 
+    private void SimulateUp(byte trackerId)
+    {
+        monitor.JumpDetector.ProcessImpulse(trackerId,
+            Time.realtimeSinceStartup, 0.32f);
+    }
+
+    private void SimulatePairUps()
+    {
+        float now = Time.realtimeSinceStartup;
+        monitor.JumpDetector.ProcessImpulse(1, now, 0.32f);
+        monitor.JumpDetector.ProcessImpulse(2, now, 0.32f);
+    }
+
     private void SimulateJump()
     {
         if (isJumping) return;
@@ -189,7 +210,7 @@ public sealed class BiofitMovementLab : MonoBehaviour
         float viewportHeight = h - 22f;
         scrollPosition = GUI.BeginScrollView(
             new Rect(11f, 11f, viewportWidth, viewportHeight),
-            scrollPosition, new Rect(0f, 0f, contentWidth, 985f),
+            scrollPosition, new Rect(0f, 0f, contentWidth, 1120f),
             false, true);
 
         float x = 20f;
@@ -213,7 +234,7 @@ public sealed class BiofitMovementLab : MonoBehaviour
         }
 
         GUI.Label(new Rect(x, 153f, bodyW, 58f),
-            "PC: A = tobillo izquierdo | D = derecho | ESPACIO = salto manual", smallStyle);
+            "PC: A/D = MOV_ON | Q/E = UP aislados | J = par UP | ESPACIO = salto manual", smallStyle);
         GUI.Label(new Rect(x, 204f, bodyW, 48f),
             "Teclas recibidas: A = " + leftKeyPresses +
             "   D = " + rightKeyPresses, textStyle);
@@ -229,8 +250,17 @@ public sealed class BiofitMovementLab : MonoBehaviour
             "Cadencia estimada: " + engine.EstimatedCadence.ToString("F0") +
             "/min | " + engine.Activity, smallStyle);
 
+        BiofitBilateralJumpDetector jump = monitor.JumpDetector;
+        GUI.Label(new Rect(x, 405f, bodyW, 56f),
+            "UP aceptados: izq " + jump.LeftUpCandidates +
+            " | der " + jump.RightUpCandidates +
+            " | PARES BILATERALES: " + jump.BilateralCandidates, textStyle);
+        GUI.Label(new Rect(x, 455f, bodyW, 58f),
+            "Ultimo par: " + jump.LastPairGapMs.ToString("F0") +
+            " ms | " + jump.LastStatus, smallStyle);
+
         // PISTA: se dibuja debajo de todos los indicadores.
-        float trackTop = 427f;
+        float trackTop = 520f;
         float trackW = bodyW;
         float trackH = 238f;
         DrawSolid(new Rect(x, trackTop, trackW, trackH),
@@ -248,19 +278,19 @@ public sealed class BiofitMovementLab : MonoBehaviour
         DrawSolid(new Rect(obstacleScreenX, ground - 68f, 48f, 68f),
             new Color(0.96f, 0.45f, 0.43f));
 
-        GUI.Label(new Rect(x, 682f, bodyW, 54f),
+        GUI.Label(new Rect(x, 775f, bodyW, 54f),
             "Obstaculos superados: " + obstaclesPassed +
             "   |   colisiones ilustrativas: " + collisions,
             textStyle);
-        GUI.Label(new Rect(x, 746f, bodyW, 93f),
-            "PRUEBA: pulsá A, soltá, luego D, soltá, y repetí " +
-            "(aprox. una tecla cada 0,5 s). Cada tecla mueve el obstaculo " +
-            "un poco. Tras varios pares, deberia aparecer cadencia.",
+        GUI.Label(new Rect(x, 837f, bodyW, 102f),
+            "PRUEBA COMBINADA: A-D alternados estima cadencia. " +
+            "Q/E simulan UP por tobillo. J genera dos UP simultaneos " +
+            "(candidato bilateral). ESPACIO salta manualmente.",
             smallStyle);
-        GUI.Label(new Rect(x, 864f, bodyW, 102f),
-            "Importante: esto simula eventos de tobillo. Los candidatos " +
-            "no son pasos confirmados. El salto de ESPACIO no detecta " +
-            "un salto real con los sensores.",
+        GUI.Label(new Rect(x, 965f, bodyW, 118f),
+            "IMPORTANTE: el par bilateral es solo un candidato NO VALIDADO. " +
+            "Q/E/J no hacen saltar al cubo. El salto del personaje por ESPACIO " +
+            "es manual, no depende de la IMU.",
             smallStyle);
 
         GUI.EndScrollView();
