@@ -129,7 +129,7 @@ public sealed class BiofitEventCapture
         float verticalG, bool bilateralCandidate,
         float unityQueueDelayMs = 0f, double callbackMonotonicSeconds = 0d,
         double estimatedEventSeconds = 0d, bool clockAligned = false,
-        double estimatedAgeMs = 0d)
+        double relativeArrivalDelayMs = 0d)
     {
         if (!Recording) return;
         if (rows.Count >= MaxRows)
@@ -155,7 +155,7 @@ public sealed class BiofitEventCapture
                  callbackMonotonicSeconds.ToString("F3", invariant) + ";" +
                  (clockAligned ? estimatedEventSeconds.ToString("F3", invariant) : "") +
                  ";" + (clockAligned ? "1" : "0") + ";" +
-                 (clockAligned ? estimatedAgeMs.ToString("F1", invariant) : ""));
+                 (clockAligned ? relativeArrivalDelayMs.ToString("F1", invariant) : ""));
         EventRows++;
     }
 
@@ -164,7 +164,7 @@ public sealed class BiofitEventCapture
         get
         {
             var sb = new StringBuilder(rows.Count * 85 + 200);
-            sb.AppendLine("tipo;etapa;reloj_unity_procesado_s;tracker_id;evento;reloj_esp32_ms;secuencia;giro_dps;acel_vertical_g;par_bilateral;espera_cola_unity_ms;reloj_callback_monotonico_s;reloj_evento_estimado_s;reloj_alineado;edad_estimada_evento_ms");
+            sb.AppendLine("tipo;etapa;reloj_unity_procesado_s;tracker_id;evento;reloj_esp32_ms;secuencia;giro_dps;acel_vertical_g;par_bilateral;espera_cola_unity_ms;reloj_callback_monotonico_s;reloj_evento_estimado_s;reloj_alineado;demora_relativa_estimacion_ms");
             foreach (string row in rows)
                 sb.AppendLine(row);
             sb.AppendLine("# filas_eventos=" + EventRows +
