@@ -212,3 +212,50 @@ reabrir proyecto, y usar `BIOFIT > Verificar salto bilateral (sin APK)`.
 Luego en `Game` abrir el laboratorio y pulsar Q/E/J si se desea.
 No volver a agregar el laboratorio a la escena si ya aparece en Inspector.
 **No generar APK Android hasta la proxima validacion combinada.**
+
+
+## Correccion de laboratorio 2D tras prueba de teclas (2026-11-15)
+
+El usuario comprobo que A/D simulaban eventos, Q/E aumentaban los contadores
+de impulsos y J generaba pares bilaterales. Detecto dos problemas: el
+obstaculo daba saltos por pulsacion antes de moverse suavemente y, en
+ciertas resoluciones, los cuadrados aparecian cortados en el borde inferior.
+
+**Causas y soluciones:**
+- Se elimino el desplazamiento artificial `obstacleX -= 52` en cada
+  pulsacion de A o D. Ahora el obstaculo **solo avanza con cadencia
+  alternada reciente**, usando `Mathf.MoveTowards` para acelerar y
+  desacelerar suavemente. Pulsaciones unilaterales muestran un indicador
+  A/D y actualizan contadores, pero NO crean avance continuo.
+- Una secuencia A/D demasiado rapida puede ser filtrada por los limites
+  temporales del clasificador: **no se flexibilizaron umbrales de IMU
+  usando solo teclas de PC**, porque eso podria generar falsos pasos
+  durante las pruebas reales.
+- La pista ya no esta al final de una pagina vertical desplazable:
+  se usa un lienzo virtual de 1120x740 escalado uniformemente.
+  El cuadrado turquesa y el obstaculo salmon se dibujan completos
+  sobre el suelo en la pantalla Game, incluyendo cuando no hay salto.
+- `Q` y `E` por separado solo registran UP. Si se pulsan en una
+  ventana de 180 ms y el detector acepta el par, el cubo hace un
+  **salto demostrativo**. `J` genera ambos UP en Editor; si se acepta
+  el par, tambien dispara el salto de demostracion.
+- `ESPACIO` / `SALTO MANUAL` siguen funcionando independientemente
+  del detector.
+- En una futura APK Android, el control
+  `SALTAR CON PARES BLE: NO/SI (DEMO)` permite elegir voluntariamente
+  si los candidatos recibidos de las placas animan al cubo.
+  Esta opcion empieza DESACTIVADA: los pares UP NO prueban un salto real.
+- La pantalla de diagnostico BLE es ahora desplazable, para acceder a
+  `INICIAR`, `FIN CAMINAR`, `FIN CORRER`, `FIN SALTOS`,
+  `COPIAR RESUMEN` y `COPIAR CSV` en celulares de distintas alturas.
+- `BIOFIT > Verificar salto bilateral (sin APK)` agrega comprobaciones
+  sinteticas de la velocidad de vista previa, pares Q/E y posicion
+  de la pista (29 casos totales); siguen pendientes las pruebas con
+  datos BLE reales y la compilacion Android.
+
+**Proximo paso:** detener Play, guardar, cerrar Unity, actualizar
+en GitHub Desktop (Fetch -> Pull), reabrir Unity y ejecutar una sola
+vez la verificacion automatica del salto bilateral. Si pasa,
+probar brevemente `J` y `ESPACIO` en la pestaña Game (sin sensores).
+No generar APK todavia, salvo que se programe una futura sesion
+de validacion fisica combinada.
