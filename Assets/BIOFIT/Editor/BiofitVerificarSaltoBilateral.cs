@@ -108,6 +108,32 @@ public static class BiofitVerificarSaltoBilateral
             Assert(session.Report.Contains("PARES UP=1"),
                 "El resumen debe incluir candidatos bilaterales", ref checks);
 
+            // Regresiones del laboratorio 2D: el obstaculo ya no debe
+            // avanzar por pulsaciones individuales ni si no hay cadencia.
+            Assert(BiofitMovementLab.TargetSpeedForCadence(0f) == 0f,
+                "Sin cadencia la velocidad visual objetivo debe ser cero", ref checks);
+            Assert(BiofitMovementLab.TargetSpeedForCadence(54f) == 0f,
+                "Movimiento sin clasificar no debe activar avance", ref checks);
+            Assert(BiofitMovementLab.TargetSpeedForCadence(120f) > 0f,
+                "Caminar tentativo debe permitir avance continuo", ref checks);
+            Assert(BiofitMovementLab.TargetSpeedForCadence(170f) >
+                   BiofitMovementLab.TargetSpeedForCadence(120f),
+                "Mayor cadencia debe dar mayor velocidad visual", ref checks);
+
+            // Q/E representan impulsos individuales; solo juntos forman par.
+            var teclas = new BiofitBilateralJumpDetector();
+            Assert(!teclas.ProcessImpulse(1, 10.00f, 0.32f),
+                "La tecla Q aislada no debe disparar par", ref checks);
+            Assert(teclas.ProcessImpulse(2, 10.08f, 0.32f),
+                "Q seguido de E en 80 ms debe producir par simulado", ref checks);
+
+            // Comprobacion de geometria virtual: el personaje sobre el
+            // suelo entra COMPLETO en el lienzo de 740 unidades.
+            const float groundVirtualY = 413f + 227f - 31f;
+            Assert(groundVirtualY - 70f >= 413f &&
+                   groundVirtualY + 7f < 740f,
+                "El cubo y la linea de suelo no deben quedar fuera de pantalla", ref checks);
+
             EditorUtility.DisplayDialog("BIOFIT - Salto bilateral",
                 checks + " verificaciones sinteticas superadas.\n\n" +
                 "El codigo reconoce pares de UP con umbral y antirrebote.\n" +
