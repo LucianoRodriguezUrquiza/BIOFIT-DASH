@@ -29,6 +29,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly BiofitBilateralJumpDetector jumpDetector = new BiofitBilateralJumpDetector();
     public BiofitBilateralJumpDetector JumpDetector => jumpDetector;
 
+    /// <summary>
+    /// Notificacion opcional para vistas de demostracion, en hilo principal.
+    /// Representa un PAR DE IMPULSOS, no un salto humano confirmado.
+    /// </summary>
+    public event Action<float> BilateralJumpCandidate;
+
     [SerializeField] private bool showDiagnostics = true;
     public bool ShowDiagnostics
     {
@@ -197,6 +203,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         {
             Debug.Log("BIOFIT: POSIBLE SALTO BILATERAL (NO CONFIRMADO), intervalo " +
                       jumpDetector.LastPairGapMs.ToString("F0") + " ms");
+            // ReadEvent se ejecuta desde Update(), en el hilo principal.
+            BilateralJumpCandidate?.Invoke(jumpDetector.LastPairGapMs);
         }
         eventCapture.Record(receivedSeconds, state.id, eventType,
             sequence, millis, gyroDps, verticalG, paired);
