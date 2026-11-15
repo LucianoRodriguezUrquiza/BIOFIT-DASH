@@ -245,8 +245,9 @@ public sealed class BiofitDashGame : MonoBehaviour
             " | reloj: " + (monitor.ClockAlignmentReady ? "IMU estimado" :
                                                      "sin ancla STATUS") +
             "\nSTATUS: " + monitor.ClockStatusLeft + "/" +
-            monitor.ClockStatusRight + " | Pares: " + blePairsObserved +
-            " | Casi pares: " + monitor.NearMisses +
+            monitor.ClockStatusRight + " | recientes(32s): " +
+            monitor.RecentStatusLeft + "/" + monitor.RecentStatusRight +
+            " | Pares: " + blePairsObserved + " | Casi pares: " + monitor.NearMisses +
             "\nIntentos de salto BLE: " + bleJumpAttempts, helper);
 
         Draw(new Rect(34f, 223f, 1050f, 414f), new Color(0.13f, 0.24f, 0.37f));
