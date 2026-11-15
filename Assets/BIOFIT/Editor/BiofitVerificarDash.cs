@@ -107,7 +107,8 @@ public static class BiofitVerificarDash
             Assert(recorder.MarkGameStage("CAMINAR", 11f) &&
                    recorder.Stage == "CAMINAR",
                 "La etapa debe actualizarse al marcar CAMINAR", ref checks);
-            recorder.Record(11.1f, 1, 3, 10, 12345, 28f, 0.33f, false, 4f, 10f);
+            recorder.Record(11.1f, 1, 3, 10, 12345, 28f, 0.33f, false,
+                4f, 10f, 9.88d, true, 120d);
             recorder.RecordGameAction("PAR_BLE_DETECTADO", 11.2f);
             recorder.RecordGameConfig(11.25f, 0.12f, 180f);
             Assert(recorder.Csv.Contains("UP=0.12g_PAIR=180ms"),
@@ -116,6 +117,14 @@ public static class BiofitVerificarDash
                    recorder.Csv.Contains("PAR_BLE_DETECTADO") &&
                    recorder.Csv.Contains("espera_cola_unity_ms"),
                 "CSV de juego combina eventos BLE, callback y acciones Unity",
+                ref checks);
+            Assert(recorder.Csv.Contains("reloj_evento_estimado_s") &&
+                   recorder.Csv.Contains("reloj_alineado") &&
+                   recorder.Csv.Contains("demora_relativa_estimacion_ms"),
+                "CSV declara la marca temporal alineada y su demora RELATIVA",
+                ref checks);
+            Assert(recorder.Csv.Contains(";9.880;1;120.0"),
+                "CSV conserva los valores numericos de sincronizacion",
                 ref checks);
             Assert(recorder.MarkGameStage("CORRER", 12f) &&
                    recorder.MarkGameStage("ELEVACION", 13f) &&
@@ -137,8 +146,9 @@ public static class BiofitVerificarDash
                 if (csvLines[line].TrimEnd('\r').Split(';').Length != columnCount)
                     columnsAreAligned = false;
             }
-            Assert(columnsAreAligned && columnCount == 12,
-                "Los registros BLE, Unity y MARCA tienen 12 columnas", ref checks);
+            Assert(columnsAreAligned && columnCount == 15,
+                "Los registros BLE, Unity, APP y MARCA tienen 15 columnas",
+                ref checks);
             Assert(!recorder.MarkGameStage("CAMINAR", 16f),
                 "No se permiten marcas tras finalizar", ref checks);
 
@@ -178,7 +188,7 @@ public static class BiofitVerificarDash
             Assert(solo.FinishGame(54f), "Cierra sesion unilateral", ref checks);
             string[] soloLines = solo.Csv.Split('\n');
             int soloColumns = soloLines[0].TrimEnd('\r').Split(';').Length;
-            bool soloValid = soloColumns == 12;
+            bool soloValid = soloColumns == 15;
             for (int k = 1; k < soloLines.Length; k++)
             {
                 if (soloLines[k].Length == 0 || soloLines[k][0] == '#')
@@ -187,7 +197,7 @@ public static class BiofitVerificarDash
                     soloValid = false;
             }
             Assert(soloValid,
-                "Filas de diagnostico unilateral tienen 12 columnas", ref checks);
+                "Filas de diagnostico unilateral tienen 15 columnas", ref checks);
 
             // Dos ESP32 sin reloj absoluto compartido: la recepcion
             // STATUS permite una alineacion aproximada sin reflashear.
@@ -227,8 +237,16 @@ public static class BiofitVerificarDash
             Assert(!falseGait.ProcessImpulse(1, 1.27d, 0.50f),
                 "Pasos alternados separados 270 ms NO son par bilateral",
                 ref checks);
+            Assert(falseGait.NearMisses == 1 &&
+                   System.Math.Abs(falseGait.LastNearMissGapMs - 270f) < 1f,
+                "Los casi-pares deben medirse en ms para afinar sin adivinar",
+                ref checks);
             Assert(!clock.IsReady(1005d),
                 "Si se pierden STATUS, hay que desactivar la alineacion",
+                ref checks);
+            Assert(!clock.TryMapEvent(1, 104000u, 1005.0d,
+                    out double invalidMapped),
+                "No usar relojes STATUS caducados en un salto real",
                 ref checks);
             clock.ObserveStatus(1, 50u, 1010d);
             Assert(clock.LeftSamples == 1,
