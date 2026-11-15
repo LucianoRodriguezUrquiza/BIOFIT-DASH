@@ -111,6 +111,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         eventCapture.RecordGameAction(action, Time.realtimeSinceStartup);
     }
 
+    public void RecordSingleFootConfig(float minVerticalG)
+    {
+        eventCapture.RecordSingleFootConfig(Time.realtimeSinceStartup,
+            minVerticalG);
+    }
+
     public bool StopGameCapture()
     {
         if (!gameCaptureActive ||
