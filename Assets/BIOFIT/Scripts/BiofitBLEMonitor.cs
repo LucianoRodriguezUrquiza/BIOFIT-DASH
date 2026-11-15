@@ -256,6 +256,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private void OnGUI()
     {
         if (!showDiagnostics) return;
+        Matrix4x4 previousMatrix = GUI.matrix;
         float scale = Mathf.Max(0.65f, Screen.width / 1080f);
         GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
         float width = Screen.width / scale;
@@ -329,6 +330,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         y += 111;
         DrawSessionControls(x, y, textWidth);
         GUI.EndScrollView();
+        GUI.matrix = previousMatrix;
     }
 
     private void DrawSessionControls(float x, float y, float width)
