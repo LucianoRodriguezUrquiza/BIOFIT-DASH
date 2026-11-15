@@ -30,13 +30,27 @@ public sealed class BiofitClockAligner
     private readonly Clock left = new Clock();
     private readonly Clock right = new Clock();
 
-    private const double WindowSeconds = 12d;
+    // En Android real STATUS puede llegar bastante por debajo de la tasa
+    // nominal del firmware. Ocho muestras en 12 s nunca se alcanzaban en
+    // la prueba v0.4 (mas de 300 STATUS acumulados, reloj INACTIVO).
+    // Conservar 8 anclas, ampliando solo la ventana de observacion.
+    // Esto no convierte el estimador basado en recepcion BLE en un reloj
+    // fisicamente sincronizado; su offset aun contiene demora GATT.
+    private const double WindowSeconds = 32d;
     private const int MinimumSamples = 8;
     private const int MaxSamples = 160;
-    private const double MaxSampleAgeSeconds = 2.5d;
+    private const double MaxSampleAgeSeconds = 4.0d;
 
     public int LeftSamples => left.Samples;
     public int RightSamples => right.Samples;
+    // A diferencia de Samples, estos valores SI estan dentro de la
+    // ventana temporal. Usarlos para diagnosticar IsReady().
+    public int LeftRecentSamples => left.Recent.Count;
+    public int RightRecentSamples => right.Recent.Count;
+    public double LeftAgeSeconds(double nowSeconds) =>
+        nowSeconds - left.LastCallback;
+    public double RightAgeSeconds(double nowSeconds) =>
+        nowSeconds - right.LastCallback;
 
     public void ObserveStatus(byte trackerId, uint sensorMillis, double callbackSeconds)
     {
