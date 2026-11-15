@@ -79,6 +79,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public int RightTimeCompressed => right.timeCompressed;
     public int ClockStatusLeft => timeAligner.LeftSamples;
     public int ClockStatusRight => timeAligner.RightSamples;
+    public int RecentStatusLeft => timeAligner.LeftRecentSamples;
+    public int RecentStatusRight => timeAligner.RightRecentSamples;
     public int AlignedEvents => alignedEvents;
     public int NearMisses => jumpDetector.NearMisses;
     public float LastNearMissGapMs => jumpDetector.LastNearMissGapMs;
@@ -160,6 +162,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "\nESTIMACION_RELOJ=" + (ClockAlignmentReady ? "ACTIVA" : "INACTIVA") +
             " | EVENTOS_ALINEADOS=" + (alignedEvents - gAlignedEvents) +
             "\nESTIMACION_STATUS: IZQ=" + ClockStatusLeft + " DER=" + ClockStatusRight +
+            " | RECIENTES_32S=" + RecentStatusLeft + "/" + RecentStatusRight +
             " | PARES_CERCANOS_RECHAZADOS=" + (NearMisses - gNearMisses) +
             "\nTIEMPOS_COMPRIMIDOS=" + (TimeCompressedEvents - gCompressed) +
             " (acumulados desde inicio=" + TimeCompressedEvents + ")" +
@@ -537,7 +540,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         y += 83;
         GUI.Label(new Rect(x, y, textWidth, 86),
             "Reloj estimado: " + (ClockAlignmentReady ? "ACTIVO" : "ESPERANDO STATUS") +
-            " | STATUS izq/der: " + ClockStatusLeft + "/" + ClockStatusRight +
+            " | STATUS total: " + ClockStatusLeft + "/" + ClockStatusRight +
+            " | 32s: " + RecentStatusLeft + "/" + RecentStatusRight +
             " | Casi pares: " + NearMisses, small);
         y += 91;
         GUI.Label(new Rect(x, y, textWidth, 62), "BIOFIT INPUT ENGINE (EXPERIMENTAL)", heading);
