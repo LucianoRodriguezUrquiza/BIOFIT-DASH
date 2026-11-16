@@ -188,7 +188,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         try {
             SavedCapturePath = BiofitCaptureArchive.Save(Application.persistentDataPath,
                 eventCapture.Csv,lastGameSummary);
-            CaptureFileStatus = "CSV completo: " + eventCapture.TotalRows + " filas + SHA256";
+            CaptureFileStatus = "CSV: " + eventCapture.TotalRows + " filas; descartadas=" + eventCapture.DroppedRows + "; SHA256 OK";
             return true;
         } catch (Exception ex) { CaptureFileStatus = "ERROR archivo: " + ex.Message; return false; }
     }
