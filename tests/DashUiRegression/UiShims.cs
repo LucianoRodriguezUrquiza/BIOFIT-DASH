@@ -15,7 +15,6 @@ namespace UnityEngine
     {
         public static ScreenOrientation orientation;
     }
-    public enum TextAnchor { MiddleLeft, MiddleCenter }
     public static partial class Mathf
     {
         public static float Min(float a, float b) => Math.Min(a, b);
