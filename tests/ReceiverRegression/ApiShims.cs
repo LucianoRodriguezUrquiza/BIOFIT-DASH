@@ -16,6 +16,7 @@ namespace UnityEngine {
  public struct Matrix4x4 { public static Matrix4x4 Scale(Vector3 v)=>new Matrix4x4(); }
  public struct Color { public static Color white; public Color(float a,float b,float c){} public Color(float a,float b,float c,float d){} }
  public enum FontStyle { Bold }
+ public enum TextAnchor { MiddleLeft, MiddleCenter }
  public class GUIStyleState { public Color textColor; }
  public class GUIStyle { public int fontSize; public FontStyle fontStyle; public bool wordWrap; public TextAnchor alignment; public GUIStyleState normal=new GUIStyleState(); public GUIStyle(object o){} }
  public class GUISkin { public object label,button; }
