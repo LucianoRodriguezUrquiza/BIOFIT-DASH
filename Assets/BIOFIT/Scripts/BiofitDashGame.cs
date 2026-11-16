@@ -342,10 +342,14 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (GUI.Button(new Rect(x + 10f, 208f, cw, 38f),
             "1. INICIAR", compact))
         {
-            soloDiagnostic.Reset();
-            singleCandidates = 0;
-            singleJumps = 0;
-            experimentStatus = monitor.StartGameCapture() ?
+            bool started = monitor.StartGameCapture();
+            if (started)
+            {
+                soloDiagnostic.Reset();
+                singleCandidates = 0;
+                singleJumps = 0;
+            }
+            experimentStatus = started ?
                 "Registro iniciado: comenzar con 10 s quieto." :
                 "Ya existe un registro activo.";
         }
@@ -377,14 +381,14 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (GUI.Button(new Rect(x + 12f, 341f, 53f, 38f), "-", compact))
             monitor.AdjustJumpThreshold(-0.02f);
         GUI.Label(new Rect(x + 72f, 347f, labelW, 30f),
-            "UP: " + monitor.MinUpG.ToString("F2") + " g", compactLabel());
+            "UP: " + monitor.MinUpG.ToString("F2") + " g", panelSmall);
         if (GUI.Button(new Rect(x + pw - 66f, 341f, 53f, 38f), "+", compact))
             monitor.AdjustJumpThreshold(+0.02f);
 
         if (GUI.Button(new Rect(x + 12f, 386f, 53f, 38f), "-", compact))
             monitor.AdjustPairWindow(-0.02f);
         GUI.Label(new Rect(x + 72f, 392f, labelW, 30f),
-            "PAR: " + monitor.PairWindowMs.ToString("F0") + " ms", compactLabel());
+            "PAR: " + monitor.PairWindowMs.ToString("F0") + " ms", panelSmall);
         if (GUI.Button(new Rect(x + pw - 66f, 386f, 53f, 38f), "+", compact))
             monitor.AdjustPairWindow(+0.02f);
 
@@ -394,7 +398,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             monitor.RecordSingleFootConfig(singleMinG);
         }
         GUI.Label(new Rect(x + 72f, 437f, labelW, 30f),
-            "SOLO UP: " + singleMinG.ToString("F2") + " g", compactLabel());
+            "SOLO UP: " + singleMinG.ToString("F2") + " g", panelSmall);
         if (GUI.Button(new Rect(x + pw - 66f, 431f, 53f, 38f), "+", compact))
         {
             singleMinG = Mathf.Min(1f, singleMinG + 0.05f);
@@ -413,15 +417,10 @@ public sealed class BiofitDashGame : MonoBehaviour
             "  ocupado " + r.GameUnavailable, panelSmall);
         GUI.Label(new Rect(x + 11f, 562f, pw - 22f, 27f),
             "Pares: " + blePairsObserved + " | Rechazos BLE: " +
-            monitor.RejectedEvents + " | Cola: " + monitor.DroppedAppPackets,
+            monitor.RejectedEvents + " | Cola: " + monitor.AppQueueDropped,
             panelSmall);
         GUI.Label(new Rect(x + 11f, 587f, pw - 22f, 39f),
             experimentStatus, panelSmall);
-    }
-
-    private GUIStyle compactLabel()
-    {
-        return panelSmall;
     }
 
     private static void Draw(Rect rect, Color color)
