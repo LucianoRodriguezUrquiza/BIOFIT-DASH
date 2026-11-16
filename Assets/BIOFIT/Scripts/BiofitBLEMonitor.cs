@@ -23,6 +23,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private const string TransportUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0007";
     private IBleCharacteristic leftTransport, rightTransport;
     public int RejectedEvents { get; private set; }
+    public int AppQueueDropped => callbackDropped;
+    public int AppQueuePending => pendingCount;
     public string TransportSummary => "Rechazos: " + RejectedEvents + " | cola=" + pendingCount + " dropApp=" + callbackDropped +
         " | huecos seq: " + (left.gate.Missing + right.gate.Missing) +
         " | duplicados/desorden: " + (left.gate.DuplicateOrReordered + right.gate.DuplicateOrReordered);
