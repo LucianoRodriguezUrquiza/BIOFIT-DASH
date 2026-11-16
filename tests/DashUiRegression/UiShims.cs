@@ -38,6 +38,7 @@ namespace UnityEngine
     public static partial class GUI
     {
         public static readonly List<string> ButtonTexts = new List<string>();
+        public static Color color = Color.white;
         public static void DrawTexture(Rect r,Texture2D t){}
         public static void DrawTexture(Rect r,Texture2D t,ScaleMode s,bool alpha){}
         public static void BeginGroup(Rect r){}
