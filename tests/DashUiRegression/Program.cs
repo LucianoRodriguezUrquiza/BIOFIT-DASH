@@ -104,10 +104,22 @@ class Program
             "actual UI selector switches back to left foot");
         UnityEngine.GUI.ClickNext="1. INICIAR";gui.Invoke(game,null);
         Check(monitor.GameCaptureActive,"actual start button starts capture");
+        UnityEngine.GUI.ClickNext="SALTAR";gui.Invoke(game,null);
+        typeof(BiofitDashGame).GetMethod("Update",
+            BindingFlags.Instance|BindingFlags.NonPublic).Invoke(game,null);
         Check(internalDiag.LeftThresholdG==.25f && internalDiag.RightThresholdG==.25f,
             "capture start preserves both preferred threshold values");
         UnityEngine.GUI.ClickNext="2. FINALIZAR";gui.Invoke(game,null);
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
+        Check(System.IO.File.ReadAllText(monitor.SavedCapturePath).Contains("PRIMER_ESTADO_SALTO"),
+            "first animated simulation frame has a distinct timestamp marker");
+        Check(BiofitAndroidExport.IsFinalStatus("GUARDADO: CSV verificado (123 bytes)") &&
+              BiofitAndroidExport.IsFinalStatus("CANCELADO: original conservado") &&
+              BiofitAndroidExport.IsFinalStatus("ERROR: falta activity"),
+            "native export terminal states recognized");
+        Check(!BiofitAndroidExport.IsFinalStatus("ABRIENDO_SELECTOR") &&
+              !BiofitAndroidExport.IsFinalStatus("SELECCIONAR_DESTINO"),
+            "picker request is not misreported as a completed save");
         UnityEngine.GUI.ClickNext="3. ARCHIVO";gui.Invoke(game,null);
         Check(UnityEngine.GUI.ClickNext==null,"actual archive button invokes export");
         UnityEngine.GUI.ClickNext="COPIAR";gui.Invoke(game,null);
