@@ -31,6 +31,12 @@ public sealed class BiofitDashGame : MonoBehaviour
     private float roadOffset;
     private bool showTestPanel = true;
     private string experimentStatus = "Registro sin iniciar. Una sola sesion.";
+    private bool exportPending;
+    private float nextExportPoll;
+    private bool visualJumpPending;
+    private double acceptedJumpAt;
+    private byte acceptedJumpFoot;
+    private string acceptedJumpSource;
     private GUIStyle compact, panelSmall, hudStatus;
 
     private void Awake()
@@ -74,6 +80,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         bleJumpAttempts++;
         lastInput = "PAR BLE EXPERIMENTAL (" + gapMs.ToString("F0") + " ms)";
         bool jumped = game.Jump();
+        if (jumped) TrackAcceptedJump(0, "BILATERAL");
         monitor.RecordDecision(0,jumped ? "PAR_SALTO" : "PAR_CUBO_OCUPADO");
         monitor.RecordGameAction(jumped ?
             "SALTO_BLE_REALIZADO" : "SALTO_BLE_NO_REALIZADO");
@@ -107,7 +114,11 @@ public sealed class BiofitDashGame : MonoBehaviour
         bool jumped = game.Jump();
         soloDiagnostic.RecordGameResult(foot, jumped);
         monitor.RecordDecision(foot,jumped ? "SALTO" : "CUBO_OCUPADO");
-        if (jumped) singleJumps++;
+        if (jumped)
+        {
+            singleJumps++;
+            TrackAcceptedJump(foot, side);
+        }
         lastInput = "UP SOLO " + side + " (" + verticalG.ToString("F2") +
             " g)" + (jumped ? " SALTO" : " CUBO OCUPADO");
         monitor.RecordGameAction(jumped ?
@@ -130,14 +141,46 @@ public sealed class BiofitDashGame : MonoBehaviour
 
         float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.05f);
         game.Step(dt);
+        if (visualJumpPending && game.JumpAltitude > 0f)
+        {
+            double now = System.Diagnostics.Stopwatch.GetTimestamp() /
+                (double)System.Diagnostics.Stopwatch.Frequency;
+            monitor.RecordFirstJumpFrame(acceptedJumpFoot, acceptedJumpSource,
+                (now - acceptedJumpAt) * 1000.0);
+            visualJumpPending = false;
+        }
+        if (exportPending && Time.realtimeSinceStartup >= nextExportPoll)
+        {
+            nextExportPoll = Time.realtimeSinceStartup + .25f;
+            string status = BiofitAndroidExport.PollStatus();
+            if (!string.IsNullOrEmpty(status))
+            {
+                experimentStatus = status;
+                if (BiofitAndroidExport.IsFinalStatus(status))
+                {
+                    exportPending = false;
+                    if (status.StartsWith("ERROR")) Debug.LogWarning("BIOFIT ARCHIVO: " + status);
+                }
+            }
+        }
         if (game.Playing && !game.Paused)
             roadOffset = (roadOffset + game.Speed * dt) % 90f;
+    }
+
+    private void TrackAcceptedJump(byte foot, string source)
+    {
+        visualJumpPending = true;
+        acceptedJumpAt = System.Diagnostics.Stopwatch.GetTimestamp() /
+            (double)System.Diagnostics.Stopwatch.Frequency;
+        acceptedJumpFoot = foot;
+        acceptedJumpSource = source;
     }
 
     private void Jump(string input)
     {
         if (game.Jump())
         {
+            TrackAcceptedJump(0, "MANUAL");
             lastInput = input;
             monitor.RecordGameAction("SALTO_MANUAL");
         }
@@ -145,6 +188,7 @@ public sealed class BiofitDashGame : MonoBehaviour
 
     private void ResetGame()
     {
+        visualJumpPending = false;
         game.StartNewGame();
         lastInput = "NUEVA PARTIDA";
         roadOffset = 0f;
@@ -367,14 +411,17 @@ public sealed class BiofitDashGame : MonoBehaviour
         }
         if (GUI.Button(new Rect(x + 16f + cw, 208f, cw, 38f),
             "2. FINALIZAR", compact))
-            experimentStatus = monitor.StopGameCapture() ?
-                monitor.CaptureFileStatus :
-                "Primero inicia el registro.";
+        {
+            monitor.StopGameCapture();
+            experimentStatus = monitor.CaptureFileStatus;
+        }
         if (GUI.Button(new Rect(x + 22f + 2f*cw, 208f, cw, 38f),
             "3. ARCHIVO", compact))
-            experimentStatus = monitor.ExportGameCapture() ?
-                "Elegir destino del CSV." :
-                "Inicia y finaliza el registro primero.";
+        {
+            exportPending = monitor.ExportGameCapture();
+            nextExportPoll = Time.realtimeSinceStartup + .25f;
+            experimentStatus = monitor.CaptureFileStatus;
+        }
 
         string[] stages = { "QUIETO", "CAMINAR", "CORRER", "ELEVACION", "DASH" };
         for (int i = 0; i < stages.Length; i++)
