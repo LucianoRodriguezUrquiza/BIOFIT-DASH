@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>DASH_UI_TESTS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="UiShims.cs" />
+    <Compile Include="../ReceiverRegression/ApiShims.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashGame.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashCore.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashLayout.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSingleFootDiagnostic.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitClockAligner.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventGate.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventCapture.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSessionLogger.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitInputEngine.cs" />
+  </ItemGroup>
+</Project>
