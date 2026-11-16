@@ -85,6 +85,22 @@ class Program {
   telemetry.StopGameCapture();telemetry.CopyGameCapture();
   Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("upMg=-125 velocityMmS=-80"),"firmware v2 signed diagnostic fields decoded");
   Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("fwVersion=227"),"v227 identity decoded");
+  // A failed private-file save must NOT be misreported as successful finalization.
+  string originalPath=UnityEngine.Application.persistentDataPath;
+  string obstructed=System.IO.Path.GetTempFileName();
+  try {
+    UnityEngine.Application.persistentDataPath=obstructed; // existing file, not directory
+    var failed=new BiofitBLEMonitor();
+    Check(failed.StartGameCapture(),"failure test capture starts");
+    Check(!failed.StopGameCapture() && failed.CaptureFileStatus.StartsWith("ERROR archivo:"),
+          "failed private save reported, not hidden behind FINALIZAR");
+    Check(failed.CopyGameCapture() &&
+          BiofitCaptureArchive.Verify(UnityEngine.GUIUtility.systemCopyBuffer),
+          "lossless hashed clipboard fallback after storage failure");
+  } finally {
+    UnityEngine.Application.persistentDataPath=originalPath;
+    System.IO.File.Delete(obstructed);
+  }
   Console.WriteLine("PASS: "+checks+" receiver integration checks using API shims (not a Unity build).");
  }
 }
