@@ -23,8 +23,8 @@ public sealed class BiofitSingleFootDiagnostic
     public Counters Left { get; private set; } = new Counters();
     public Counters Right { get; private set; } = new Counters();
 
-    public float LeftThresholdG { get; private set; } = 0.35f;
-    public float RightThresholdG { get; private set; } = 0.35f;
+    public float LeftThresholdG { get; private set; } = 0.25f;
+    public float RightThresholdG { get; private set; } = 0.25f;
     public float Threshold(byte foot) => foot == 1 ? LeftThresholdG : RightThresholdG;
     public void AdjustThreshold(byte foot, float delta)
     {
