@@ -35,6 +35,16 @@ class Program
         CheckLayout(800,600); // conservative viewport
 
         var d = new BiofitSingleFootDiagnostic();
+        Check(Math.Abs(d.LeftThresholdG-.25f)<.001f &&
+              Math.Abs(d.RightThresholdG-.25f)<.001f,
+              "both feet start at experimentally supported 0.25g");
+        Check(d.Observe(1,.30f,0.0,d.Threshold(1),.32)==
+              BiofitSingleFootDiagnostic.Decision.Accepted,
+              "left real decision accepts 0.30g at default");
+        Check(d.Observe(2,.30f,0.0,d.Threshold(2),.32)==
+              BiofitSingleFootDiagnostic.Decision.Accepted,
+              "right real decision accepts 0.30g at default");
+        d.Reset();
         Check(d.Observe(1,.20f,1.0,.35f,.32) ==
             BiofitSingleFootDiagnostic.Decision.BelowThreshold, "below-threshold candidate classified");
         Check(d.Left.Received==1 && d.Left.BelowThreshold==1 && d.Left.Accepted==0,
@@ -60,11 +70,11 @@ class Program
               d.Left.Refractory==1 && d.Left.BelowThreshold==1 &&
               d.Left.Invalid==1, "per-foot counters consistent");
         d.AdjustThreshold(1,.10f);
-        Check(Math.Abs(d.Threshold(1)-.45f)<.001f && d.Threshold(2)==.35f,"thresholds independent");
+        Check(Math.Abs(d.Threshold(1)-.35f)<.001f && d.Threshold(2)==.25f,"thresholds independent");
         d.AdjustThreshold(2,float.NaN);d.AdjustThreshold(2,float.PositiveInfinity);
-        Check(d.Threshold(2)==.35f,"invalid threshold changes rejected");
+        Check(d.Threshold(2)==.25f,"invalid threshold changes rejected");
         d.Reset();
-        Check(Math.Abs(d.Threshold(1)-.45f)<.001f,"capture reset preserves thresholds");
+        Check(Math.Abs(d.Threshold(1)-.35f)<.001f,"capture reset preserves thresholds");
         Check(d.Left.Received==0 && d.Right.Received==0,
             "reset clears both diagnostics");
         Check(d.Observe(1,.50f,1.0,.35f,.32) ==
@@ -83,8 +93,19 @@ class Program
         Check(true,"real Dash UI code executed without host exception");
         var gui=typeof(BiofitDashGame).GetMethod("OnGUI",BindingFlags.Instance|BindingFlags.NonPublic);
         var monitor=(BiofitBLEMonitor)typeof(BiofitDashGame).GetField("monitor",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game);
+        var internalDiag=(BiofitSingleFootDiagnostic)typeof(BiofitDashGame).GetField("soloDiagnostic",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game);
+        Check(internalDiag.LeftThresholdG==.25f && internalDiag.RightThresholdG==.25f,
+            "actual Dash game uses both 0.25g defaults");
+        UnityEngine.GUI.ClickNext="IZQ: 0.25 g";gui.Invoke(game,null);
+        Check((byte)typeof(BiofitDashGame).GetField("thresholdFoot",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game)==2,
+            "actual UI selector switches to right foot");
+        UnityEngine.GUI.ClickNext="DER: 0.25 g";gui.Invoke(game,null);
+        Check((byte)typeof(BiofitDashGame).GetField("thresholdFoot",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game)==1,
+            "actual UI selector switches back to left foot");
         UnityEngine.GUI.ClickNext="1. INICIAR";gui.Invoke(game,null);
         Check(monitor.GameCaptureActive,"actual start button starts capture");
+        Check(internalDiag.LeftThresholdG==.25f && internalDiag.RightThresholdG==.25f,
+            "capture start preserves both preferred threshold values");
         UnityEngine.GUI.ClickNext="2. FINALIZAR";gui.Invoke(game,null);
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
         UnityEngine.GUI.ClickNext="3. ARCHIVO";gui.Invoke(game,null);
