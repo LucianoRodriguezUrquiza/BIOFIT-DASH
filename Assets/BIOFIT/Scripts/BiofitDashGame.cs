@@ -19,8 +19,8 @@ public sealed class BiofitDashGame : MonoBehaviour
     // OFF=0, bilateral=1, unilateral izquierdo=2, unilateral derecho=3.
     // Los modos 2 y 3 sirven para diagnosticar la cadena BLE, NO saltos reales.
     private int bleMode;
-    private float singleMinG = 0.45f;
-    private float lastSingleEventSeconds = -10000f;
+    private float singleMinG = 0.35f;
+    private readonly BiofitSingleFootDiagnostic soloDiagnostic = new BiofitSingleFootDiagnostic();
     private int singleCandidates;
     private int singleJumps;
     private int blePairsObserved;
@@ -31,7 +31,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     private float roadOffset;
     private bool showTestPanel = true;
     private string experimentStatus = "Registro sin iniciar. Una sola sesion.";
-    private GUIStyle compact;
+    private GUIStyle compact, panelSmall;
 
     private void Awake()
     {
@@ -84,18 +84,29 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (!monitor.BothTrackersConnected || bleMode < 2) return;
         if ((bleMode == 2 && foot != 1) ||
             (bleMode == 3 && foot != 2)) return;
-        if (verticalG < singleMinG ||
-            eventSeconds - lastSingleEventSeconds < BiofitBilateralJumpDetector.SameAnkleRefractorySeconds)
-            return;
 
-        lastSingleEventSeconds = eventSeconds;
+        BiofitSingleFootDiagnostic.Decision decision = soloDiagnostic.Observe(
+            foot, verticalG, eventSeconds, singleMinG,
+            BiofitBilateralJumpDetector.SameAnkleRefractorySeconds);
+        string side = foot == 1 ? "IZQ" : "DER";
+        if (decision != BiofitSingleFootDiagnostic.Decision.Accepted)
+        {
+            string reason = decision == BiofitSingleFootDiagnostic.Decision.BelowThreshold ?
+                "UMBRAL" : decision == BiofitSingleFootDiagnostic.Decision.Refractory ?
+                "ANTIRREBOTE" : "INVALIDO";
+            monitor.RecordGameAction("SOLO_" + side + "_DESCARTADO_" + reason);
+            lastInput = "SOLO " + side + ": " + reason +
+                " (" + verticalG.ToString("F2") + " g)";
+            return;
+        }
+
         singleCandidates++;
         monitor.RecordGameAction("UP_SOLO_CANDIDATO");
         bool jumped = game.Jump();
+        soloDiagnostic.RecordGameResult(foot, jumped);
         if (jumped) singleJumps++;
-        lastInput = "UP SOLO " + (foot == 1 ? "IZQ" : "DER") +
-            " (" + verticalG.ToString("F2") + " g)" +
-            (jumped ? " SALTO" : " NO DISPONIBLE");
+        lastInput = "UP SOLO " + side + " (" + verticalG.ToString("F2") +
+            " g)" + (jumped ? " SALTO" : " CUBO OCUPADO");
         monitor.RecordGameAction(jumped ?
             "SALTO_SOLO_REALIZADO" : "SALTO_SOLO_NO_REALIZADO");
     }
@@ -160,6 +171,9 @@ public sealed class BiofitDashGame : MonoBehaviour
             { fontSize = 24, fontStyle = FontStyle.Bold };
         compact = new GUIStyle(GUI.skin.button)
             { fontSize = 19, fontStyle = FontStyle.Bold };
+        panelSmall = new GUIStyle(GUI.skin.label)
+            { fontSize = 17, wordWrap = true };
+        panelSmall.normal.textColor = new Color(0.86f, 0.95f, 1f);
         center = new GUIStyle(GUI.skin.label)
             { fontSize = 51, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
         heading.normal.textColor = Color.white;
@@ -171,237 +185,243 @@ public sealed class BiofitDashGame : MonoBehaviour
     private void OnGUI()
     {
         InitStyles();
-        float scale = Mathf.Min(Screen.width / VirtualW, Screen.height / VirtualH);
-        if (scale <= 0f) return;
-
+        BiofitDashLayout.Layout layout = BiofitDashLayout.ForScreen(
+            Screen.width, Screen.height, showTestPanel);
+        float viewW = layout.Width;
         Matrix4x4 prev = GUI.matrix;
-        float xOffset = 0.5f * (Screen.width - VirtualW * scale);
-        float yOffset = 0.5f * (Screen.height - VirtualH * scale);
-        GUI.matrix = Matrix4x4.TRS(new Vector3(xOffset, yOffset, 0f),
-            Quaternion.identity, new Vector3(scale, scale, 1f));
+        GUI.matrix = Matrix4x4.Scale(new Vector3(layout.Scale, layout.Scale, 1f));
 
-        Draw(new Rect(0f, 0f, VirtualW, VirtualH), new Color(0.055f, 0.10f, 0.18f));
-        Draw(new Rect(12f, 12f, VirtualW - 24f, 720f),
+        Draw(new Rect(0, 0, viewW, layout.Height),
+            new Color(0.055f, 0.105f, 0.18f));
+        Draw(new Rect(12f, 12f, viewW - 24f, 122f),
             new Color(0.11f, 0.18f, 0.28f));
 
-        GUI.Label(new Rect(40f, 26f, 590f, 60f),
-            "BIOFIT DASH", heading);
-        GUI.Label(new Rect(44f, 91f, 550f, 38f),
-            "Puntos: " + game.ObstaclesPassed +
-            "    Mejor: " + game.BestObstaclesPassed +
-            "    Recorrido: " + game.Distance.ToString("F0"), info);
+        GUI.Label(new Rect(32f, 21f, 375f, 57f), "BIOFIT DASH", heading);
+        GUI.Label(new Rect(34f, 84f, 570f, 38f),
+            "Puntos: " + game.ObstaclesPassed + "   Mejor: " +
+            game.BestObstaclesPassed + "   Recorrido: " +
+            game.Distance.ToString("F0"), info);
 
-        if (GUI.Button(new Rect(692f, 33f, 173f, 60f),
-            game.Paused ? "REANUDAR" : "PAUSA (P)", control))
+        float controlsX = viewW - 719f;
+        if (GUI.Button(new Rect(controlsX, 29f, 208f, 46f),
+            game.PracticeMode ? "SIN COLISION: SI" : "SIN COLISION: NO", compact))
+        {
+            game.PracticeMode = !game.PracticeMode;
+            if (game.GameOver) ResetGame();
+        }
+        if (GUI.Button(new Rect(controlsX + 217f, 29f, 211f, 46f),
+            showTestPanel ? "OCULTAR PANEL" : "MOSTRAR PANEL", compact))
+            showTestPanel = !showTestPanel;
+        if (GUI.Button(new Rect(controlsX + 439f, 29f, 118f, 46f),
+            game.Paused ? "REANUDAR" : "PAUSA", compact))
             game.TogglePause();
-
-        if (GUI.Button(new Rect(876f, 33f, 204f, 60f),
-            "REINICIAR (R)", control))
+        if (GUI.Button(new Rect(controlsX + 568f, 29f, 126f, 46f),
+            "REINICIAR", compact))
             ResetGame();
 
-        string modeLabel = bleMode == 0 ? "BLE: OFF (TOCAR PARA ACTIVAR)" :
-            bleMode == 1 ? "BLE: BILATERAL (EXPERIMENTAL)" :
-            bleMode == 2 ? "BLE: SOLO IZQ (DIAGNOSTICO)" :
-                           "BLE: SOLO DER (DIAGNOSTICO)";
-        if (GUI.Button(new Rect(692f, 105f, 388f, 51f),
+        string modeLabel = bleMode == 0 ? "BLE: OFF" :
+            bleMode == 1 ? "BLE: BILATERAL" :
+            bleMode == 2 ? "BLE: SOLO IZQ" : "BLE: SOLO DER";
+        if (GUI.Button(new Rect(controlsX, 83f, 315f, 43f),
             modeLabel, compact))
         {
             int next = (bleMode + 1) % 4;
             if (next != 0 && !monitor.BothTrackersConnected)
-                lastInput = "No se habilito BLE: faltan trackers";
+                lastInput = "Faltan trackers para activar BLE";
             else
             {
                 bleMode = next;
-                lastSingleEventSeconds = -10000f;
                 string action = bleMode == 0 ? "BLE_MODO_APAGADO" :
                     bleMode == 1 ? "BLE_ACTIVADO" :
                     bleMode == 2 ? "BLE_SOLO_IZQUIERDO" :
                                    "BLE_SOLO_DERECHO";
                 monitor.RecordGameAction(action);
                 monitor.RecordSingleFootConfig(singleMinG);
-                lastInput = "Modo BLE: " + (bleMode == 0 ? "OFF" :
-                    bleMode == 1 ? "BILATERAL" :
-                    bleMode == 2 ? "SOLO IZQUIERDO" : "SOLO DERECHO");
+                lastInput = "Modo BLE: " + modeLabel;
             }
         }
+        string connection = monitor.BothTrackersConnected ? "2/2" : "ESPERANDO";
+        string sync = monitor.ClockAlignmentReady ? "IMU OK" : "SIN RELOJ";
+        GUI.Label(new Rect(controlsX + 327f, 86f, 359f, 40f),
+            "Sensores: " + connection + "   Reloj: " + sync +
+            "\nPares: " + blePairsObserved +
+            "   Rechazos: " + monitor.RejectedEvents, panelSmall);
 
-        GUI.Label(new Rect(42f, 142f, 638f, 38f),
-            "El cubo avanza solo. ESPACIO o SALTAR para esquivar las puntas.",
-            helper);
-        if (GUI.Button(new Rect(43f, 178f, 307f, 42f),
-            showTestPanel ? "OCULTAR PANEL DE PRUEBAS" :
-                            "MOSTRAR PANEL DE PRUEBAS", compact))
-            showTestPanel = !showTestPanel;
-        if (GUI.Button(new Rect(364f, 178f, 293f, 42f),
-            game.PracticeMode ? "PRACTICA SIN COLISION: SI" :
-                                "PRACTICA SIN COLISION: NO", compact))
-        {
-            game.PracticeMode = !game.PracticeMode;
-            if (game.GameOver) ResetGame();
-        }
-        GUI.Label(new Rect(692f, 160f, 395f, 66f),
-            "BLE: " + (monitor.BothTrackersConnected ? "2/2 conectados" :
-                          "esperando trackers") +
-            " | reloj: " + (monitor.ClockAlignmentReady ? "IMU estimado" :
-                                                     "sin ancla STATUS") +
-            "\nSTATUS: " + monitor.ClockStatusLeft + "/" +
-            monitor.ClockStatusRight + " | recientes(32s): " +
-            monitor.RecentStatusLeft + "/" + monitor.RecentStatusRight +
-            " | Pares: " + blePairsObserved + " | Casi pares: " + monitor.NearMisses +
-            "\nIntentos de salto BLE: " + bleJumpAttempts, helper);
-
-        Draw(new Rect(34f, 223f, 1050f, 414f), new Color(0.13f, 0.24f, 0.37f));
-
-        // Marquesina de suelo, desplazamiento solo visual.
-        for (int i = 0; i < 15; i++)
-            Draw(new Rect(34f + i * 90f - roadOffset, 608f, 47f, 7f),
-                new Color(0.18f, 0.42f, 0.56f));
-        Draw(new Rect(34f, BiofitDashCore.FloorY, 1050f, 8f),
+        // Game and diagnostics occupy separate, non-overlapping rectangles.
+        GUI.BeginGroup(new Rect(layout.GameX, BiofitDashLayout.WorldTop,
+            layout.GameWidth, BiofitDashLayout.WorldHeight));
+        Draw(new Rect(0f, 0f, layout.GameWidth, BiofitDashLayout.WorldHeight),
+            new Color(0.12f, 0.22f, 0.33f));
+        float floorLocal = BiofitDashCore.FloorY - BiofitDashLayout.WorldTop;
+        Draw(new Rect(0f, floorLocal, layout.GameWidth, 8f),
             new Color(0.57f, 0.81f, 0.93f));
+        int dashCount = Mathf.CeilToInt(layout.GameWidth / 90f) + 2;
+        for (int i = 0; i < dashCount; i++)
+            Draw(new Rect(i * 90f - roadOffset, floorLocal + 2f, 46f, 6f),
+                new Color(0.18f, 0.42f, 0.56f));
 
-        // Personaje y obstáculos usan el mismo sistema de coordenadas que el motor.
         float heroTop = BiofitDashCore.FloorY -
             BiofitDashCore.HeroSize - game.JumpAltitude;
-        Draw(new Rect(BiofitDashCore.HeroX, heroTop,
+        float hx = BiofitDashCore.HeroX - layout.GameX;
+        Draw(new Rect(hx, heroTop - BiofitDashLayout.WorldTop,
             BiofitDashCore.HeroSize, BiofitDashCore.HeroSize),
-            new Color(0.27f, 0.87f, 0.79f));
-        Draw(new Rect(BiofitDashCore.HeroX + 14f, heroTop + 17f, 8f, 8f),
-            new Color(0.06f, 0.15f, 0.25f));
-        Draw(new Rect(BiofitDashCore.HeroX + 43f, heroTop + 17f, 8f, 8f),
-            new Color(0.06f, 0.15f, 0.25f));
+            new Color(0.38f, 0.93f, 0.87f));
+        Draw(new Rect(hx + 18f, heroTop - BiofitDashLayout.WorldTop + 20f,
+            8f, 8f), new Color(0.2f, 0.32f, 0.43f));
+        Draw(new Rect(hx + 46f, heroTop - BiofitDashLayout.WorldTop + 20f,
+            8f, 8f), new Color(0.2f, 0.32f, 0.43f));
 
         for (int i = 0; i < game.ObstacleCount; i++)
         {
             BiofitDashCore.Obstacle o = game.GetObstacle(i);
-            Rect rect = new Rect(o.X, BiofitDashCore.FloorY - o.Height,
-                o.Width, o.Height);
+            Rect rect = new Rect(o.X - layout.GameX,
+                floorLocal - o.Height, o.Width, o.Height);
             if (spikeTex != null)
             {
-                Color prevColor = GUI.color;
-                GUI.color = new Color(1f, 0.40f, 0.42f);
+                Color old = GUI.color;
+                GUI.color = new Color(1f, 0.46f, 0.54f);
                 GUI.DrawTexture(rect, spikeTex, ScaleMode.StretchToFill, true);
-                GUI.color = prevColor;
+                GUI.color = old;
             }
-            else
-                Draw(rect, new Color(1f, 0.40f, 0.42f));
+            else Draw(rect, new Color(1f, 0.46f, 0.54f));
         }
-
-        if (showTestPanel)
-            DrawExperimentPanel();
 
         if (game.GameOver)
         {
-            Draw(new Rect(320f, 326f, 480f, 197f),
+            float cx = Mathf.Max(30f, (layout.GameWidth - 440f) / 2f);
+            Draw(new Rect(cx, 150f, 440f, 200f),
                 new Color(0.06f, 0.12f, 0.21f));
-            GUI.Label(new Rect(350f, 341f, 422f, 68f),
+            GUI.Label(new Rect(cx + 25f, 166f, 390f, 60f),
                 "FIN DEL JUEGO", center);
-            GUI.Label(new Rect(398f, 414f, 358f, 36f),
-                "Obstaculos superados: " + game.ObstaclesPassed, info);
-            if (GUI.Button(new Rect(418f, 462f, 290f, 49f),
+            if (GUI.Button(new Rect(cx + 88f, 266f, 264f, 53f),
                 "VOLVER A JUGAR", control))
                 ResetGame();
         }
         else if (game.Paused)
         {
-            GUI.Label(new Rect(380f, 358f, 350f, 68f), "PAUSA", center);
+            GUI.Label(new Rect(Mathf.Max(0f,
+                (layout.GameWidth - 350f) / 2f), 160f, 350f, 68f),
+                "PAUSA", center);
         }
+        GUI.EndGroup();
 
-        if (GUI.Button(new Rect(40f, 654f, 315f, 59f),
-            "SALTAR (TACTIL / ESPACIO)", control))
+        if (showTestPanel)
+            DrawExperimentPanel(layout.PanelX, layout.PanelWidth);
+
+        if (GUI.Button(new Rect(29f, 647f, 217f, 67f),
+            "SALTAR", control))
             Jump("BOTON TACTIL");
-        if (GUI.Button(new Rect(367f, 654f, 292f, 59f),
-            "DIAGNOSTICO BLE", control))
+        if (GUI.Button(new Rect(258f, 647f, 250f, 67f),
+            "DIAGNOSTICO BLE", compact))
         {
             ReturnToDiagnostics();
             GUI.matrix = prev;
             return;
         }
-
-        GUI.Label(new Rect(673f, 650f, 405f, 68f),
-            "Ultima entrada: " + lastInput +
-            ". Pares BLE: NO son saltos confirmados.", helper);
-
+        GUI.Label(new Rect(527f, 651f, viewW - 552f, 63f),
+            "Ultima entrada: " + lastInput, helper);
         GUI.matrix = prev;
     }
 
     /// <summary>
-    /// Herramientas de medicion dentro del MISMO juego y la MISMA sesion.
-    /// Se pueden ocultar para jugar sin controles sobre la pista.
-    /// Ningun parametro requiere firmware ni otra APK.
+    /// Diagnostic sidebar: no longer drawn on top of the gameplay.
+    /// Every button is available in landscape without scrolling or overlap.
     /// </summary>
-    private void DrawExperimentPanel()
+    private void DrawExperimentPanel(float x, float pw)
     {
-        Draw(new Rect(38f, 231f, 1037f, 249f),
-            new Color(0.085f, 0.14f, 0.22f, 0.93f));
-
-        if (GUI.Button(new Rect(47f, 238f, 224f, 42f),
-            "1. INICIAR REGISTRO", compact))
-            experimentStatus = monitor.StartGameCapture() ?
-                "Registro iniciado. 10 s quieto y luego marca la actividad." :
-                "Ya existe un registro activo. Finalizalo primero.";
-
-        if (GUI.Button(new Rect(281f, 238f, 226f, 42f),
-            "2. FINALIZAR", compact))
-            experimentStatus = monitor.StopGameCapture() ?
-                "Registro terminado. Toca COPIAR REGISTRO." :
-                "No hay un registro de juego activo.";
-
-        if (GUI.Button(new Rect(518f, 238f, 237f, 42f),
-            "3. COPIAR REGISTRO", compact))
-            experimentStatus = monitor.CopyGameCapture() ?
-                "Resumen + CSV copiados. Pegalos en una nota o en ChatGPT." :
-                "Primero INICIAR y FINALIZAR el registro.";
-
-        GUI.Label(new Rect(767f, 240f, 293f, 42f),
+        Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
+            BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
+        GUI.Label(new Rect(x + 12f, 149f, pw - 24f, 34f),
+            "PANEL DE PRUEBAS", info);
+        GUI.Label(new Rect(x + 12f, 183f, pw - 24f, 23f),
             (monitor.GameCaptureActive ? "GRABANDO " : "REGISTRO ") +
             monitor.CaptureStage + " | " + monitor.CapturedEventCount +
-            " eventos", helper);
+            " eventos", panelSmall);
 
-        const float buttonW = 193f;
-        string[] stages = {"QUIETO", "CAMINAR", "CORRER", "ELEVACION", "DASH"};
+        float cw = (pw - 32f) / 3f;
+        if (GUI.Button(new Rect(x + 10f, 208f, cw, 38f),
+            "1. INICIAR", compact))
+        {
+            soloDiagnostic.Reset();
+            singleCandidates = 0;
+            singleJumps = 0;
+            experimentStatus = monitor.StartGameCapture() ?
+                "Registro iniciado: comenzar con 10 s quieto." :
+                "Ya existe un registro activo.";
+        }
+        if (GUI.Button(new Rect(x + 16f + cw, 208f, cw, 38f),
+            "2. FINALIZAR", compact))
+            experimentStatus = monitor.StopGameCapture() ?
+                "Registro finalizado. Toca COPIAR." :
+                "Primero inicia el registro.";
+        if (GUI.Button(new Rect(x + 22f + 2f*cw, 208f, cw, 38f),
+            "3. COPIAR", compact))
+            experimentStatus = monitor.CopyGameCapture() ?
+                "Resumen y CSV copiados." :
+                "Inicia y finaliza el registro primero.";
+
+        string[] stages = { "QUIETO", "CAMINAR", "CORRER", "ELEVACION", "DASH" };
         for (int i = 0; i < stages.Length; i++)
         {
+            int col = i < 3 ? i : i - 3;
+            float sy = i < 3 ? 254f : 293f;
+            float sw = i < 3 ? cw : (pw - 26f) / 2f;
+            float sx = x + 10f + col * (sw + 6f);
             string stage = stages[i];
-            if (GUI.Button(new Rect(47f + i * 202f, 288f, buttonW, 40f),
-                stage, compact))
+            if (GUI.Button(new Rect(sx, sy, sw, 35f), stage, compact))
                 experimentStatus = monitor.MarkGameStage(stage) ?
-                    "Marcado " + stage + " en el CSV." :
-                    "Primero inicia el registro para marcar " + stage + ".";
+                    "Etapa: " + stage : "Inicia el registro primero.";
         }
 
-        if (GUI.Button(new Rect(47f, 338f, 124f, 39f),
-            "UP -", compact)) monitor.AdjustJumpThreshold(-0.02f);
-        GUI.Label(new Rect(181f, 343f, 197f, 32f),
-            "UP: " + monitor.MinUpG.ToString("F2") + " g", helper);
-        if (GUI.Button(new Rect(350f, 338f, 124f, 39f),
-            "UP +", compact)) monitor.AdjustJumpThreshold(+0.02f);
+        float labelW = pw - 150f;
+        if (GUI.Button(new Rect(x + 12f, 341f, 53f, 38f), "-", compact))
+            monitor.AdjustJumpThreshold(-0.02f);
+        GUI.Label(new Rect(x + 72f, 347f, labelW, 30f),
+            "UP: " + monitor.MinUpG.ToString("F2") + " g", compactLabel());
+        if (GUI.Button(new Rect(x + pw - 66f, 341f, 53f, 38f), "+", compact))
+            monitor.AdjustJumpThreshold(+0.02f);
 
-        if (GUI.Button(new Rect(496f, 338f, 117f, 39f),
-            "PAR -", compact)) monitor.AdjustPairWindow(-0.02f);
-        GUI.Label(new Rect(626f, 343f, 209f, 32f),
-            "Par: " + monitor.PairWindowMs.ToString("F0") + " ms", helper);
-        if (GUI.Button(new Rect(853f, 338f, 120f, 39f),
-            "PAR +", compact)) monitor.AdjustPairWindow(+0.02f);
+        if (GUI.Button(new Rect(x + 12f, 386f, 53f, 38f), "-", compact))
+            monitor.AdjustPairWindow(-0.02f);
+        GUI.Label(new Rect(x + 72f, 392f, labelW, 30f),
+            "PAR: " + monitor.PairWindowMs.ToString("F0") + " ms", compactLabel());
+        if (GUI.Button(new Rect(x + pw - 66f, 386f, 53f, 38f), "+", compact))
+            monitor.AdjustPairWindow(+0.02f);
 
-        GUI.Label(new Rect(48f, 382f, 994f, 38f),
-            experimentStatus + " | PARES: " + monitor.TotalPairs +
-            " | " + monitor.TransportSummary, helper);
-        if (GUI.Button(new Rect(48f, 425f, 177f, 41f),
-            "SOLO UP -", compact))
+        if (GUI.Button(new Rect(x + 12f, 431f, 53f, 38f), "-", compact))
         {
             singleMinG = Mathf.Max(0.25f, singleMinG - 0.05f);
             monitor.RecordSingleFootConfig(singleMinG);
         }
-        GUI.Label(new Rect(244f, 432f, 396f, 35f),
-            "Umbral solo un pie: " + singleMinG.ToString("F2") + " g", helper);
-        if (GUI.Button(new Rect(659f, 425f, 174f, 41f),
-            "SOLO UP +", compact))
+        GUI.Label(new Rect(x + 72f, 437f, labelW, 30f),
+            "SOLO UP: " + singleMinG.ToString("F2") + " g", compactLabel());
+        if (GUI.Button(new Rect(x + pw - 66f, 431f, 53f, 38f), "+", compact))
         {
-            singleMinG = Mathf.Min(1.00f, singleMinG + 0.05f);
+            singleMinG = Mathf.Min(1f, singleMinG + 0.05f);
             monitor.RecordSingleFootConfig(singleMinG);
         }
-        GUI.Label(new Rect(845f, 426f, 210f, 45f),
-            "Solo: " + singleCandidates + " | salto: " + singleJumps, helper);
+
+        BiofitSingleFootDiagnostic.Counters l = soloDiagnostic.Left;
+        BiofitSingleFootDiagnostic.Counters r = soloDiagnostic.Right;
+        GUI.Label(new Rect(x + 11f, 478f, pw - 22f, 47f),
+            "IZQ | UP " + l.Received + "  bajo " + l.BelowThreshold +
+            "  anti " + l.Refractory + "  salto " + l.Jumped +
+            "  ocupado " + l.GameUnavailable, panelSmall);
+        GUI.Label(new Rect(x + 11f, 519f, pw - 22f, 47f),
+            "DER | UP " + r.Received + "  bajo " + r.BelowThreshold +
+            "  anti " + r.Refractory + "  salto " + r.Jumped +
+            "  ocupado " + r.GameUnavailable, panelSmall);
+        GUI.Label(new Rect(x + 11f, 562f, pw - 22f, 27f),
+            "Pares: " + blePairsObserved + " | Rechazos BLE: " +
+            monitor.RejectedEvents + " | Cola: " + monitor.DroppedAppPackets,
+            panelSmall);
+        GUI.Label(new Rect(x + 11f, 587f, pw - 22f, 39f),
+            experimentStatus, panelSmall);
+    }
+
+    private GUIStyle compactLabel()
+    {
+        return panelSmall;
     }
 
     private static void Draw(Rect rect, Color color)
