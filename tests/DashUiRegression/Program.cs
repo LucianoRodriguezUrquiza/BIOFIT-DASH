@@ -59,7 +59,12 @@ class Program
         Check(d.Left.Received==5 && d.Left.Accepted==2 &&
               d.Left.Refractory==1 && d.Left.BelowThreshold==1 &&
               d.Left.Invalid==1, "per-foot counters consistent");
+        d.AdjustThreshold(1,.10f);
+        Check(Math.Abs(d.Threshold(1)-.45f)<.001f && d.Threshold(2)==.35f,"thresholds independent");
+        d.AdjustThreshold(2,float.NaN);d.AdjustThreshold(2,float.PositiveInfinity);
+        Check(d.Threshold(2)==.35f,"invalid threshold changes rejected");
         d.Reset();
+        Check(Math.Abs(d.Threshold(1)-.45f)<.001f,"capture reset preserves thresholds");
         Check(d.Left.Received==0 && d.Right.Received==0,
             "reset clears both diagnostics");
         Check(d.Observe(1,.50f,1.0,.35f,.32) ==
@@ -76,6 +81,16 @@ class Program
         typeof(BiofitDashGame).GetMethod("OnGUI",
             BindingFlags.Instance|BindingFlags.NonPublic).Invoke(game,null);
         Check(true,"real Dash UI code executed without host exception");
+        var gui=typeof(BiofitDashGame).GetMethod("OnGUI",BindingFlags.Instance|BindingFlags.NonPublic);
+        var monitor=(BiofitBLEMonitor)typeof(BiofitDashGame).GetField("monitor",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game);
+        UnityEngine.GUI.ClickNext="1. INICIAR";gui.Invoke(game,null);
+        Check(monitor.GameCaptureActive,"actual start button starts capture");
+        UnityEngine.GUI.ClickNext="2. FINALIZAR";gui.Invoke(game,null);
+        Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
+        UnityEngine.GUI.ClickNext="3. ARCHIVO";gui.Invoke(game,null);
+        Check(UnityEngine.GUI.ClickNext==null,"actual archive button invokes export");
+        UnityEngine.GUI.ClickNext="COPIAR";gui.Invoke(game,null);
+        Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("filas_total="),"clipboard fallback retained");
         Console.WriteLine("PASS: " + checks +
             " UI/unilateral host checks; no actual Unity or Android render.");
     }

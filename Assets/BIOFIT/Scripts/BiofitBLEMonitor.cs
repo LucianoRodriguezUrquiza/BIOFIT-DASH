@@ -25,6 +25,19 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public int RejectedEvents { get; private set; }
     public int AppQueueDropped => callbackDropped;
     public int AppQueuePending => pendingCount;
+    private static double MonotonicNow => System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency;
+    public string ReadinessSummary => "I " + left.readiness.Describe(MonotonicNow) + " | D " + right.readiness.Describe(MonotonicNow);
+    public string SavedCapturePath { get; private set; } = "";
+    public string CaptureFileStatus { get; private set; } = "Sin archivo";
+    public string CurrentEventTrace { get; private set; } = "";
+    private double dispatchStarted, currentCallbackSeconds;
+    public void RecordDecision(byte foot, string decision)
+    {
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, foot,
+            "DECISION " + decision + " " + CurrentEventTrace + " dispatchMs=" +
+            ((MonotonicNow-dispatchStarted)*1000).ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
+            " callbackToDecisionMs=" + ((MonotonicNow-currentCallbackSeconds)*1000).ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
+    }
     public string TransportSummary => "Rechazos: " + RejectedEvents + " | cola=" + pendingCount + " dropApp=" + callbackDropped +
         " | huecos seq: " + (left.gate.Missing + right.gate.Missing) +
         " | duplicados/desorden: " + (left.gate.DuplicateOrReordered + right.gate.DuplicateOrReordered);
@@ -131,7 +144,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gCompressed = TimeCompressedEvents;
         gAlignedEvents = alignedEvents;
         gNearMisses = jumpDetector.NearMisses;
-        lastGameSummary = "";
+        lastGameSummary = ""; SavedCapturePath = ""; CaptureFileStatus = "Grabando";
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,1,left.readiness.Detail(MonotonicNow));
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,2,right.readiness.Detail(MonotonicNow));
+        foreach (Tracker tracker in new[] { left, right })
+            foreach (string page in tracker.configPages)
+                if (page != null) eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,tracker.id,page);
         eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
             MinUpG, PairWindowMs);
         return true;
@@ -152,6 +170,27 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         eventCapture.RecordSingleFootConfig(Time.realtimeSinceStartup,
             minVerticalG);
+    }
+
+    public void RecordSingleFootConfig(byte foot, float minVerticalG)
+    {
+        eventCapture.RecordSingleFootConfig(Time.realtimeSinceStartup,foot,minVerticalG);
+    }
+
+    public bool ExportGameCapture()
+    {
+        if (gameCaptureActive || string.IsNullOrEmpty(lastGameSummary)) return false;
+        if (string.IsNullOrEmpty(SavedCapturePath) && !SaveCaptureFile()) return false;
+        return BiofitAndroidExport.Open(SavedCapturePath);
+    }
+    private bool SaveCaptureFile()
+    {
+        try {
+            SavedCapturePath = BiofitCaptureArchive.Save(Application.persistentDataPath,
+                eventCapture.Csv,lastGameSummary);
+            CaptureFileStatus = "CSV completo: " + eventCapture.TotalRows + " filas + SHA256";
+            return true;
+        } catch (Exception ex) { CaptureFileStatus = "ERROR archivo: " + ex.Message; return false; }
     }
 
     public bool StopGameCapture()
@@ -177,7 +216,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "\nTIEMPOS_COMPRIMIDOS=" + (TimeCompressedEvents - gCompressed) +
             " (acumulados desde inicio=" + TimeCompressedEvents + ")" +
             "\n" + TransportSummary + "\n" + FirmwareSummary +
+            "\n" + ReadinessSummary + "\n" + left.detector + " / " + right.detector +
             "\nNO son pasos ni saltos humanos confirmados.\n";
+        SaveCaptureFile();
         return true;
     }
 
@@ -214,6 +255,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         public readonly BiofitEventGate statusGate = new BiofitEventGate();
         public double statusWindowStart, lastStatusCallback, statusHz, maxStatusGapMs;
         public int statusInWindow;
+        public readonly BiofitTrackerReadiness readiness = new BiofitTrackerReadiness();
+        public string detector = "Sin extension detector";
+        public readonly string[] configPages = new string[4];
         public Tracker(string name, byte id) { this.name = name; this.id = id; }
     }
 
@@ -402,6 +446,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             {
                 tracker.moving = false; tracker.hasLastTimestamp = false;
                 tracker.hasStatus = false; tracker.gate.Reset(); tracker.statusGate.Reset();
+                tracker.readiness.Reset(); Array.Clear(tracker.configPages,0,tracker.configPages.Length);
                 tracker.statusWindowStart = 0; tracker.lastStatusCallback = 0;
                 tracker.statusInWindow = 0; tracker.statusHz = 0;
                 inputEngine.ProcessEvent(packet.expectedId, 2, Time.realtimeSinceStartup);
@@ -446,6 +491,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             tracker.statusInWindow = 0; tracker.statusWindowStart = callbackSeconds;
         }
         tracker.lastStatusMs = sensor; tracker.hasStatus = true;
+        if (tracker.readiness.Observe(b,packet.expectedId,callbackSeconds))
+            eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,
+                "STATUS_FLAGS=" + b[2] + " sensorMs=" + sensor + " " + tracker.readiness.Detail(callbackSeconds));
         timeAligner.ObserveStatus(packet.expectedId, sensor,
             callbackSeconds);
     }
@@ -453,7 +501,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private void ReadTransport(Packet packet)
     {
         byte[] b = packet.bytes;
-        if (b.Length != 20 || b[0] != 1 || b[1] != packet.expectedId) return;
+        if (b.Length != 20 || b[1] != packet.expectedId) return;
+        if (b[0] == 2) { ReadDetectorPage(packet); return; }
+        if (b[0] != 1) return;
         Tracker tracker = packet.expectedId == 1 ? left : right;
         tracker.transport = "qMax=" + U16(b,8) + " drop=" + U16(b,10) +
             " edadMax=" + U16(b,12) + " notifyMax=" + U16(b,14) +
@@ -463,6 +513,21 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " statusGap=" + tracker.statusGate.Missing;
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, packet.expectedId,
             "TX " + tracker.transport);
+    }
+
+    private void ReadDetectorPage(Packet packet)
+    {
+        byte[] b = packet.bytes; int page=b[2];
+        if(page>3) return;
+        Tracker tracker=packet.expectedId==1?left:right;
+        string[] names = page==0 ? new[]{"restCount","disarmedMs","upMg","velocityMmS","biasX100","gravityMg"} :
+            page==1 ? new[]{"upOnMg","upActMg","upVmmS","upGapMs","movOffMg","filterHzX100"} :
+            page==2 ? new[]{"movOnDpsX10","movOffDpsX10","movOnMg","confirmMs","releaseMs","restWindowMs"} :
+                      new[]{"rearms","blockMask","blockedSamples","calSamples","restRejected","fwVersion"};
+        string detail="FW2 page="+page+" sensorMs="+U32(b,4)+" flags="+b[3];
+        for(int i=0;i<6;i++) detail+=" "+names[i]+"="+((page==0&&(i==2||i==3))?I16(b,8+i*2):(int)U16(b,8+i*2));
+        if(page==0) tracker.detector=detail; else tracker.configPages[page]=detail;
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,detail);
     }
 
     private void ReadEvent(Packet packet)
@@ -547,6 +612,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         }
         else inputEngine.ProcessEvent(state.id, eventType,
             eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
+        CurrentEventTrace = "seq=" + sequence + " sensorMs=" + millis + " callbackS=" +
+            callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture);
+        dispatchStarted=MonotonicNow; currentCallbackSeconds=callbackSeconds;
         bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 &&
             jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG);
         if (fresh && eventType == 3)
@@ -621,7 +689,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         // incluso en pantallas Android mas bajas.
         diagnosticsScroll = GUI.BeginScrollView(
             new Rect(18f, 18f, width - 36f, height - 36f),
-            diagnosticsScroll, new Rect(0f, 0f, width - 80f, 2550f),
+            diagnosticsScroll, new Rect(0f, 0f, width - 80f, 2700f),
             false, true);
         float x = 20f;
         float y = 16f;
@@ -768,7 +836,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         GUI.Label(new Rect(x, y, width, 52),
             "Etapa: " + eventCapture.Stage + " | Registro: " +
             eventCapture.EventRows + " eventos | descartados: " +
-            eventCapture.DroppedRows + " | maximo 1500 filas", small);
+            eventCapture.DroppedRows + " | maximo 6000 filas", small);
         y += 58;
         GUI.Label(new Rect(x, y, width, 120),
             sessionLogger.Started ? sessionLogger.LastMark :
@@ -786,6 +854,6 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "MOV_ON: " + tracker.movOn + "    MOV_OFF: " + tracker.movOff +
             "    UP: " + tracker.upImpulses, normal); y += 59;
         GUI.Label(new Rect(x, y, width, 104), tracker.lastEvent, small); y += 104;
-        GUI.Label(new Rect(x, y, width, 95), tracker.transport + " (maximos desde arranque, ms)", small); y += 100;
+        GUI.Label(new Rect(x, y, width, 95), tracker.transport + " (maximos desde arranque, ms)\n" + tracker.readiness.Detail(MonotonicNow), small); y += 140;
     }
 }

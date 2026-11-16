@@ -11,3 +11,15 @@ jobs:
       - run: dotnet run --project tests/LatencyRegression
       - run: dotnet run --project tests/ReceiverRegression
       - run: dotnet run --project tests/DashUiRegression
+  android-export-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile export Activity against Android SDK (not an APK)
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35'
+          javac -Xlint:all -classpath "$ANDROID_HOME/platforms/android-35/android.jar" -d /tmp/biofit-java Assets/Plugins/Android/BiofitExport.androidlib/src/com/biofit/export/CsvExportActivity.java

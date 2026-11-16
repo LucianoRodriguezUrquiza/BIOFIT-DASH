@@ -53,7 +53,7 @@ class Program {
   csv.Record(1,1,3,9,100,.2f,.3f,false,2,1002,1000.5,true,1500);
   Check(csv.EventRows==1&&csv.Csv.Contains("RECHAZO_ANTIGUO"),"old event retained with reason");
   foreach(var line in csv.Csv.Split('\n')) if(line.Length>0&&line[0]!='#') Check(line.TrimEnd('\r').Split(';').Length==15,"CSV column count");
-  for(int i=0;i<1600;i++) csv.RecordDiagnostic(1,1,"TX");
+  for(int i=0;i<6100;i++) csv.RecordDiagnostic(1,1,"TX");
   Check(csv.DroppedRows>0,"diagnostic overflow accounted");
   Console.WriteLine("PASS: "+checks+" additional latency checks. Synthetic host tests; no Unity/Android/hardware build.");
  }

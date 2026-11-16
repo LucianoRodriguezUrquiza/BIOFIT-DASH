@@ -23,6 +23,16 @@ public sealed class BiofitSingleFootDiagnostic
     public Counters Left { get; private set; } = new Counters();
     public Counters Right { get; private set; } = new Counters();
 
+    public float LeftThresholdG { get; private set; } = 0.35f;
+    public float RightThresholdG { get; private set; } = 0.35f;
+    public float Threshold(byte foot) => foot == 1 ? LeftThresholdG : RightThresholdG;
+    public void AdjustThreshold(byte foot, float delta)
+    {
+        if ((foot != 1 && foot != 2) || float.IsNaN(delta) || float.IsInfinity(delta)) return;
+        float v = Math.Max(0.25f, Math.Min(1f, Threshold(foot) + delta));
+        if (foot == 1) LeftThresholdG = v; else RightThresholdG = v;
+    }
+
     private double lastLeftAccepted = double.NegativeInfinity;
     private double lastRightAccepted = double.NegativeInfinity;
 
@@ -42,8 +52,8 @@ public sealed class BiofitSingleFootDiagnostic
         c.Received++;
         if (float.IsNaN(verticalG) || float.IsInfinity(verticalG) ||
             double.IsNaN(eventSeconds) || double.IsInfinity(eventSeconds) ||
-            float.IsNaN(thresholdG) || thresholdG < 0f ||
-            double.IsNaN(refractorySeconds) || refractorySeconds < 0d)
+            float.IsNaN(thresholdG) || float.IsInfinity(thresholdG) || thresholdG < 0f ||
+            double.IsNaN(refractorySeconds) || double.IsInfinity(refractorySeconds) || refractorySeconds < 0d)
         {
             c.Invalid++;
             return Decision.Invalid;

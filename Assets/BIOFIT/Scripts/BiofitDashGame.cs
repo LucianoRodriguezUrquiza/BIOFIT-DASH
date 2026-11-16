@@ -19,7 +19,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     // OFF=0, bilateral=1, unilateral izquierdo=2, unilateral derecho=3.
     // Los modos 2 y 3 sirven para diagnosticar la cadena BLE, NO saltos reales.
     private int bleMode;
-    private float singleMinG = 0.35f;
+    private byte thresholdFoot = 1;
     private readonly BiofitSingleFootDiagnostic soloDiagnostic = new BiofitSingleFootDiagnostic();
     private int singleCandidates;
     private int singleJumps;
@@ -31,7 +31,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     private float roadOffset;
     private bool showTestPanel = true;
     private string experimentStatus = "Registro sin iniciar. Una sola sesion.";
-    private GUIStyle compact, panelSmall;
+    private GUIStyle compact, panelSmall, hudStatus;
 
     private void Awake()
     {
@@ -74,6 +74,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         bleJumpAttempts++;
         lastInput = "PAR BLE EXPERIMENTAL (" + gapMs.ToString("F0") + " ms)";
         bool jumped = game.Jump();
+        monitor.RecordDecision(0,jumped ? "PAR_SALTO" : "PAR_CUBO_OCUPADO");
         monitor.RecordGameAction(jumped ?
             "SALTO_BLE_REALIZADO" : "SALTO_BLE_NO_REALIZADO");
     }
@@ -86,7 +87,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             (bleMode == 3 && foot != 2)) return;
 
         BiofitSingleFootDiagnostic.Decision decision = soloDiagnostic.Observe(
-            foot, verticalG, eventSeconds, singleMinG,
+            foot, verticalG, eventSeconds, soloDiagnostic.Threshold(foot),
             BiofitBilateralJumpDetector.SameAnkleRefractorySeconds);
         string side = foot == 1 ? "IZQ" : "DER";
         if (decision != BiofitSingleFootDiagnostic.Decision.Accepted)
@@ -95,6 +96,7 @@ public sealed class BiofitDashGame : MonoBehaviour
                 "UMBRAL" : decision == BiofitSingleFootDiagnostic.Decision.Refractory ?
                 "ANTIRREBOTE" : "INVALIDO";
             monitor.RecordGameAction("SOLO_" + side + "_DESCARTADO_" + reason);
+            monitor.RecordDecision(foot,reason);
             lastInput = "SOLO " + side + ": " + reason +
                 " (" + verticalG.ToString("F2") + " g)";
             return;
@@ -104,6 +106,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         monitor.RecordGameAction("UP_SOLO_CANDIDATO");
         bool jumped = game.Jump();
         soloDiagnostic.RecordGameResult(foot, jumped);
+        monitor.RecordDecision(foot,jumped ? "SALTO" : "CUBO_OCUPADO");
         if (jumped) singleJumps++;
         lastInput = "UP SOLO " + side + " (" + verticalG.ToString("F2") +
             " g)" + (jumped ? " SALTO" : " CUBO OCUPADO");
@@ -173,6 +176,8 @@ public sealed class BiofitDashGame : MonoBehaviour
             { fontSize = 19, fontStyle = FontStyle.Bold };
         panelSmall = new GUIStyle(GUI.skin.label)
             { fontSize = 17, wordWrap = true };
+        hudStatus = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = false };
+        hudStatus.normal.textColor = Color.white;
         panelSmall.normal.textColor = new Color(0.86f, 0.95f, 1f);
         center = new GUIStyle(GUI.skin.label)
             { fontSize = 51, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
@@ -239,18 +244,18 @@ public sealed class BiofitDashGame : MonoBehaviour
                     bleMode == 2 ? "BLE_SOLO_IZQUIERDO" :
                                    "BLE_SOLO_DERECHO";
                 monitor.RecordGameAction(action);
-                monitor.RecordSingleFootConfig(singleMinG);
+                monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
+                monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
                 lastInput = "Modo BLE: " + (bleMode == 0 ? "OFF" :
                     bleMode == 1 ? "BILATERAL" :
                     bleMode == 2 ? "SOLO IZQ" : "SOLO DER");
             }
         }
         string connection = monitor.BothTrackersConnected ? "2/2" : "ESPERANDO";
-        string sync = monitor.ClockAlignmentReady ? "IMU OK" : "SIN RELOJ";
+        string sync = monitor.ClockAlignmentReady ? "ALINEADO" : "SIN ANCLAS";
         GUI.Label(new Rect(controlsX + 327f, 86f, 359f, 40f),
             "Sensores: " + connection + "   Reloj: " + sync +
-            "\nPares: " + blePairsObserved +
-            "   Rechazos: " + monitor.RejectedEvents, panelSmall);
+            "\n" + monitor.ReadinessSummary, hudStatus);
 
         // Game and diagnostics occupy separate, non-overlapping rectangles.
         GUI.BeginGroup(new Rect(layout.GameX, BiofitDashLayout.WorldTop,
@@ -353,6 +358,8 @@ public sealed class BiofitDashGame : MonoBehaviour
                 soloDiagnostic.Reset();
                 singleCandidates = 0;
                 singleJumps = 0;
+                monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
+                monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
             }
             experimentStatus = started ?
                 "Registro iniciado: comenzar con 10 s quieto." :
@@ -361,12 +368,12 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (GUI.Button(new Rect(x + 16f + cw, 208f, cw, 38f),
             "2. FINALIZAR", compact))
             experimentStatus = monitor.StopGameCapture() ?
-                "Registro finalizado. Toca COPIAR." :
+                monitor.CaptureFileStatus :
                 "Primero inicia el registro.";
         if (GUI.Button(new Rect(x + 22f + 2f*cw, 208f, cw, 38f),
-            "3. COPIAR", compact))
-            experimentStatus = monitor.CopyGameCapture() ?
-                "Resumen y CSV copiados." :
+            "3. ARCHIVO", compact))
+            experimentStatus = monitor.ExportGameCapture() ?
+                "Elegir destino del CSV." :
                 "Inicia y finaliza el registro primero.";
 
         string[] stages = { "QUIETO", "CAMINAR", "CORRER", "ELEVACION", "DASH" };
@@ -399,15 +406,16 @@ public sealed class BiofitDashGame : MonoBehaviour
 
         if (GUI.Button(new Rect(x + 12f, 431f, 53f, 38f), "-", compact))
         {
-            singleMinG = Mathf.Max(0.25f, singleMinG - 0.05f);
-            monitor.RecordSingleFootConfig(singleMinG);
+            soloDiagnostic.AdjustThreshold(thresholdFoot,-0.05f);
+            monitor.RecordSingleFootConfig(thresholdFoot,soloDiagnostic.Threshold(thresholdFoot));
         }
-        GUI.Label(new Rect(x + 72f, 437f, labelW, 30f),
-            "SOLO UP: " + singleMinG.ToString("F2") + " g", panelSmall);
+        if (GUI.Button(new Rect(x + 72f, 431f, labelW, 38f),
+            (thresholdFoot==1?"IZQ: ":"DER: ") + soloDiagnostic.Threshold(thresholdFoot).ToString("F2") + " g", compact))
+            thresholdFoot=thresholdFoot==1?(byte)2:(byte)1;
         if (GUI.Button(new Rect(x + pw - 66f, 431f, 53f, 38f), "+", compact))
         {
-            singleMinG = Mathf.Min(1f, singleMinG + 0.05f);
-            monitor.RecordSingleFootConfig(singleMinG);
+            soloDiagnostic.AdjustThreshold(thresholdFoot,0.05f);
+            monitor.RecordSingleFootConfig(thresholdFoot,soloDiagnostic.Threshold(thresholdFoot));
         }
 
         BiofitSingleFootDiagnostic.Counters l = soloDiagnostic.Left;
@@ -422,10 +430,12 @@ public sealed class BiofitDashGame : MonoBehaviour
             "  ocupado " + r.GameUnavailable, panelSmall);
         GUI.Label(new Rect(x + 11f, 562f, pw - 22f, 27f),
             "Pares: " + blePairsObserved + " | Rechazos BLE: " +
-            monitor.RejectedEvents + " | Cola: " + monitor.AppQueueDropped,
+            monitor.RejectedEvents + " | Cola: " + monitor.AppQueuePending,
             panelSmall);
-        GUI.Label(new Rect(x + 11f, 587f, pw - 22f, 39f),
+        GUI.Label(new Rect(x + 11f, 587f, pw - 120f, 39f),
             experimentStatus, panelSmall);
+        if(GUI.Button(new Rect(x+pw-102f,587f,91f,39f),"COPIAR",compact))
+            experimentStatus=monitor.CopyGameCapture()?"CSV copiado.":"Finalizar primero.";
     }
 
     private static void Draw(Rect rect, Color color)
