@@ -3,26 +3,28 @@
 using System;
 using System.Threading.Tasks;
 namespace UnityEngine {
- public class MonoBehaviour { public T GetComponent<T>()=>default(T); public GameObject gameObject=new GameObject(); }
+ public class MonoBehaviour { public T GetComponent<T>()=>(T)Activator.CreateInstance(typeof(T)); public GameObject gameObject=new GameObject(); protected void Destroy(object o){} }
  public class GameObject { public T AddComponent<T>()=>default(T); }
  public class HeaderAttribute:Attribute { public HeaderAttribute(string s){} }
  public class SerializeField:Attribute {}
  public static class Time { public static float realtimeSinceStartup=10; }
  public static class Debug { public static void Log(object o){} public static void LogWarning(object o){} public static void LogException(Exception e){throw e;} }
- public static class Screen { public static int width=1080,height=1920; }
- public static class Mathf { public static float Max(float a,float b)=>Math.Max(a,b); }
+ public static partial class Screen { public static int width=1080,height=1920; }
+ public static partial class Mathf { public static float Max(float a,float b)=>Math.Max(a,b); }
  public struct Vector2 {} public struct Vector3 { public Vector3(float a,float b,float c){} }
- public struct Rect { public Rect(float a,float b,float c,float d){} }
+ public struct Rect { public float x,y,width,height; public Rect(float a,float b,float c,float d){ x=a; y=b; width=c; height=d; } }
  public struct Matrix4x4 { public static Matrix4x4 Scale(Vector3 v)=>new Matrix4x4(); }
- public struct Color { public static Color white; public Color(float a,float b,float c){} }
+ public struct Color { public static Color white; public Color(float a,float b,float c){} public Color(float a,float b,float c,float d){} }
  public enum FontStyle { Bold }
  public class GUIStyleState { public Color textColor; }
- public class GUIStyle { public int fontSize; public FontStyle fontStyle; public bool wordWrap; public GUIStyleState normal=new GUIStyleState(); public GUIStyle(object o){} }
+ public class GUIStyle { public int fontSize; public FontStyle fontStyle; public bool wordWrap; public TextAnchor alignment; public GUIStyleState normal=new GUIStyleState(); public GUIStyle(object o){} }
  public class GUISkin { public object label,button; }
- public static class GUI { public static Matrix4x4 matrix; public static GUISkin skin=new GUISkin(); public static void Box(Rect r,string s){} public static void Label(Rect r,string s,GUIStyle st){} public static bool Button(Rect r,string s,GUIStyle st)=>false; public static Vector2 BeginScrollView(Rect r,Vector2 v,Rect c,bool h,bool b)=>v; public static void EndScrollView(){} }
+ public static partial class GUI { public static Matrix4x4 matrix; public static GUISkin skin=new GUISkin(); public static void Box(Rect r,string s){} public static void Label(Rect r,string s,GUIStyle st){} public static bool Button(Rect r,string s,GUIStyle st)=>false; public static Vector2 BeginScrollView(Rect r,Vector2 v,Rect c,bool h,bool b)=>v; public static void EndScrollView(){} }
  public static class GUIUtility { public static string systemCopyBuffer; }
 }
+#if !DASH_UI_TESTS
 public class BiofitDashGame {}
+#endif
 namespace UniBLE {
  // Surface checked against UniBLE v0.1.1 dba3f296; this does not execute BLE.
  public enum BleConnectionState { Disconnected,Connecting,Connected,Disconnecting }
