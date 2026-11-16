@@ -197,12 +197,15 @@ public sealed class BiofitDashGame : MonoBehaviour
             new Color(0.11f, 0.18f, 0.28f));
 
         GUI.Label(new Rect(32f, 21f, 375f, 57f), "BIOFIT DASH", heading);
-        GUI.Label(new Rect(34f, 84f, 570f, 38f),
+        float controlsX = viewW - 719f;
+        string score = controlsX < 645f ?
+            "P: " + game.ObstaclesPassed + "   M: " + game.BestObstaclesPassed +
+            "   R: " + game.Distance.ToString("F0") :
             "Puntos: " + game.ObstaclesPassed + "   Mejor: " +
             game.BestObstaclesPassed + "   Recorrido: " +
-            game.Distance.ToString("F0"), info);
-
-        float controlsX = viewW - 719f;
+            game.Distance.ToString("F0");
+        GUI.Label(new Rect(34f, 84f, Mathf.Max(330f, controlsX - 48f), 38f),
+            score, info);
         if (GUI.Button(new Rect(controlsX, 29f, 208f, 46f),
             game.PracticeMode ? "SIN COLISION: SI" : "SIN COLISION: NO", compact))
         {
@@ -237,7 +240,9 @@ public sealed class BiofitDashGame : MonoBehaviour
                                    "BLE_SOLO_DERECHO";
                 monitor.RecordGameAction(action);
                 monitor.RecordSingleFootConfig(singleMinG);
-                lastInput = "Modo BLE: " + modeLabel;
+                lastInput = "Modo BLE: " + (bleMode == 0 ? "OFF" :
+                    bleMode == 1 ? "BILATERAL" :
+                    bleMode == 2 ? "SOLO IZQ" : "SOLO DER");
             }
         }
         string connection = monitor.BothTrackersConnected ? "2/2" : "ESPERANDO";
