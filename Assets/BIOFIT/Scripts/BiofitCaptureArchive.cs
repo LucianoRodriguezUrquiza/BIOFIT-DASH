@@ -54,7 +54,7 @@ public static class BiofitCaptureArchive
         string text=Build(csv,summary);
         if(!Verify(text))throw new InvalidDataException("CSV incompleto o recuento inconsistente");
         Directory.CreateDirectory(directory);
-        string path=Path.Combine(directory,"BIOFIT_v08_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv");
+        string path=Path.Combine(directory,"BIOFIT_v09_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv");
         File.WriteAllText(path,text,Utf8);
         if(!Verify(File.ReadAllText(path,Utf8)))throw new IOException("Fallo de verificacion de archivo");
         return path;
