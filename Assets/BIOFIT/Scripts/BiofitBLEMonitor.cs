@@ -166,6 +166,16 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         eventCapture.RecordGameAction(action, Time.realtimeSinceStartup);
     }
 
+    // The first Unity simulation frame with positive avatar altitude, NOT the
+    // time of physical leg lift or the actual Android display photon.
+    public void RecordFirstJumpFrame(byte foot, string source, double decisionToFrameMs)
+    {
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, foot,
+            "PRIMER_ESTADO_SALTO origen=" + source +
+            " decisionToFrameMs=" + decisionToFrameMs.ToString("F3",
+                System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     public void RecordSingleFootConfig(float minVerticalG)
     {
         eventCapture.RecordSingleFootConfig(Time.realtimeSinceStartup,
@@ -179,9 +189,29 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     public bool ExportGameCapture()
     {
-        if (gameCaptureActive || string.IsNullOrEmpty(lastGameSummary)) return false;
+        if (gameCaptureActive || string.IsNullOrEmpty(lastGameSummary))
+        {
+            CaptureFileStatus = "Primero FINALIZAR la sesion";
+            return false;
+        }
         if (string.IsNullOrEmpty(SavedCapturePath) && !SaveCaptureFile()) return false;
-        return BiofitAndroidExport.Open(SavedCapturePath);
+        // Revalidate source before asking Android to duplicate it.
+        try
+        {
+            if (!BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(SavedCapturePath)))
+            {
+                CaptureFileStatus = "ERROR: CSV privado no integro";
+                return false;
+            }
+        }
+        catch (Exception ex) { CaptureFileStatus = "ERROR: CSV: " + ex.Message; return false; }
+        if (!BiofitAndroidExport.Open(SavedCapturePath))
+        {
+            CaptureFileStatus = BiofitAndroidExport.LastError;
+            return false;
+        }
+        CaptureFileStatus = "Selector solicitado; guardar y confirmar";
+        return true;
     }
     private bool SaveCaptureFile()
     {
@@ -218,15 +248,15 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "\n" + TransportSummary + "\n" + FirmwareSummary +
             "\n" + ReadinessSummary + "\n" + left.detector + " / " + right.detector +
             "\nNO son pasos ni saltos humanos confirmados.\n";
-        SaveCaptureFile();
-        return true;
+        return SaveCaptureFile();
     }
 
     public bool CopyGameCapture()
     {
         if (gameCaptureActive || string.IsNullOrEmpty(lastGameSummary))
             return false;
-        GUIUtility.systemCopyBuffer = lastGameSummary + "\n" + eventCapture.Csv;
+        // Clipboard fallback also carries the same SHA256-protected archive.
+        GUIUtility.systemCopyBuffer = BiofitCaptureArchive.Build(eventCapture.Csv, lastGameSummary);
         return true;
     }
 
