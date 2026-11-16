@@ -10,6 +10,7 @@ namespace UnityEngine
         public RequireComponent(Type t) {}
     }
     public enum ScreenOrientation { LandscapeLeft, Portrait }
+    public static partial class Time { public static float deltaTime = .016f; }
     public static partial class Screen
     {
         public static ScreenOrientation orientation;
