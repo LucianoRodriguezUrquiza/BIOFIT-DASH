@@ -85,6 +85,34 @@ class Program {
   telemetry.StopGameCapture();telemetry.CopyGameCapture();
   Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("upMg=-125 velocityMmS=-80"),"firmware v2 signed diagnostic fields decoded");
   Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("fwVersion=227"),"v227 identity decoded");
+  // Recover the last valid private archive after an APK restart without a new capture.
+  string prevFolder=UnityEngine.Application.persistentDataPath;
+  string recoverDir=System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+      "biofit-archive-recover-"+Guid.NewGuid().ToString("N"));
+  System.IO.Directory.CreateDirectory(recoverDir);
+  try {
+    string good=System.IO.Path.Combine(recoverDir,"BIOFIT_v09_good.csv");
+    string damaged=System.IO.Path.Combine(recoverDir,"BIOFIT_v09_damaged.csv");
+    System.IO.File.WriteAllText(good,System.IO.File.ReadAllText(m.SavedCapturePath));
+    System.IO.File.WriteAllText(damaged,"truncated");
+    System.IO.File.SetLastWriteTimeUtc(damaged,DateTime.UtcNow.AddSeconds(30));
+    UnityEngine.Application.persistentDataPath=recoverDir;
+    var restarted=new BiofitBLEMonitor();
+    Check(restarted.ExportGameCapture() && restarted.SavedCapturePath==good,
+          "ARCHIVO after restart recovers most recent valid private session");
+    Check(restarted.CopyGameCapture() &&
+          BiofitCaptureArchive.Verify(UnityEngine.GUIUtility.systemCopyBuffer),
+          "COPIAR after restart recovers full verified session");
+    Check(!BiofitCaptureArchive.FindNewestValid(System.IO.Path.Combine(recoverDir,"missing")).Contains(".csv"),
+          "no phantom recovered archive");
+    System.IO.File.Delete(good);
+    Check(!new BiofitBLEMonitor().ExportGameCapture(),
+          "damaged latest archive not exported after restart");
+  }
+  finally {
+    UnityEngine.Application.persistentDataPath=prevFolder;
+    System.IO.Directory.Delete(recoverDir,true);
+  }
   // A failed private-file save must NOT be misreported as successful finalization.
   string originalPath=UnityEngine.Application.persistentDataPath;
   string obstructed=System.IO.Path.GetTempFileName();
