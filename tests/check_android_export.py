@@ -32,4 +32,16 @@ for token in ("CallStatic<bool>(\"start\"", "GetStatic<string>(\"status\"",
     assert token in csharp, f"missing C# export bridge: {token}"
 ui = screen.read_text()
 assert "PollStatus()" in ui and "exportPending" in ui, "no async outcome in game UI"
-print("PASS: Android library SAF wiring source checks (NOT APK/emulator test)")
+# Main production path: no custom Java class, picker or clipboard.
+assert 'com.biofit.export.CsvExportActivity' not in csharp, "export still depends on custom Java"
+assert "ACTION_CREATE_DOCUMENT" not in csharp
+for token in ("MediaStore$Downloads", "openOutputStream", "relative_path",
+              "DIRECTORY_DOWNLOADS", "SDK_INT", "getStatSize",
+              "BiofitCaptureArchive.Verify", "SaveToDownloads"):
+    assert token in csharp, f"required direct Downloads API missing: {token}"
+ui = screen.read_text()
+assert 'monitor.ExportGameCapture()' in ui
+assert 'exportPending' not in ui, "ARCHIVO should not wait for a picker"
+assert "BiofitAndroidExport.LastStatus" in (root / "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs").read_text()
+print("PASS: direct MediaStore Downloads bridge and unused legacy Java source syntax")
+print("Note: static checks do not prove an Android APK runs on a phone")
