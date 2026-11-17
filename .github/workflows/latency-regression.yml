@@ -10,6 +10,7 @@ jobs:
           dotnet-version: '8.0.x'
       - run: dotnet run --project tests/LatencyRegression
       - run: dotnet run --project tests/ReceiverRegression
+      - run: dotnet run --project tests/AndroidDownloadsRegression
       - run: dotnet run --project tests/DashUiRegression
       - run: python3 tests/check_android_export.py
   android-export-source:
