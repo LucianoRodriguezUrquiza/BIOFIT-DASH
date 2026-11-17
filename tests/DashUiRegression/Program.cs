@@ -122,6 +122,12 @@ class Program
             "picker request is not misreported as a completed save");
         UnityEngine.GUI.ClickNext="3. ARCHIVO";gui.Invoke(game,null);
         Check(UnityEngine.GUI.ClickNext==null,"actual archive button invokes export");
+        string path=System.IO.Path.Combine(UnityEngine.Application.persistentDataPath,
+            "BiofitEditorExports",System.IO.Path.GetFileName(monitor.SavedCapturePath));
+        Check(System.IO.File.Exists(path) &&
+              BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(path)) &&
+              BiofitAndroidExport.LastStatus.StartsWith("EDITOR:"),
+              "GUI ARCHIVO saves complete CSV without chooser or clipboard");
         UnityEngine.GUI.ClickNext="COPIAR";gui.Invoke(game,null);
         Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("filas_total="),"clipboard fallback retained");
         Console.WriteLine("PASS: " + checks +
