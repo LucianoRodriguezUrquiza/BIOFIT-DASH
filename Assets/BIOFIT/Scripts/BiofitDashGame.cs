@@ -371,6 +371,19 @@ public sealed class BiofitDashGame : MonoBehaviour
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
         GUI.Label(new Rect(x + 12f, 149f, pw - 24f, 34f),
             "PANEL DE PRUEBAS", info);
+        // Experimental A/B opt-in. Normal gameplay preserves 0.25g minimum.
+        if (GUI.Button(new Rect(x + pw - 105f, 149f, 95f, 32f),
+            soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
+        {
+            soloDiagnostic.SetExperimentalMode(!soloDiagnostic.ExperimentalMode);
+            monitor.RecordGameAction(soloDiagnostic.ExperimentalMode ?
+                "MODO_EXP_UMBRAL_ON" : "MODO_EXP_UMBRAL_OFF");
+            monitor.RecordSingleFootConfig(1, soloDiagnostic.LeftThresholdG);
+            monitor.RecordSingleFootConfig(2, soloDiagnostic.RightThresholdG);
+            experimentStatus = soloDiagnostic.ExperimentalMode ?
+                "EXP ACTIVO: umbral unilateral minimo 0.15 g" :
+                "EXP OFF: umbrales >= 0.25 g restaurados";
+        }
         GUI.Label(new Rect(x + 12f, 183f, pw - 24f, 23f),
             (monitor.GameCaptureActive ? "GRABANDO " : "REGISTRO ") +
             monitor.CaptureStage + " | " + monitor.CapturedEventCount +
