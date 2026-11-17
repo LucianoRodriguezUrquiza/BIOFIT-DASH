@@ -80,6 +80,25 @@ class Program
         Check(d.Observe(1,.50f,1.0,.35f,.32) ==
             BiofitSingleFootDiagnostic.Decision.Accepted,
             "reset clears refractory state");
+        // A/B mode is opt-in; default and OFF must preserve 0.25 g.
+        var ab = new BiofitSingleFootDiagnostic();
+        ab.AdjustThreshold(2,-.10f);
+        Check(Math.Abs(ab.RightThresholdG-.25f)<.001f && !ab.ExperimentalMode,
+            "normal mode refuses lowering right threshold under 0.25g");
+        ab.SetExperimentalMode(true);
+        ab.AdjustThreshold(2,-.10f);
+        Check(Math.Abs(ab.RightThresholdG-.15f)<.001f &&
+              ab.Observe(2,.165f,1.0,ab.Threshold(2),.32) ==
+              BiofitSingleFootDiagnostic.Decision.Accepted,
+            "opt-in A/B accepts early 0.165g candidate at 0.15g");
+        ab.AdjustThreshold(1,-.20f);
+        Check(ab.LeftThresholdG==.15f && ab.RightThresholdG==.15f,
+            "A/B clamps at 0.15g in both feet without touching normal defaults");
+        ab.SetExperimentalMode(false);
+        Check(!ab.ExperimentalMode && ab.LeftThresholdG==.25f &&
+              ab.RightThresholdG==.25f,
+            "leaving A/B restores at least 0.25g baseline");
+
 
         // Compile and execute the real MonoBehaviour's GUI entry point
         // against shims. This is NOT a visual Unity/Android validation.
@@ -102,6 +121,14 @@ class Program
         UnityEngine.GUI.ClickNext="DER: 0.25 g";gui.Invoke(game,null);
         Check((byte)typeof(BiofitDashGame).GetField("thresholdFoot",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game)==1,
             "actual UI selector switches back to left foot");
+        UnityEngine.GUI.ClickNext="EXP: NO";gui.Invoke(game,null);
+        Check(internalDiag.ExperimentalMode, "EXPERIMENT A/B is explicit opt-in");
+        internalDiag.AdjustThreshold(2,-.10f);
+        Check(internalDiag.RightThresholdG==.15f, "A/B permits 0.15g with one threshold at a time");
+        UnityEngine.GUI.ClickNext="EXP: SI";gui.Invoke(game,null);
+        Check(!internalDiag.ExperimentalMode && internalDiag.RightThresholdG==.25f,
+            "UI EXP:SI toggle restores normal right threshold");
+
         UnityEngine.GUI.ClickNext="1. INICIAR";gui.Invoke(game,null);
         Check(monitor.GameCaptureActive,"actual start button starts capture");
         UnityEngine.GUI.ClickNext="SALTAR";gui.Invoke(game,null);
