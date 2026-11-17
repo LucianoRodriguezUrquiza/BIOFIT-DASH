@@ -41,6 +41,13 @@ class Program
             Check(File.ReadAllBytes(source).SequenceEqual(original),
                   "private source preserved");
 
+            Check(FakeStore.StreamClosed && FakeStore.DescriptorClosed,"Java resources explicitly closed");
+            Check(FakeStore.Entries[0].Published,"publish only after verification");
+            FakeStore.Reset(); FakeStore.Corrupt=true;
+            Check(!BiofitAndroidExport.SaveToDownloads(source) && FakeStore.Entries.Count==0,"same-size corruption rejected");
+            FakeStore.Reset(); FakeStore.FailClose = true;
+            Check(!BiofitAndroidExport.SaveToDownloads(source) && FakeStore.Entries.Count==0,
+                  "close failure cannot report success or leave incomplete entry");
             FakeStore.Reset();
             FakeStore.FailWrite = true;
             Check(!BiofitAndroidExport.SaveToDownloads(source) &&

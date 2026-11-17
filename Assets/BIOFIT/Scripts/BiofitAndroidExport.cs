@@ -36,10 +36,10 @@ public static class BiofitAndroidExport
                 !name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Nombre de archivo BIOFIT no valido");
 
-            string text = File.ReadAllText(path, Encoding.UTF8);
+            byte[] bytes = File.ReadAllBytes(path);
+            string text = new UTF8Encoding(false,true).GetString(bytes);
             if (!BiofitCaptureArchive.Verify(text))
                 throw new InvalidDataException("CSV incompleto o SHA256 incorrecto");
-            byte[] bytes = File.ReadAllBytes(path);
 
 #if UNITY_ANDROID && !UNITY_EDITOR
             SaveAndroid(bytes, name);
@@ -96,6 +96,8 @@ public static class BiofitAndroidExport
                 metadata.Call("put", "relative_path",
                     environment.GetStatic<string>("DIRECTORY_DOWNLOADS") + "/");
 
+                using(var pending = new AndroidJavaObject("java.lang.Integer", 1))
+                    metadata.Call("put", "is_pending", pending);
                 AndroidJavaObject savedUri = null;
                 try
                 {
@@ -111,8 +113,12 @@ public static class BiofitAndroidExport
                     {
                         if (output == null)
                             throw new IOException("Android no abrio el archivo de destino");
-                        output.Call("write", bytes);
-                        output.Call("flush");
+                        try
+                        {
+                            output.Call("write", bytes);
+                            output.Call("flush");
+                        }
+                        finally { output.Call("close"); }
                     }
 
                     // Check the published document's reported byte count when the
@@ -122,9 +128,40 @@ public static class BiofitAndroidExport
                     {
                         if (descriptor == null)
                             throw new IOException("Archivo de Descargas no reabrible");
-                        long written = descriptor.Call<long>("getStatSize");
-                        if (written >= 0 && written != bytes.LongLength)
-                            throw new IOException("Archivo incompleto en Descargas");
+                        try
+                        {
+                            long written = descriptor.Call<long>("getStatSize");
+                            if (written < 0 || written != bytes.LongLength)
+                                throw new IOException("No se pudo verificar el tamaño completo en Descargas");
+                        }
+                        finally { descriptor.Call("close"); }
+                    }
+
+                    using(var input = resolver.Call<AndroidJavaObject>("openInputStream", savedUri))
+                    {
+                        if(input==null) throw new IOException("No se pudo verificar el contenido exportado");
+                        try
+                        {
+                            using(var scanner = new AndroidJavaObject("java.util.Scanner", input, "UTF-8"))
+                            {
+                                try
+                                {
+                                    using(var ignored = scanner.Call<AndroidJavaObject>("useDelimiter", "\\A")) { }
+                                    string copied = scanner.Call<bool>("hasNext") ? scanner.Call<string>("next") : "";
+                                    if(copied != Encoding.UTF8.GetString(bytes) || !BiofitCaptureArchive.Verify(copied))
+                                        throw new IOException("Contenido o SHA256 de Descargas incorrecto");
+                                }
+                                finally { scanner.Call("close"); }
+                            }
+                        }
+                        finally { input.Call("close"); }
+                    }
+                    using(var published = new AndroidJavaObject("android.content.ContentValues"))
+                    using(var ready = new AndroidJavaObject("java.lang.Integer", 0))
+                    {
+                        published.Call("put", "is_pending", ready);
+                        if(resolver.Call<int>("update",savedUri,published,"",new string[0]) != 1)
+                            throw new IOException("No se pudo publicar el CSV en Descargas");
                     }
 
                     Debug.Log("BIOFIT: CSV guardado en Descargas/" + name +
