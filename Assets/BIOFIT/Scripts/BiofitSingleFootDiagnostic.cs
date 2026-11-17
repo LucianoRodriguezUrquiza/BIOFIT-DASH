@@ -25,11 +25,27 @@ public sealed class BiofitSingleFootDiagnostic
 
     public float LeftThresholdG { get; private set; } = 0.25f;
     public float RightThresholdG { get; private set; } = 0.25f;
+
+    // A/B experiment: the physical baseline always starts at 0.25g.
+    // 0.15g is accessible only after the user explicitly enables EXP.
+    // This flag and threshold are session-local; firmware/NVS stay unchanged.
+    public bool ExperimentalMode { get; private set; }
+    public void SetExperimentalMode(bool enabled)
+    {
+        ExperimentalMode = enabled;
+        if (!enabled)
+        {
+            LeftThresholdG = Math.Max(0.25f, LeftThresholdG);
+            RightThresholdG = Math.Max(0.25f, RightThresholdG);
+        }
+    }
+
     public float Threshold(byte foot) => foot == 1 ? LeftThresholdG : RightThresholdG;
     public void AdjustThreshold(byte foot, float delta)
     {
         if ((foot != 1 && foot != 2) || float.IsNaN(delta) || float.IsInfinity(delta)) return;
-        float v = Math.Max(0.25f, Math.Min(1f, Threshold(foot) + delta));
+        float min = ExperimentalMode ? 0.15f : 0.25f;
+        float v = Math.Max(min, Math.Min(1f, Threshold(foot) + delta));
         if (foot == 1) LeftThresholdG = v; else RightThresholdG = v;
     }
 
