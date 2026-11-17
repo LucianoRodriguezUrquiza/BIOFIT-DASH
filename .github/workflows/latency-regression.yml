@@ -12,6 +12,7 @@ jobs:
       - run: dotnet run --project tests/ReceiverRegression
       - run: dotnet run --project tests/AndroidDownloadsRegression
       - run: dotnet run --project tests/DashUiRegression
+      - run: dotnet run --project tests/PhaseAudit
       - run: python3 tests/check_android_export.py
   android-export-source:
     runs-on: ubuntu-latest
@@ -27,3 +28,14 @@ jobs:
           javac -Xlint:all -classpath "$ANDROID_HOME/platforms/android-35/android.jar" -d /tmp/biofit-java Assets/Plugins/Android/BiofitExport.androidlib/src/main/java/com/biofit/export/CsvExportActivity.java
           test -s /tmp/biofit-java/com/biofit/export/CsvExportActivity.class
           javap -classpath /tmp/biofit-java com.biofit.export.CsvExportActivity
+
+  phase-firmware-replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: LucianoRodriguezUrquiza/BIOFIT-GAME-Firmware
+          ref: 9cb5b7ac06315b0b657a33b8e608aca335eccb9e
+          path: firmware-reference
+      - run: python3 tests/PhaseAudit/replay_firmware.py firmware-reference
