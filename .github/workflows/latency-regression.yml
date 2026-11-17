@@ -23,4 +23,6 @@ jobs:
       - name: Compile export Activity against Android SDK (not an APK)
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35'
-          javac -Xlint:all -classpath "$ANDROID_HOME/platforms/android-35/android.jar" -d /tmp/biofit-java Assets/Plugins/Android/BiofitExport.androidlib/src/com/biofit/export/CsvExportActivity.java
+          javac -Xlint:all -classpath "$ANDROID_HOME/platforms/android-35/android.jar" -d /tmp/biofit-java Assets/Plugins/Android/BiofitExport.androidlib/src/main/java/com/biofit/export/CsvExportActivity.java
+          test -s /tmp/biofit-java/com/biofit/export/CsvExportActivity.class
+          javap -classpath /tmp/biofit-java com.biofit.export.CsvExportActivity
