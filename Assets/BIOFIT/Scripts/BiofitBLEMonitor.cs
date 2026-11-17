@@ -189,12 +189,28 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     public bool ExportGameCapture()
     {
-        if (gameCaptureActive || string.IsNullOrEmpty(lastGameSummary))
+        if (gameCaptureActive)
         {
-            CaptureFileStatus = "Primero FINALIZAR la sesion";
+            CaptureFileStatus = "Finalizar la grabacion antes de exportar";
             return false;
         }
-        if (string.IsNullOrEmpty(SavedCapturePath) && !SaveCaptureFile()) return false;
+        if (string.IsNullOrEmpty(SavedCapturePath))
+        {
+            if (!string.IsNullOrEmpty(lastGameSummary))
+            {
+                if (!SaveCaptureFile()) return false;
+            }
+            else
+            {
+                SavedCapturePath =
+                    BiofitCaptureArchive.FindNewestValid(Application.persistentDataPath);
+                if (string.IsNullOrEmpty(SavedCapturePath))
+                {
+                    CaptureFileStatus = "ERROR: no existe CSV privado valido; no borrar datos";
+                    return false;
+                }
+            }
+        }
         // Revalidate source before asking Android to duplicate it.
         try
         {
@@ -253,11 +269,24 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     public bool CopyGameCapture()
     {
-        if (gameCaptureActive || string.IsNullOrEmpty(lastGameSummary))
-            return false;
-        // Clipboard fallback also carries the same SHA256-protected archive.
-        GUIUtility.systemCopyBuffer = BiofitCaptureArchive.Build(eventCapture.Csv, lastGameSummary);
-        return true;
+        if (gameCaptureActive) return false;
+        if (!string.IsNullOrEmpty(lastGameSummary))
+        {
+            GUIUtility.systemCopyBuffer =
+                BiofitCaptureArchive.Build(eventCapture.Csv, lastGameSummary);
+            return true;
+        }
+        string path = BiofitCaptureArchive.FindNewestValid(Application.persistentDataPath);
+        if (string.IsNullOrEmpty(path)) return false;
+        try
+        {
+            string text = System.IO.File.ReadAllText(path);
+            if (!BiofitCaptureArchive.Verify(text)) return false;
+            GUIUtility.systemCopyBuffer = text;
+            return true;
+        }
+        catch (System.IO.IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
     }
 
     private string message = "Iniciando...";
