@@ -27,9 +27,9 @@ for token in ("ACTION_CREATE_DOCUMENT", "onActivityResult(", "SHA-256",
               "CANCELADO:", "ERROR:", "status", "public static boolean start("):
     assert token in src, f"missing SAF export contract: {token}"
 csharp = bridge.read_text()
-for token in ("CallStatic<bool>(\"start\"", "GetStatic<string>(\"status\"",
-              "IsFinalStatus(", "LastError"):
-    assert token in csharp, f"missing C# export bridge: {token}"
+for token in ("SaveToDownloads(", "MediaStore$Downloads", "openOutputStream",
+              "getStatSize", "LastError"):
+    assert token in csharp, f"missing native Downloads bridge: {token}"
 ui = screen.read_text()
 assert "PollStatus()" in ui and "exportPending" in ui, "no async outcome in game UI"
 # Main production path: no custom Java class, picker or clipboard.
