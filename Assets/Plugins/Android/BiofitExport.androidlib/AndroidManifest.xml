@@ -1,6 +1,0 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.biofit.export">
-  <application>
-    <activity android:name="com.biofit.export.CsvExportActivity" android:exported="false"
-      android:excludeFromRecents="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-  </application>
-</manifest>
