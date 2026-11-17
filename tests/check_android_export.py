@@ -5,11 +5,14 @@ import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[1]
 lib = root / "Assets/Plugins/Android/BiofitExport.androidlib"
-manifest = lib / "AndroidManifest.xml"
-java = lib / "src/com/biofit/export/CsvExportActivity.java"
+manifest = lib / "src/main/AndroidManifest.xml"
+java = lib / "src/main/java/com/biofit/export/CsvExportActivity.java"
 bridge = root / "Assets/BIOFIT/Scripts/BiofitAndroidExport.cs"
 screen = root / "Assets/BIOFIT/Scripts/BiofitDashGame.cs"
 
+assert (lib / "project.properties").read_text().strip() == "android.library=true"
+assert not (lib / "src/com/biofit/export/CsvExportActivity.java").exists(), "obsolete Java source path"
+assert not (lib / "AndroidManifest.xml").exists(), "obsolete root manifest"
 ns = "{http://schemas.android.com/apk/res/android}"
 tree = ET.parse(manifest).getroot()
 acts = tree.findall("./application/activity")
