@@ -31,8 +31,6 @@ public sealed class BiofitDashGame : MonoBehaviour
     private float roadOffset;
     private bool showTestPanel = true;
     private string experimentStatus = "Registro sin iniciar. Una sola sesion.";
-    private bool exportPending;
-    private float nextExportPoll;
     private bool visualJumpPending;
     private double acceptedJumpAt;
     private byte acceptedJumpFoot;
@@ -148,20 +146,6 @@ public sealed class BiofitDashGame : MonoBehaviour
             monitor.RecordFirstJumpFrame(acceptedJumpFoot, acceptedJumpSource,
                 (now - acceptedJumpAt) * 1000.0);
             visualJumpPending = false;
-        }
-        if (exportPending && Time.realtimeSinceStartup >= nextExportPoll)
-        {
-            nextExportPoll = Time.realtimeSinceStartup + .25f;
-            string status = BiofitAndroidExport.PollStatus();
-            if (!string.IsNullOrEmpty(status))
-            {
-                experimentStatus = status;
-                if (BiofitAndroidExport.IsFinalStatus(status))
-                {
-                    exportPending = false;
-                    if (status.StartsWith("ERROR")) Debug.LogWarning("BIOFIT ARCHIVO: " + status);
-                }
-            }
         }
         if (game.Playing && !game.Paused)
             roadOffset = (roadOffset + game.Speed * dt) % 90f;
@@ -418,8 +402,9 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (GUI.Button(new Rect(x + 22f + 2f*cw, 208f, cw, 38f),
             "3. ARCHIVO", compact))
         {
-            exportPending = monitor.ExportGameCapture();
-            nextExportPoll = Time.realtimeSinceStartup + .25f;
+            // Single tap: directly save full CSV in Android Downloads.
+            // Also works after an app restart via the private archive.
+            monitor.ExportGameCapture();
             experimentStatus = monitor.CaptureFileStatus;
         }
 
