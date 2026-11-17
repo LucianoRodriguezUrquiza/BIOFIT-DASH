@@ -131,13 +131,20 @@ class Program
 
         UnityEngine.GUI.ClickNext="1. INICIAR";gui.Invoke(game,null);
         Check(monitor.GameCaptureActive,"actual start button starts capture");
+        UnityEngine.GUI.ClickNext="EXP: NO";gui.Invoke(game,null);
+        UnityEngine.GUI.ClickNext="EXP: SI";gui.Invoke(game,null);
+        UnityEngine.GUI.ClickNext="SYNC VIDEO";gui.Invoke(game,null);
+        Check(monitor.SyncLabel=="SYNC 001","visible numbered video marker");
         UnityEngine.GUI.ClickNext="SALTAR";gui.Invoke(game,null);
         typeof(BiofitDashGame).GetMethod("Update",
             BindingFlags.Instance|BindingFlags.NonPublic).Invoke(game,null);
         Check(internalDiag.LeftThresholdG==.25f && internalDiag.RightThresholdG==.25f,
             "capture start preserves both preferred threshold values");
         UnityEngine.GUI.ClickNext="2. FINALIZAR";gui.Invoke(game,null);
+        monitor.CaptureCompletion.GetAwaiter().GetResult();
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
+        string savedCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
+        Check(savedCsv.Contains("MODO_EXP_UMBRAL_ON") && savedCsv.Contains("MODO_EXP_UMBRAL_OFF") && savedCsv.Contains("SYNC 001"),"actual GUI EXP and video marks survive archive");
         Check(System.IO.File.ReadAllText(monitor.SavedCapturePath).Contains("PRIMER_ESTADO_SALTO"),
             "first animated simulation frame has a distinct timestamp marker");
         Check(BiofitAndroidExport.IsFinalStatus("GUARDADO: CSV verificado (123 bytes)") &&

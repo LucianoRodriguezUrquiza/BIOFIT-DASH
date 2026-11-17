@@ -356,7 +356,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             GUI.matrix = prev;
             return;
         }
-        GUI.Label(new Rect(527f, 651f, viewW - 552f, 63f),
+        GUI.Label(new Rect(527f, 651f, showTestPanel ? layout.PanelX - 545f : viewW - 552f, 63f),
             "Ultima entrada: " + lastInput, helper);
         GUI.matrix = prev;
     }
@@ -370,7 +370,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
         GUI.Label(new Rect(x + 12f, 149f, pw - 24f, 34f),
-            "PANEL DE PRUEBAS", info);
+            "PRUEBAS v0.9.5", info);
         // Experimental A/B opt-in. Normal gameplay preserves 0.25g minimum.
         if (GUI.Button(new Rect(x + pw - 105f, 149f, 95f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
@@ -399,6 +399,7 @@ public sealed class BiofitDashGame : MonoBehaviour
                 soloDiagnostic.Reset();
                 singleCandidates = 0;
                 singleJumps = 0;
+                monitor.RecordGameAction(soloDiagnostic.ExperimentalMode ? "MODO_EXP_UMBRAL_ON" : "MODO_EXP_UMBRAL_OFF");
                 monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
                 monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
             }
@@ -478,9 +479,15 @@ public sealed class BiofitDashGame : MonoBehaviour
             monitor.RejectedEvents + " | Cola: " + monitor.AppQueuePending,
             panelSmall);
         GUI.Label(new Rect(x + 11f, 587f, pw - 120f, 39f),
-            experimentStatus, panelSmall);
+            monitor.CaptureSaving ? monitor.CaptureFileStatus : experimentStatus, panelSmall);
         if(GUI.Button(new Rect(x+pw-102f,587f,91f,39f),"COPIAR",compact))
             experimentStatus=monitor.CopyGameCapture()?"CSV copiado.":"Finalizar primero.";
+        float diagnosticWidth=(pw-26f)/2f;
+        if(GUI.Button(new Rect(x+10f,647f,diagnosticWidth,38f),monitor.RawActive?"RAW: ON":"RAW: OFF",compact))
+            monitor.ToggleRawCapture();
+        if(GUI.Button(new Rect(x+16f+diagnosticWidth,647f,diagnosticWidth,38f),monitor.SyncLabel,compact))
+            monitor.MarkVideoSync();
+        GUI.Label(new Rect(x+10f,688f,pw-20f,48f),monitor.RawStatus+" n="+monitor.RawCount+" | "+monitor.CaptureFileStatus,panelSmall);
     }
 
     private static void Draw(Rect rect, Color color)

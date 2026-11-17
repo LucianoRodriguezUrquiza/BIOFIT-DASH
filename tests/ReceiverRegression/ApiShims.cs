@@ -30,7 +30,7 @@ public class BiofitDashGame {}
 namespace UniBLE {
  // Surface checked against UniBLE v0.1.1 dba3f296; this does not execute BLE.
  public enum BleConnectionState { Disconnected,Connecting,Connected,Disconnecting }
- public interface IBleCharacteristic { Task SubscribeAsync(Action<byte[]> a); }
+ public interface IBleCharacteristic { Task SubscribeAsync(Action<byte[]> a, System.Threading.CancellationToken cancellationToken=default); Task UnsubscribeAsync(System.Threading.CancellationToken cancellationToken=default); Task WriteAsync(byte[] data,bool withResponse=true,System.Threading.CancellationToken cancellationToken=default); }
  public interface IBleService { Task<IBleCharacteristic> GetCharacteristicAsync(string s); }
  public interface IBleDevice { event Action<BleConnectionState> OnConnectionStateChanged; Task ConnectAsync(); Task<IBleService> GetServiceAsync(string s); }
  public interface IBleAdapter { Task<bool> RequestPermissionAsync(); Task<bool> IsAvailableAsync(); Task<IBleDevice> GetDeviceAsync(string s); }

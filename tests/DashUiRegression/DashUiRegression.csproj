@@ -23,5 +23,8 @@
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitTrackerReadiness.cs"/>
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitCaptureArchive.cs"/>
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitAndroidExport.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSessionFile.cs" />
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitRawCapture.cs" />
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitRawLink.cs" />
 </ItemGroup>
 </Project>

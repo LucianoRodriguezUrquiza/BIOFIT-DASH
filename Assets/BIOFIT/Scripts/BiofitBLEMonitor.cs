@@ -22,6 +22,113 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     private const string TransportUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0007";
     private IBleCharacteristic leftTransport, rightTransport;
+    private const string RawUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0005";
+    private const string ConfigUuid = "f9710000-6d68-4b7d-a742-6fae7b5f0004";
+    private BiofitRawLink leftRaw, rightRaw;
+    private BiofitSessionFile sessionFile;
+    private BiofitRawCapture rawCapture;
+    private readonly System.Threading.SemaphoreSlim rawTransition = new System.Threading.SemaphoreSlim(1,1);
+    private readonly object rawReceiveGate = new object();
+    private volatile bool rawActive;
+    private int rawEpoch, rawSegment, syncNumber;
+    private double nextRawDiagnostic, previousUpdate, updateGapMax, eventQueueSum, eventQueueMax;
+    private int perfEvents;
+    public bool RawActive => rawActive;
+    public string RawCount => rawCapture==null?"0":rawCapture.LeftCount+"/"+rawCapture.RightCount;
+    public string RawStatus { get; private set; } = "RAW OFF (20 Hz opcional)";
+    public string SyncLabel { get; private set; } = "SYNC VIDEO";
+    public Task CaptureCompletion { get; private set; } = Task.CompletedTask;
+    public Task RawOperation { get; private set; } = Task.CompletedTask;
+    public bool CaptureSaving => !CaptureCompletion.IsCompleted;
+
+    public void MarkVideoSync()
+    {
+        if(!gameCaptureActive) return;
+        SyncLabel="SYNC "+(++syncNumber).ToString("D3");
+        eventCapture.MarkSync(SyncLabel,Time.realtimeSinceStartup);
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,SyncLabel+" callbackClockS="+
+            MonotonicNow.ToString("F6",System.Globalization.CultureInfo.InvariantCulture));
+    }
+    public void ToggleRawCapture() { if(RawOperation.IsCompleted && !CaptureSaving) RawOperation=SetRawCaptureAsync(!rawActive); }
+    public async Task SetRawCaptureAsync(bool enabled)
+    {
+        await rawTransition.WaitAsync();
+        try
+        {
+            if(enabled && (!gameCaptureActive || !BothTrackersConnected || leftRaw==null || rightRaw==null))
+            { RawStatus="RAW: iniciar captura y conectar ambos sensores";return; }
+            lock(rawReceiveGate) { rawActive=false;rawEpoch++; }
+            if(enabled)
+            {
+                if(sessionFile.Error.Length!=0)throw new System.IO.IOException("Archivo principal: "+sessionFile.Error);
+                if(rawCapture==null)
+                {
+                    string path=System.IO.Path.Combine(Application.persistentDataPath,"RawCaptures",System.IO.Path.GetFileNameWithoutExtension(sessionFile.Path)+"_RAW.csv");
+                    rawCapture=new BiofitRawCapture(new BiofitSessionFile(path,BiofitRawCapture.Header));
+                }
+                if(rawCapture.File.Error.Length!=0) throw new System.IO.IOException(rawCapture.File.Error);
+                rawCapture.Segment="RAW_SEG_"+(++rawSegment);
+                int epoch=rawEpoch;
+                lock(rawReceiveGate)rawActive=true;
+                RawStatus="RAW activando ambos...";
+                await leftRaw.SetAsync(true,b=>ReceiveRaw(1,b,epoch));
+                await rightRaw.SetAsync(true,b=>ReceiveRaw(2,b,epoch));
+                RawStatus="RAW ON 20 Hz (ver contador)";
+            }
+            else
+            {
+                string errors=await StopRawLinks();
+                RawStatus=errors.Length==0?"RAW OFF":"RAW OFF local; STREAM,0 no confirmado: "+errors;
+            }
+        }
+        catch(Exception ex)
+        {
+            lock(rawReceiveGate) { rawActive=false;rawEpoch++; }
+            string cleanup=await StopRawLinks();
+            RawStatus="ERROR RAW: "+ex.Message+" "+cleanup;
+        }
+        finally
+        {
+            eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,RawStatus+" segment="+rawSegment+" callbackS="+MonotonicNow.ToString("F6",System.Globalization.CultureInfo.InvariantCulture)+" "+TransportSummary+" "+FirmwareSummary);
+            rawTransition.Release();
+        }
+    }
+    private async Task<string> StopRawLinks()
+    {
+        string errors="";
+        foreach(var link in new[]{leftRaw,rightRaw})
+            if(link!=null)try { await link.SetAsync(false,null); }catch(Exception ex){errors+=ex.Message+" ";}
+        return errors;
+    }
+    private void ReceiveRaw(byte id,byte[] bytes,int epoch)
+    {
+        double received=MonotonicNow;
+        lock(rawReceiveGate)
+            if(rawActive && epoch==rawEpoch)rawCapture.Record(id,bytes,received);
+    }
+    private async Task CompleteCaptureAsync()
+    {
+        await SetRawCaptureAsync(false);
+        if(rawCapture!=null)await rawCapture.FinishAsync();
+        // Include final RAW quality even though gameplay recording has ended.
+        sessionFile.Add("DIAG;FINAL;"+Time.realtimeSinceStartup.ToString("F3",System.Globalization.CultureInfo.InvariantCulture)+
+            ";0;"+(rawCapture==null?RawStatus:RawStatus+" "+rawCapture.Summary).Replace(';',',').Replace('\n',' ').Replace('\r',' ')+";;;;;;;;;;");
+        await sessionFile.Finish();
+        if(sessionFile.Error.Length!=0) { CaptureFileStatus="ERROR archivo: "+sessionFile.Error+"; conservar .partial";return; }
+        SavedCapturePath=sessionFile.Path;
+        CaptureFileStatus="CSV guardado SHA256 OK";
+        if(rawCapture!=null) CaptureFileStatus+=(rawCapture.File.Error.Length>0 || rawCapture.QueueDropped>0 ? "; ERROR RAW: " : " + RAW: ")+rawCapture.Summary;
+    }
+    private void OnApplicationPause(bool paused)
+    {
+        if(!paused)return;
+        if(gameCaptureActive) { eventCapture.MarkSync("APP_PAUSA_FIN",Time.realtimeSinceStartup); StopGameCapture(); }
+        else RawOperation=SetRawCaptureAsync(false);
+    }
+    private void OnDestroy()
+    {
+        if(gameCaptureActive)StopGameCapture(); else RawOperation=SetRawCaptureAsync(false);
+    }
     public int RejectedEvents { get; private set; }
     public int AppQueueDropped => callbackDropped;
     public int AppQueuePending => pendingCount;
@@ -92,7 +199,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     public bool GameCaptureActive => gameCaptureActive;
     public int CapturedEventCount => eventCapture.EventRows;
-    public int DroppedEventCount => eventCapture.DroppedRows;
+    public int DroppedEventCount => eventCapture.DroppedRows + (sessionFile==null?0:sessionFile.Rejected);
     public string CaptureStage => eventCapture.Stage;
     public float MinUpG => jumpDetector.MinimumVerticalGThreshold;
     public float PairWindowMs => jumpDetector.MaxPairGapWindowSeconds * 1000f;
@@ -136,6 +243,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// <summary>Una sola sesion para reposo, marcha, carrera, elevacion y juego.</summary>
     public bool StartGameCapture()
     {
+        if(gameCaptureActive || eventCapture.Recording || CaptureSaving || !RawOperation.IsCompleted) return false;
+        string name="BIOFIT_v095_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
+        sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
+        eventCapture.RowSink=row=>sessionFile.Add(row);
+        rawCapture=null;rawSegment=0;syncNumber=0;SyncLabel="SYNC VIDEO";
         if (!eventCapture.BeginGame(Time.realtimeSinceStartup)) return false;
         gameCaptureActive = true;
         gLeftOn = left.movOn; gRightOn = right.movOn;
@@ -189,7 +301,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     public bool ExportGameCapture()
     {
-        if (gameCaptureActive)
+        if (gameCaptureActive || CaptureSaving)
         {
             CaptureFileStatus = "Finalizar la grabacion antes de exportar";
             return false;
@@ -227,11 +339,19 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             CaptureFileStatus = BiofitAndroidExport.LastError;
             return false;
         }
-        CaptureFileStatus = BiofitAndroidExport.LastStatus;
+        string mainStatus=BiofitAndroidExport.LastStatus;
+        string rawPath=System.IO.Path.Combine(Application.persistentDataPath,"RawCaptures",System.IO.Path.GetFileNameWithoutExtension(SavedCapturePath)+"_RAW.csv");
+        if(System.IO.File.Exists(rawPath))
+        {
+            if(!BiofitAndroidExport.Open(rawPath)) { CaptureFileStatus=mainStatus+"; ERROR exportando RAW: "+BiofitAndroidExport.LastError;return false; }
+            CaptureFileStatus=mainStatus+" + RAW guardado";
+        }
+        else CaptureFileStatus=mainStatus+(System.IO.File.Exists(rawPath+".partial")?"; RAW INCOMPLETO: conservar datos privados":"");
         return true;
     }
     private bool SaveCaptureFile()
     {
+        if(sessionFile!=null) { CaptureFileStatus="ERROR: revisar cierre de archivo; no exportar vista parcial";return false; }
         try {
             SavedCapturePath = BiofitCaptureArchive.Save(Application.persistentDataPath,
                 eventCapture.Csv,lastGameSummary);
@@ -252,7 +372,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " UP=" + (right.upImpulses - gRightUp) + "\n" +
             "PARES UP=" + (jumpDetector.BilateralCandidates - gPairs) +
             " | EVENTOS=" + eventCapture.EventRows +
-            " | DESCARTADOS=" + eventCapture.DroppedRows +
+            " | DESCARTADOS=" + DroppedEventCount +
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
             " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
             "\nESTIMACION_RELOJ=" + (ClockAlignmentReady ? "ACTIVA" : "INACTIVA") +
@@ -265,12 +385,29 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "\n" + TransportSummary + "\n" + FirmwareSummary +
             "\n" + ReadinessSummary + "\n" + left.detector + " / " + right.detector +
             "\nNO son pasos ni saltos humanos confirmados.\n";
-        return SaveCaptureFile();
+        eventCapture.RowSink=null;
+        sessionFile.Add("DIAG;FINAL;;0;"+lastGameSummary.Replace(';',',').Replace('\n',' ').Replace('\r',' ')+";;;;;;;;;;");
+        CaptureFileStatus="Cerrando CSV y RAW...";
+        CaptureCompletion=CompleteCaptureAsync();
+        return true;
     }
 
     public bool CopyGameCapture()
     {
-        if (gameCaptureActive) return false;
+        if (gameCaptureActive || CaptureSaving) return false;
+        if(sessionFile!=null)
+        {
+            if(string.IsNullOrEmpty(SavedCapturePath))
+            {
+                // Only a complete short preview may be a clipboard fallback.
+                if(eventCapture.TotalRows>6000)return false;
+                string fallback=BiofitCaptureArchive.Build(eventCapture.Csv,lastGameSummary);
+                if(!BiofitCaptureArchive.Verify(fallback))return false;
+                GUIUtility.systemCopyBuffer=fallback;return true;
+            }
+            GUIUtility.systemCopyBuffer=System.IO.File.ReadAllText(SavedCapturePath);
+            return true;
+        }
         if (!string.IsNullOrEmpty(lastGameSummary))
         {
             GUIUtility.systemCopyBuffer =
@@ -475,6 +612,15 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 });
             }
             catch (Exception ex) { Debug.LogWarning("BIOFIT TX opcional: " + ex.Message); }
+            try
+            {
+                var raw=await service.GetCharacteristicAsync(RawUuid);
+                var config=await service.GetCharacteristicAsync(ConfigUuid);
+                var link=new BiofitRawLink(raw,config);
+                await link.SetAsync(false,null);
+                if(id==1)leftRaw=link;else rightRaw=link;
+            }
+            catch(Exception ex) { RawStatus="RAW no disponible: "+ex.Message; }
             tracker.connection = "CONECTADO - NOTIFICACIONES ACTIVAS";
         }
         catch (Exception ex)
@@ -497,6 +643,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     private void Update()
     {
+        double updateAt=MonotonicNow;
+        if(previousUpdate>0)updateGapMax=Math.Max(updateGapMax,(updateAt-previousUpdate)*1000);
+        previousUpdate=updateAt;
         int processed = 0;
         while (processed++ < 100 && pending.TryDequeue(out Packet packet))
         {
@@ -504,6 +653,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             Tracker tracker = packet.expectedId == 1 ? left : right;
             if (packet.reset)
             {
+                if(rawActive) RawOperation=SetRawCaptureAsync(false);
+                eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,"DESCONEXION: STREAM,0 best effort; sin enlace no se confirma apagado remoto");
                 tracker.moving = false; tracker.hasLastTimestamp = false;
                 tracker.hasStatus = false; tracker.gate.Reset(); tracker.statusGate.Reset();
                 tracker.readiness.Reset(); Array.Clear(tracker.configPages,0,tracker.configPages.Length);
@@ -517,6 +668,22 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             if (packet.isTransport) ReadTransport(packet);
             else if (packet.isStatus) ReadStatus(packet);
             else ReadEvent(packet);
+        }
+        if(gameCaptureActive && MonotonicNow>=nextRawDiagnostic)
+        {
+            nextRawDiagnostic=MonotonicNow+1;
+            eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,"RAW_ACTIVE="+rawActive+" "+
+                (rawCapture==null?"raw=0":rawCapture.Summary)+" eventDisk="+sessionFile.Error+" "+TransportSummary+
+                " eventN="+perfEvents+" eventQueueMeanMs="+(perfEvents==0?0:eventQueueSum/perfEvents).ToString("F3",System.Globalization.CultureInfo.InvariantCulture)+
+                " eventQueueMaxMs="+eventQueueMax.ToString("F3",System.Globalization.CultureInfo.InvariantCulture)+
+                " updateGapMaxMs="+updateGapMax.ToString("F3",System.Globalization.CultureInfo.InvariantCulture));
+            perfEvents=0;eventQueueSum=eventQueueMax=updateGapMax=0;
+            if(sessionFile.Error.Length!=0)CaptureFileStatus="ERROR CAPTURA: "+sessionFile.Error;
+            if(rawActive && (sessionFile.Error.Length!=0 || rawCapture.File.Error.Length!=0 || rawCapture.QueueDropped>0))
+            {
+                CaptureFileStatus="ERROR CAPTURA: "+sessionFile.Error+" RAW "+rawCapture.Summary;
+                RawOperation=SetRawCaptureAsync(false);
+            }
         }
         inputEngine.Update(Time.realtimeSinceStartup);
         sessionLogger.ObserveCadence(inputEngine.EstimatedCadence);
@@ -556,6 +723,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 "STATUS_FLAGS=" + b[2] + " sensorMs=" + sensor + " " + tracker.readiness.Detail(callbackSeconds));
         timeAligner.ObserveStatus(packet.expectedId, sensor,
             callbackSeconds);
+        if(gameCaptureActive && rawCapture!=null)
+            eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,
+                "RAW_CLOCK_ANCHOR sensorMs="+sensor+" callbackS="+callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private void ReadTransport(Packet packet)
@@ -617,6 +787,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         float queueDelayMs = (float)((ticksNow - packet.callbackTicks) *
             1000.0 / System.Diagnostics.Stopwatch.Frequency);
         if (queueDelayMs < 0f) queueDelayMs = 0f;
+        perfEvents++;eventQueueSum+=queueDelayMs;eventQueueMax=Math.Max(eventQueueMax,queueDelayMs);
         double callbackSeconds = packet.callbackTicks /
             (double)System.Diagnostics.Stopwatch.Frequency;
         float eventSeconds = receivedSeconds - queueDelayMs * 0.001f;
@@ -824,6 +995,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             }
             else
             {
+                if(CaptureSaving) { message="Esperar cierre de archivos";return; }
+                eventCapture.RowSink=null;
                 sessionLogger.Begin(left.movOn, left.movOff, left.upImpulses,
                     right.movOn, right.movOff, right.upImpulses, jumpDetector.BilateralCandidates);
                 eventCapture.Begin(Time.realtimeSinceStartup);

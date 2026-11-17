@@ -3,8 +3,8 @@ using System.Globalization;
 using System.Text;
 
 /// <summary>
-/// Captura acotada de eventos BLE de una sesion para analisis posterior.
-/// El monitor guarda el CSV al finalizar; esta clase mantiene las filas.
+/// Streaming capture via RowSink, with a bounded 6000-row clipboard preview.
+/// Legacy guided mode without a sink retains its original bounded behavior.
 /// El reloj `phoneSeconds` es comun a ambos tobillos; millis de ESP32 NO.
 /// </summary>
 public sealed class BiofitEventCapture
@@ -19,11 +19,21 @@ public sealed class BiofitEventCapture
     public string Stage => stage;
     public int EventRows { get; private set; }
     public int DroppedRows { get; private set; }
-    public int TotalRows => rows.Count;
+    public int TotalRows => totalRows;
+    private int totalRows;
+    public System.Action<string> RowSink { get; set; }
+    private void AddRow(string row)
+    {
+        RowSink?.Invoke(row);
+        totalRows++;
+        // Bounded preview only; streaming archive contains every row.
+        if(rows.Count < MaxRows) rows.Add(row);
+    }
+    public void MarkSync(string name,float seconds) { if(Recording) Mark(name,seconds); }
 
     public void Begin(float phoneSeconds)
     {
-        rows.Clear();
+        rows.Clear(); totalRows=0;
         gameMode = false;
         stage = "CAMINAR";
         Recording = true;
@@ -60,18 +70,18 @@ public sealed class BiofitEventCapture
     public void RecordDiagnostic(float phoneSeconds, byte id, string detail)
     {
         if (!Recording) return;
-        if (rows.Count >= MaxRows) { DroppedRows++; return; }
-        rows.Add("DIAG;" + stage + ";" + phoneSeconds.ToString("F3", invariant) +
+        if (RowSink == null && rows.Count >= MaxRows) { DroppedRows++; return; }
+        AddRow("DIAG;" + stage + ";" + phoneSeconds.ToString("F3", invariant) +
             ";" + id + ";" + detail.Replace(';', ',').Replace('\n', ' ').Replace('\r', ' ') + ";;;;;;;;;;");
     }
 
     public void RecordGameAction(string action, float phoneSeconds)
     {
         if (!Recording || !gameMode) return;
-        if (rows.Count >= MaxRows) { DroppedRows++; return; }
+        if (RowSink == null && rows.Count >= MaxRows) { DroppedRows++; return; }
         // Misma cabecera de 15 columnas; este evento proviene de Unity,
         // NO del sensor. Las columnas de la IMU quedan vacias.
-        if (action != "SALTO_MANUAL" && action != "PAR_BLE_DETECTADO" &&
+        if (action != "MODO_EXP_UMBRAL_ON" && action != "MODO_EXP_UMBRAL_OFF" && action != "SALTO_MANUAL" && action != "PAR_BLE_DETECTADO" &&
             action != "SALTO_BLE_REALIZADO" &&
             action != "SALTO_BLE_NO_REALIZADO" &&
             action != "BLE_ACTIVADO" && action != "BLE_DESACTIVADO" &&
@@ -82,7 +92,7 @@ public sealed class BiofitEventCapture
             action != "SOLO_IZQ_DESCARTADO_UMBRAL" && action != "SOLO_DER_DESCARTADO_UMBRAL" &&
             action != "SOLO_IZQ_DESCARTADO_ANTIRREBOTE" && action != "SOLO_DER_DESCARTADO_ANTIRREBOTE" &&
             action != "SOLO_IZQ_DESCARTADO_INVALIDO" && action != "SOLO_DER_DESCARTADO_INVALIDO") return;
-        rows.Add("APP;" + stage + ";" +
+        AddRow("APP;" + stage + ";" +
             phoneSeconds.ToString("F3", invariant) + ";;" + action + ";;;;;;;;;;");
     }
 
@@ -90,8 +100,8 @@ public sealed class BiofitEventCapture
         float pairWindowMs)
     {
         if (!Recording || !gameMode) return;
-        if (rows.Count >= MaxRows) { DroppedRows++; return; }
-        rows.Add("CONFIG;" + stage + ";" +
+        if (RowSink == null && rows.Count >= MaxRows) { DroppedRows++; return; }
+        AddRow("CONFIG;" + stage + ";" +
             phoneSeconds.ToString("F3", invariant) +
             ";;UP=" + upThresholdG.ToString("F2", invariant) +
             "g_PAIR=" + pairWindowMs.ToString("F0", invariant) +
@@ -102,8 +112,8 @@ public sealed class BiofitEventCapture
     public void RecordSingleFootConfig(float phoneSeconds, float minVerticalG)
     {
         if (!Recording || !gameMode) return;
-        if (rows.Count >= MaxRows) { DroppedRows++; return; }
-        rows.Add("CONFIG;" + stage + ";" +
+        if (RowSink == null && rows.Count >= MaxRows) { DroppedRows++; return; }
+        AddRow("CONFIG;" + stage + ";" +
             phoneSeconds.ToString("F3", invariant) +
             ";;SOLO_UP=" + minVerticalG.ToString("F2", invariant) +
             "g;;;;;;;;;;");
@@ -111,8 +121,9 @@ public sealed class BiofitEventCapture
 
     public void RecordSingleFootConfig(float phoneSeconds, byte foot, float threshold)
     {
-        RecordDiagnostic(phoneSeconds, foot, "SOLO_UP_" + (foot == 1 ? "IZQ=" : "DER=") +
-            threshold.ToString("F2", invariant) + "g");
+        if(!Recording || !gameMode) return;
+        AddRow("CONFIG;"+stage+";"+phoneSeconds.ToString("F3",invariant)+";"+foot+";SOLO_UP_"+
+            (foot==1?"IZQ=":"DER=")+threshold.ToString("F2",invariant)+"g;;;;;;;;;;");
     }
 
     public bool FinishGame(float phoneSeconds)
@@ -151,7 +162,7 @@ public sealed class BiofitEventCapture
         double relativeArrivalDelayMs = 0d)
     {
         if (!Recording) return;
-        if (rows.Count >= MaxRows)
+        if (RowSink == null && rows.Count >= MaxRows)
         {
             DroppedRows++;
             return;
@@ -162,7 +173,7 @@ public sealed class BiofitEventCapture
                       eventType == 3 ? "UP_IMPULSE" : "OTRO";
 
         // Formato CSV compatible con separador de listas habitual de Excel ES.
-        rows.Add("EV;" + stage + ";" +
+        AddRow("EV;" + stage + ";" +
                  phoneSeconds.ToString("F3", invariant) + ";" +
                  id + ";" + name + ";" +
                  sensorMilliseconds + ";" +
@@ -196,12 +207,12 @@ public sealed class BiofitEventCapture
 
     private void Mark(string name, float phoneSeconds)
     {
-        if (rows.Count >= MaxRows)
+        if (RowSink == null && rows.Count >= MaxRows)
         {
             DroppedRows++;
             return;
         }
-        rows.Add("MARCA;" + name + ";" +
+        AddRow("MARCA;" + name + ";" +
                  phoneSeconds.ToString("F3", invariant) + ";;;;;;;;;;;;");
     }
 }

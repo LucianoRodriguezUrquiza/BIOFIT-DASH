@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+ <ItemGroup>
+  <Compile Include="Program.cs"/><Compile Include="../ReceiverRegression/ApiShims.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitClockAligner.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventGate.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventCapture.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSessionLogger.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitInputEngine.cs"/>
+   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitTrackerReadiness.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitCaptureArchive.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitAndroidExport.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSessionFile.cs" />
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitRawCapture.cs" />
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitRawLink.cs" />
+</ItemGroup>
+</Project>

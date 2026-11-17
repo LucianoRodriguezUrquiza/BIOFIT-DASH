@@ -35,7 +35,8 @@ class Program {
   // A callback held >250ms inside Unity cannot act even with a recent sensor time.
   Read(m,Packet(1,false,3,100100),now-1);
   Check(solo==2&&m.RejectedEvents==4,"Unity stalled packet rejected");
-  Check(m.StopGameCapture()&&m.CopyGameCapture(),"export finishes");
+  Check(m.StopGameCapture(),"stop requested"); m.CaptureCompletion.GetAwaiter().GetResult();
+  Check(m.CopyGameCapture(),"export finishes");
   Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("RECHAZO_ANTIGUO")&&UnityEngine.GUIUtility.systemCopyBuffer.Contains("RECHAZO_SECUENCIA"),"CSV keeps rejection reasons");
   var cold=new BiofitBLEMonitor();cold.AnkleUpCandidate+=(a,b,c)=>solo++;
   Read(cold,Packet(1,false,1,1),now);
@@ -91,7 +92,7 @@ class Program {
   readTransport.Invoke(telemetry,new[]{Wrap(page,now)});
   page[2]=3;BitConverter.GetBytes((ushort)227).CopyTo(page,18);
   readTransport.Invoke(telemetry,new[]{Wrap(page,now)});
-  telemetry.StopGameCapture();telemetry.CopyGameCapture();
+  telemetry.StopGameCapture();telemetry.CaptureCompletion.GetAwaiter().GetResult();telemetry.CopyGameCapture();
   Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("upMg=-125 velocityMmS=-80"),"firmware v2 signed diagnostic fields decoded");
   Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("fwVersion=227"),"v227 identity decoded");
   // Recover the last valid private archive after an APK restart without a new capture.
@@ -129,7 +130,9 @@ class Program {
     UnityEngine.Application.persistentDataPath=obstructed; // existing file, not directory
     var failed=new BiofitBLEMonitor();
     Check(failed.StartGameCapture(),"failure test capture starts");
-    Check(!failed.StopGameCapture() && failed.CaptureFileStatus.StartsWith("ERROR archivo:"),
+    Check(failed.StopGameCapture(),"asynchronous failure close requested");
+    failed.CaptureCompletion.GetAwaiter().GetResult();
+    Check(failed.CaptureFileStatus.StartsWith("ERROR archivo:"),
           "failed private save reported, not hidden behind FINALIZAR");
     Check(failed.CopyGameCapture() &&
           BiofitCaptureArchive.Verify(UnityEngine.GUIUtility.systemCopyBuffer),
