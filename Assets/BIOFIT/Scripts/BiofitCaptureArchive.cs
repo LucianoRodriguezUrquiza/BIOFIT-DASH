@@ -49,6 +49,37 @@ public static class BiofitCaptureArchive
         }
         return finished && rows==total && events==expectedEvents;
     }
+    public static string FindNewestValid(string directory)
+    {
+        // APK updates retain Application.persistentDataPath when package/signature match.
+        // Never accept arbitrary paths or unverified partial archives.
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return "";
+        string newest = "";
+        DateTime newestTime = DateTime.MinValue;
+        try
+        {
+            foreach (string path in Directory.GetFiles(directory, "BIOFIT_v0*.csv"))
+            {
+                try
+                {
+                    if (!Verify(File.ReadAllText(path, Utf8))) continue;
+                    DateTime written = File.GetLastWriteTimeUtc(path);
+                    if (written >= newestTime)
+                    {
+                        newest = path;
+                        newestTime = written;
+                    }
+                }
+                catch (IOException) { /* skip unreadable archive */ }
+                catch (UnauthorizedAccessException) { /* skip inaccessible archive */ }
+            }
+        }
+        catch (IOException) { return ""; }
+        catch (UnauthorizedAccessException) { return ""; }
+        return newest;
+    }
+
     public static string Save(string directory,string csv,string summary)
     {
         string text=Build(csv,summary);
