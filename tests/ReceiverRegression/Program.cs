@@ -55,6 +55,15 @@ class Program {
   Check(System.IO.File.Exists(m.SavedCapturePath),"capture saved to disk");
   string archive=System.IO.File.ReadAllText(m.SavedCapturePath);
   Check(BiofitCaptureArchive.Verify(archive),"saved archive hash and counts valid");
+  // Press ARCHIVO: this must create a real CSV file, without copying or chooser.
+  Check(m.ExportGameCapture() && m.CaptureFileStatus.StartsWith("EDITOR:"),
+        "ARCHIVO stores a file and reports actual completion in host mode");
+  string exportPath=System.IO.Path.Combine(UnityEngine.Application.persistentDataPath,
+      "BiofitEditorExports",System.IO.Path.GetFileName(m.SavedCapturePath));
+  Check(System.IO.File.Exists(exportPath) &&
+        System.IO.File.ReadAllText(exportPath)==archive &&
+        BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(exportPath)),
+        "one-tap export includes complete hashed CSV with all events");
   Check(!BiofitCaptureArchive.Verify(archive.Substring(0,archive.Length-20)),"truncated archive rejected");
   Check(!BiofitCaptureArchive.Verify(archive.Replace("RECHAZO_ANTIGUO","ALTERADO")),"tampered archive rejected");
   Check(!BiofitCaptureArchive.Verify(BiofitCaptureArchive.Build("tipo;etapa;\n# filas_total=1; finalizada=1\n# filas_eventos=0\n","")),"wrong row count rejected even with valid hash");
