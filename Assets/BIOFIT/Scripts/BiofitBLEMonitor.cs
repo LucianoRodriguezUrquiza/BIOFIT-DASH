@@ -211,7 +211,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 }
             }
         }
-        // Revalidate source before asking Android to duplicate it.
+        // Validate the private SHA256 archive first. ARCHIVO then saves it
+        // DIRECTLY in Downloads; no picker, clipboard or Java export Activity.
         try
         {
             if (!BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(SavedCapturePath)))
@@ -226,7 +227,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             CaptureFileStatus = BiofitAndroidExport.LastError;
             return false;
         }
-        CaptureFileStatus = "Selector solicitado; guardar y confirmar";
+        CaptureFileStatus = BiofitAndroidExport.LastStatus;
         return true;
     }
     private bool SaveCaptureFile()
