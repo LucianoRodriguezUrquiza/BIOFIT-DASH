@@ -129,6 +129,174 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         if(gameCaptureActive)StopGameCapture(); else RawOperation=SetRawCaptureAsync(false);
     }
+
+    // v0.9.6: archived sessions remain private and untouched until independently
+    // verified copies have been made. A newer short session must not hide an
+    // older long session from the user.
+    public sealed class StoredSession
+    {
+        public string MainPath;
+        public string RawPath;
+        public string Label;
+        public bool MainValid;
+        public bool RawValid;
+        public bool MainPartial;
+        public bool RawPartial;
+    }
+    private StoredSession[] storedSessions = new StoredSession[0];
+    private int selectedStoredSession = -1;
+    private bool scanningSessions;
+    private string archiveStatus = "Abrir SESIONES para buscar capturas anteriores";
+    public StoredSession[] StoredSessions => storedSessions;
+    public int SelectedStoredSession => selectedStoredSession;
+    public string ArchiveStatus => archiveStatus;
+    public bool ScanningSessions => scanningSessions;
+    public bool ExportBusy { get; private set; }
+    public string ExportStatus { get; private set; } = "Exportacion no iniciada";
+    public string CaptureBanner
+    {
+        get
+        {
+            if (ExportBusy) return "EXPORTANDO CSV - " + ExportStatus;
+            if (CaptureSaving) return "FINALIZANDO - esperando cierre de archivos";
+            if (gameCaptureActive) return "GRABANDO - ETAPA " + CaptureStage;
+            if (CaptureFileStatus.StartsWith("ERROR",StringComparison.Ordinal)) return "ERROR - " + CaptureFileStatus;
+            if (!string.IsNullOrEmpty(SavedCapturePath)) return "ARCHIVO PRIVADO GUARDADO - exportar";
+            return "SIN GRABACION - presionar 1. INICIAR";
+        }
+    }
+
+    public void ScanSessionHistory()
+    {
+        if(scanningSessions || gameCaptureActive || CaptureSaving || ExportBusy)return;
+        _ = ScanSessionHistoryAsync();
+    }
+    private async Task ScanSessionHistoryAsync()
+    {
+        scanningSessions=true;
+        archiveStatus="Buscando y verificando archivos privados...";
+        try
+        {
+            string root=Application.persistentDataPath;
+            var found=await Task.Run(()=>
+            {
+                var list=new System.Collections.Generic.List<StoredSession>();
+                if(!System.IO.Directory.Exists(root))return list;
+                string[] paths=System.IO.Directory.GetFiles(root,"BIOFIT_v0*");
+                System.Array.Sort(paths,(a,b)=>System.IO.File.GetLastWriteTimeUtc(b).CompareTo(System.IO.File.GetLastWriteTimeUtc(a)));
+                foreach(string path in paths)
+                {
+                    if(list.Count>=80)break;
+                    bool partial=path.EndsWith(".csv.partial",StringComparison.OrdinalIgnoreCase);
+                    if(!partial && !path.EndsWith(".csv",StringComparison.OrdinalIgnoreCase))continue;
+                    string expected=partial?path.Substring(0,path.Length-8):path;
+                    string raw=System.IO.Path.Combine(root,"RawCaptures",System.IO.Path.GetFileNameWithoutExtension(expected)+"_RAW.csv");
+                    bool valid=false,rawValid=false;
+                    try { if(!partial)valid=BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(path)); }
+                    catch(System.Exception) {}
+                    try { if(System.IO.File.Exists(raw))rawValid=BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(raw)); }
+                    catch(System.Exception) {}
+                    bool rawPart=System.IO.File.Exists(raw+".partial");
+                    long size=0;
+                    try { size=new System.IO.FileInfo(path).Length; } catch(System.Exception) {}
+                    string status=partial?"PARCIAL":(valid?"SHA OK":"ERROR SHA");
+                    string rawStatus=rawValid?" + RAW OK":(rawPart?" + RAW PARCIAL":"");
+                    list.Add(new StoredSession {
+                        MainPath=path,RawPath=raw,MainValid=valid,RawValid=rawValid,
+                        MainPartial=partial,RawPartial=rawPart,
+                        Label=System.IO.Path.GetFileName(path)+" | "+(size/1048576d).ToString("F1")+" MB | "+status+rawStatus
+                    });
+                }
+                return list;
+            });
+            storedSessions=found.ToArray();
+            selectedStoredSession=-1;
+            archiveStatus=found.Count+" sesion(es) encontradas. Seleccionar archivo.";
+        }
+        catch(System.Exception ex){archiveStatus="ERROR buscando sesiones: "+ex.Message;}
+        finally { scanningSessions=false; }
+    }
+    public void SelectStoredSession(int index)
+    {
+        if(index<0 || index>=storedSessions.Length)return;
+        selectedStoredSession=index;
+        var entry=storedSessions[index];
+        archiveStatus=entry.Label+(entry.MainValid?" | LISTO PARA EXPORTAR":" | NO ES ARCHIVO COMPLETO");
+    }
+
+    // Primary = streamed Android MediaStore. Secondary = Android system document
+    // picker (SAF). Both retain the original private source even on error.
+    public void RequestExport(bool alternate)
+    {
+        if(gameCaptureActive || CaptureSaving || ExportBusy)
+        {
+            ExportStatus="Finalizar antes de exportar";
+            return;
+        }
+        ExportBusy=true;
+        ExportStatus=alternate?"Validando para selector Android...":"Validando para Descargas...";
+        _=RequestExportAsync(alternate);
+    }
+    private async Task RequestExportAsync(bool alternate)
+    {
+        try
+        {
+            string selected=selectedStoredSession>=0 && selectedStoredSession<storedSessions.Length
+                ?storedSessions[selectedStoredSession].MainPath:SavedCapturePath;
+            string root=Application.persistentDataPath;
+            if(string.IsNullOrEmpty(selected))
+                selected=await Task.Run(()=>BiofitCaptureArchive.FindNewestValid(root));
+            if(string.IsNullOrEmpty(selected))throw new System.IO.FileNotFoundException("No hay CSV privado valido; abrir SESIONES");
+            string raw=System.IO.Path.Combine(root,"RawCaptures",System.IO.Path.GetFileNameWithoutExtension(selected)+"_RAW.csv");
+            string[] paths=await Task.Run(()=>
+            {
+                if(!System.IO.File.Exists(selected) || !BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(selected)))
+                    throw new System.IO.InvalidDataException("CSV principal incompleto o SHA incorrecto");
+                if(!System.IO.File.Exists(raw))return new[]{selected};
+                if(!BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(raw)))
+                    throw new System.IO.InvalidDataException("RAW no valido, originales conservados");
+                return new[]{selected,raw};
+            });
+#if UNITY_ANDROID && !UNITY_EDITOR
+            using(var player=new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using(var activity=player.GetStatic<AndroidJavaObject>("currentActivity"))
+            using(var bridge=new AndroidJavaClass("com.biofit.game.BiofitExportBridge"))
+            {
+                bridge.CallStatic(alternate?"startSaf":"startDownloads",activity,paths,gameObject.name);
+            }
+            ExportStatus=alternate?"Abrir selector del sistema, elegir destino para cada CSV":
+                                   "Copiando a Descargas (por bloques)...";
+#else
+            foreach(string file in paths)
+                if(!BiofitAndroidExport.Open(file))
+                    throw new System.IO.IOException(BiofitAndroidExport.LastError);
+            ExportStatus="EDITOR: "+paths.Length+" archivo(s) guardados y verificados";
+            ExportBusy=false;
+#endif
+        }
+        catch(System.Exception ex)
+        {
+            ExportStatus="ERROR exportacion: "+ex.Message+" (archivos privados conservados)";
+            ExportBusy=false;
+        }
+    }
+    public void OnBiofitExportResult(string messageFromAndroid)
+    {
+        string value=messageFromAndroid??"";
+        ExportStatus=value.Replace('|',' ');
+        if(value.StartsWith("DONE|",StringComparison.Ordinal))
+        {
+            ExportStatus="EXPORTADO Y VERIFICADO: "+value.Substring(5).Replace('|',' ');
+            ExportBusy=false;
+        }
+        else if(value.StartsWith("ERROR|",StringComparison.Ordinal) ||
+                value.StartsWith("CANCEL|",StringComparison.Ordinal))
+        {
+            ExportStatus=value.Replace('|',' ')+ " (privados conservados)";
+            ExportBusy=false;
+        }
+    }
+
     public int RejectedEvents { get; private set; }
     public int AppQueueDropped => callbackDropped;
     public int AppQueuePending => pendingCount;
@@ -243,7 +411,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// <summary>Una sola sesion para reposo, marcha, carrera, elevacion y juego.</summary>
     public bool StartGameCapture()
     {
-        if(gameCaptureActive || eventCapture.Recording || CaptureSaving || !RawOperation.IsCompleted) return false;
+        if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || !RawOperation.IsCompleted) return false;
         string name="BIOFIT_v095_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
@@ -256,7 +424,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gCompressed = TimeCompressedEvents;
         gAlignedEvents = alignedEvents;
         gNearMisses = jumpDetector.NearMisses;
-        lastGameSummary = ""; SavedCapturePath = ""; CaptureFileStatus = "Grabando";
+        lastGameSummary = ""; SavedCapturePath = ""; selectedStoredSession=-1; CaptureFileStatus = "Grabando";
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,1,left.readiness.Detail(MonotonicNow));
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,2,right.readiness.Detail(MonotonicNow));
         foreach (Tracker tracker in new[] { left, right })
