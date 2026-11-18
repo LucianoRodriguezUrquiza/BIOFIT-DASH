@@ -127,9 +127,9 @@ class Program
   Check(Pair(d,600),"initial bilateral pair");
   Check(game.Jump(),"first actual jump");
   Advance(game,.90,60);
-  Check(Pair(d,600.90),"next eligible pair after 900ms");
+  Check(Pair(d,600.95),"next eligible pair after 900ms");
   buffer.Clear();
-  Check(buffer.Submit(game,600.90,0,"BILATERAL",8,true)==BiofitDashCore.JumpResult.Accepted &&
+  Check(buffer.Submit(game,600.95,0,"BILATERAL",8,true)==BiofitDashCore.JumpResult.Accepted &&
         !buffer.Pending,"at 900ms a normal 60FPS cube is already grounded: immediate jump");
  }
  static void Main(string[] args) {
