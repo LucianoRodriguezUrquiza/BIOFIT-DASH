@@ -542,7 +542,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             var item=items[index];
             float yy=296f+i*70f;
             string state=item.MainValid?"SHA OK":"INCOMPLETO / ERROR SHA";
-            string raw=item.RawValid?" | RAW OK":(item.RawPartial?" | RAW PARCIAL":"");
+            string raw=item.RawValid?" | RAW OK":(System.IO.File.Exists(item.RawPath)?" | RAW SHA ERROR":(item.RawPartial?" | RAW PARCIAL":""));
             string name=System.IO.Path.GetFileName(item.MainPath);
             // Filename keeps the session timestamp and the stable pairing ID.
             string shown=name.Length>35?name.Substring(0,35)+"...":name;
