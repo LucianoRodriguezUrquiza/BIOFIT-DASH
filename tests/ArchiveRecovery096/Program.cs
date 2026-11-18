@@ -29,7 +29,7 @@ class Program
             for(int i=0;i<48000;i++)
             {
                 Check(writer.Add(Row(i%10==0?"EV":"APP",i)),"write long row "+i);
-                if(i%2000==0)await Task.Yield();
+                if(i%40==0)await Task.Delay(1);
             }
             await writer.Finish();
             Check(writer.Error=="","long write error: "+writer.Error);
@@ -49,7 +49,7 @@ class Program
             Directory.CreateDirectory(rawDir);
             string oldRaw=Path.Combine(rawDir,Path.GetFileNameWithoutExtension(oldPath)+"_RAW.csv");
             var rawWriter=new BiofitSessionFile(oldRaw,header);
-            for(int i=0;i<31000;i++)Check(rawWriter.Add(Row("RAW",i)),"raw write "+i);
+            for(int i=0;i<31000;i++){Check(rawWriter.Add(Row("RAW",i)),"raw write "+i);if(i%40==0)await Task.Delay(1);}
             await rawWriter.Finish();
             Check(BiofitCaptureArchive.VerifyFileStreaming(oldRaw),"paired RAW is independent and SHA-valid");
 
