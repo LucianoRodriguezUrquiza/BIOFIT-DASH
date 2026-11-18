@@ -150,7 +150,7 @@ class Program
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
         string savedCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
         Check(savedCsv.Contains("MODO_EXP_UMBRAL_ON") && savedCsv.Contains("MODO_EXP_UMBRAL_OFF") && savedCsv.Contains("SYNC 001"),"actual GUI EXP and video marks survive archive");
-        Check(savedCsv.Contains("CONTROL_VERSION=0.9.9") && savedCsv.Contains("JUMP_COMMAND id=1 source=MANUAL result=Accepted"),
+        Check(savedCsv.Contains("CONTROL_VERSION=0.9.10") && savedCsv.Contains("JUMP_COMMAND id=1 source=MANUAL result=Accepted"),
             "shared manual command and version preserved in private CSV");
         Check(System.IO.File.ReadAllText(monitor.SavedCapturePath).Contains("PRIMER_ESTADO_SALTO"),
             "first animated simulation frame has a distinct timestamp marker");
