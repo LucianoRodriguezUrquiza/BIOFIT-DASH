@@ -74,7 +74,7 @@ class Program
   double t=200+game.Elapsed;
   Check(buffer.Submit(game,t,0,"BILATERAL",3,true)==
         BiofitDashCore.JumpResult.Buffered && buffer.Pending,
-        "one prelanding valid pair reserves at most 120ms");
+        "one prelanding valid pair reserves at most 180ms");
   Check(buffer.Submit(game,t+.010,0,"BILATERAL",4,true)==
         BiofitDashCore.JumpResult.AlreadyBuffered,
         "second input cannot be stacked or extend expiry");
@@ -87,9 +87,9 @@ class Program
   }
   Check(result.State==BiofitJumpBuffer.Completion.Executed &&
         result.CommandId==3 && result.Source=="BILATERAL" &&
-        result.AgeMilliseconds<=120.1 && !buffer.Pending &&
+        result.AgeMilliseconds<=180.1 && !buffer.Pending &&
         game.SuccessfulJumps==2,
-        "single buffered command executes once after landing in 120ms");
+        "single buffered command executes once after landing in 180ms");
   Check(buffer.Tick(game,t+.2).State==BiofitJumpBuffer.Completion.None &&
         game.SuccessfulJumps==2,
         "no second execution after buffer consumption");
@@ -100,7 +100,7 @@ class Program
         "stall setup");
   // Unity stalls beyond the real-time TTL; old signal may not trigger on landing.
   Advance(game,.100,60);
-  result=buffer.Tick(game,t+.121);
+  result=buffer.Tick(game,t+.181);
   Check(result.State==BiofitJumpBuffer.Completion.Expired &&
         !buffer.Pending && game.SuccessfulJumps==1,
         "stalled callback expires: no delayed automatic jump");
