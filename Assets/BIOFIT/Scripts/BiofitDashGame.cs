@@ -396,7 +396,9 @@ public sealed class BiofitDashGame : MonoBehaviour
         string phase = monitor.ExportBusy ? "EXPORTANDO - ver progreso abajo" :
             monitor.CaptureSaving ? "FINALIZANDO - esperando CSV" :
             monitor.GameCaptureActive ? "GRABANDO: " + monitor.CaptureStage :
-            monitor.CaptureFileStatus.StartsWith("ERROR") ? "ERROR: ver detalle abajo" :
+            monitor.ExportStatus.StartsWith("ERROR") ? "ERROR EXPORTAR - ver abajo" :
+            monitor.CaptureFileStatus.StartsWith("ERROR") ? "ERROR ARCHIVO - ver abajo" :
+            monitor.ExportStatus.StartsWith("EXPORTADO") ? "EXPORTADO: CSV VERIFICADO" :
             !string.IsNullOrEmpty(monitor.SavedCapturePath) ? "GUARDADO PRIVADO: OK" :
             "SIN GRABACION - iniciar";
         GUI.Label(new Rect(x + 12f, 182f, pw - 24f, 25f),
