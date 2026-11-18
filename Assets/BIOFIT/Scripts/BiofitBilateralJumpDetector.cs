@@ -14,7 +14,7 @@ public sealed class BiofitBilateralJumpDetector
     public const float PairCooldownSeconds = 0.90f;
     // EXPERIMENTAL: only for TWO firmware-confirmed phase evidence flags.
     // Do not use a shorter timer on ordinary +Z accelerations alone.
-    public const float PhaseFastMinGapSeconds = 0.50f;
+    public const float PhaseFastMinGapSeconds = 0.60f;
 
     public float MinimumVerticalGThreshold { get; private set; } = MinimumVerticalG;
     public float MaxPairGapWindowSeconds { get; private set; } = MaxPairGapSeconds;
