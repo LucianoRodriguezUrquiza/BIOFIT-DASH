@@ -74,9 +74,24 @@ public sealed class BiofitDashCore
         if (Playing && !GameOver) Paused = !Paused;
     }
 
-    public enum JumpResult { Accepted, NotPlaying, GameOver, Paused, Airborne }
-    // One immediate command API for all input sources. No buffer or auto-repeat:
-    // an airborne command cannot turn into a phantom jump after landing.
+    public enum JumpResult { Accepted, NotPlaying, GameOver, Paused, Airborne, Buffered, AlreadyBuffered }
+    /// <summary>
+    /// Physics-based remaining airborne time. Infinity unless descending.
+    /// This estimates game landing time, NOT physical foot contact or BLE latency.
+    /// </summary>
+    public double EstimatedSecondsUntilLanding
+    {
+        get
+        {
+            if (!Playing || GameOver || Paused || JumpAltitude <= 0f || velocityY >= 0f)
+                return double.PositiveInfinity;
+            const double gravity = 1560d;
+            double v = velocityY;
+            return (v + Math.Sqrt(v * v + 2d * gravity * JumpAltitude)) / gravity;
+        }
+    }
+    // Immediate jump retains the v0.9.7 API and physics; buffering is opt-in
+    // in BiofitJumpBuffer, AFTER the BLE bilateral filter accepted a pair.
     public JumpResult TryJump()
     {
         if (GameOver) return JumpResult.GameOver;
