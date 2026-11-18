@@ -20,6 +20,8 @@ class Program
         Check(withPanel.PanelX + withPanel.PanelWidth + 18f <= withPanel.Width + .01f,
             "sidebar ends inside device canvas");
         Check(withPanel.GameWidth >= 650f,"game area remains usable in landscape");
+        Check(withPanel.PanelWidth >= 410f,"readable sidebar virtual width");
+        if(w==1536 && h==691)Check(withPanel.PanelWidth >= 480f,"actual device screenshot gets wider panel");
         Check(gameOnly.GameWidth > withPanel.GameWidth,
             "hiding technical panel expands gameplay");
         Check(withPanel.Scale*withPanel.Width <= w + .01f &&
@@ -115,6 +117,9 @@ class Program
         var internalDiag=(BiofitSingleFootDiagnostic)typeof(BiofitDashGame).GetField("soloDiagnostic",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game);
         Check(internalDiag.LeftThresholdG==.25f && internalDiag.RightThresholdG==.25f,
             "actual Dash game uses both 0.25g defaults");
+        UnityEngine.GUI.ClickNext="RAW: OFF";gui.Invoke(game,null);
+        Check(!monitor.RawActive && monitor.RawStatus.Contains("primero pulse INICIAR"),
+            "RAW before start gives explicit prerequisite instead of silently ignoring tap");
         UnityEngine.GUI.ClickNext="IZQ: 0.25 g";gui.Invoke(game,null);
         Check((byte)typeof(BiofitDashGame).GetField("thresholdFoot",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(game)==2,
             "actual UI selector switches to right foot");
@@ -129,7 +134,7 @@ class Program
         Check(!internalDiag.ExperimentalMode && internalDiag.RightThresholdG==.25f,
             "UI EXP:SI toggle restores normal right threshold");
 
-        UnityEngine.GUI.ClickNext="1. INICIAR";gui.Invoke(game,null);
+        UnityEngine.GUI.ClickNext="INICIAR";gui.Invoke(game,null);
         Check(monitor.GameCaptureActive,"actual start button starts capture");
         UnityEngine.GUI.ClickNext="EXP: NO";gui.Invoke(game,null);
         UnityEngine.GUI.ClickNext="EXP: SI";gui.Invoke(game,null);
@@ -140,7 +145,7 @@ class Program
             BindingFlags.Instance|BindingFlags.NonPublic).Invoke(game,null);
         Check(internalDiag.LeftThresholdG==.25f && internalDiag.RightThresholdG==.25f,
             "capture start preserves both preferred threshold values");
-        UnityEngine.GUI.ClickNext="2. FINALIZAR";gui.Invoke(game,null);
+        UnityEngine.GUI.ClickNext="FINALIZAR";gui.Invoke(game,null);
         monitor.CaptureCompletion.GetAwaiter().GetResult();
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
         string savedCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
@@ -154,7 +159,7 @@ class Program
         Check(!BiofitAndroidExport.IsFinalStatus("ABRIENDO_SELECTOR") &&
               !BiofitAndroidExport.IsFinalStatus("SELECCIONAR_DESTINO"),
             "picker request is not misreported as a completed save");
-        UnityEngine.GUI.ClickNext="3. ARCHIVO";gui.Invoke(game,null);
+        UnityEngine.GUI.ClickNext="ARCHIVO";gui.Invoke(game,null);
         Check(UnityEngine.GUI.ClickNext==null,"archive button requests asynchronous export");
         int ticks=0;
         while(monitor.ExportBusy && ticks++<200)
@@ -172,7 +177,7 @@ class Program
         Check(monitor.StoredSessions.Length>0 &&
               monitor.StoredSessions[0].MainValid,"history finds SHA-valid previous capture");
         monitor.SelectStoredSession(0);
-        UnityEngine.GUI.ClickNext="4. RESCATE";gui.Invoke(game,null);
+        UnityEngine.GUI.ClickNext="RESCATE";gui.Invoke(game,null);
         ticks=0;
         while(monitor.ExportBusy && ticks++<200)
             System.Threading.Thread.Sleep(20);
