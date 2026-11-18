@@ -7,7 +7,7 @@ using System;
 /// </summary>
 public sealed class BiofitJumpBuffer
 {
-    public const double WindowSeconds = 0.120d;
+    public const double WindowSeconds = 0.180d;
     private bool pending;
     private double armedAt, expiresAt;
     private byte pendingFoot;
