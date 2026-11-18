@@ -458,7 +458,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public bool StartGameCapture()
     {
         if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || !RawOperation.IsCompleted) return false;
-        string name="BIOFIT_v098_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
+        string name="BIOFIT_v099_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
         rawCapture=null;rawSegment=0;syncNumber=0;SyncLabel="SYNC VIDEO";
