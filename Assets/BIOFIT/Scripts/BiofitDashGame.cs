@@ -35,7 +35,9 @@ public sealed class BiofitDashGame : MonoBehaviour
     private double acceptedJumpAt;
     private byte acceptedJumpFoot;
     private string acceptedJumpSource;
-    private GUIStyle compact, panelSmall, hudStatus;
+    private GUIStyle compact, panelSmall, hudStatus, captureHeading;
+    private bool showArchivedSessions;
+    private int archivePage;
 
     private void Awake()
     {
@@ -205,6 +207,10 @@ public sealed class BiofitDashGame : MonoBehaviour
         panelSmall = new GUIStyle(GUI.skin.label)
             { fontSize = 17, wordWrap = true };
         hudStatus = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = false };
+        captureHeading = new GUIStyle(GUI.skin.label) {
+            fontSize = 23, fontStyle = FontStyle.Bold, wordWrap = false,
+            alignment = TextAnchor.MiddleLeft };
+        captureHeading.normal.textColor = new Color(0.95f, 0.96f, 0.72f);
         hudStatus.normal.textColor = Color.white;
         panelSmall.normal.textColor = new Color(0.86f, 0.95f, 1f);
         center = new GUIStyle(GUI.skin.label)
@@ -369,10 +375,10 @@ public sealed class BiofitDashGame : MonoBehaviour
     {
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
-        GUI.Label(new Rect(x + 12f, 149f, pw - 24f, 34f),
-            "PRUEBAS v0.9.5", info);
-        // Experimental A/B opt-in. Normal gameplay preserves 0.25g minimum.
-        if (GUI.Button(new Rect(x + pw - 105f, 149f, 95f, 32f),
+        GUI.Label(new Rect(x + 12f, 149f, pw - 223f, 34f),
+            "v0.9.6", info);
+        // EXP and RAW intentionally next to each other on the same top row.
+        if (GUI.Button(new Rect(x + pw - 213f, 149f, 97f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
         {
             soloDiagnostic.SetExperimentalMode(!soloDiagnostic.ExperimentalMode);
@@ -384,10 +390,17 @@ public sealed class BiofitDashGame : MonoBehaviour
                 "EXP ACTIVO: umbral unilateral minimo 0.15 g" :
                 "EXP OFF: umbrales >= 0.25 g restaurados";
         }
-        GUI.Label(new Rect(x + 12f, 183f, pw - 24f, 23f),
-            (monitor.GameCaptureActive ? "GRABANDO " : "REGISTRO ") +
-            monitor.CaptureStage + " | " + monitor.CapturedEventCount +
-            " eventos", panelSmall);
+        if (GUI.Button(new Rect(x + pw - 111f, 149f, 100f, 32f),
+            monitor.RawActive ? "RAW: ON" : "RAW: OFF", compact))
+            monitor.ToggleRawCapture();
+        string phase = monitor.ExportBusy ? "EXPORTANDO - ver progreso abajo" :
+            monitor.CaptureSaving ? "FINALIZANDO - esperando CSV" :
+            monitor.GameCaptureActive ? "GRABANDO: " + monitor.CaptureStage :
+            monitor.CaptureFileStatus.StartsWith("ERROR") ? "ERROR: ver detalle abajo" :
+            !string.IsNullOrEmpty(monitor.SavedCapturePath) ? "GUARDADO PRIVADO: OK" :
+            "SIN GRABACION - iniciar";
+        GUI.Label(new Rect(x + 12f, 182f, pw - 24f, 25f),
+            phase, captureHeading);
 
         float cw = (pw - 32f) / 3f;
         if (GUI.Button(new Rect(x + 10f, 208f, cw, 38f),
@@ -416,10 +429,8 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (GUI.Button(new Rect(x + 22f + 2f*cw, 208f, cw, 38f),
             "3. ARCHIVO", compact))
         {
-            // Single tap: directly save full CSV in Android Downloads.
-            // Also works after an app restart via the private archive.
-            monitor.ExportGameCapture();
-            experimentStatus = monitor.CaptureFileStatus;
+            monitor.RequestExport(false);
+            experimentStatus = monitor.ExportStatus;
         }
 
         string[] stages = { "QUIETO", "CAMINAR", "CORRER", "ELEVACION", "DASH" };
@@ -478,16 +489,76 @@ public sealed class BiofitDashGame : MonoBehaviour
             "Pares: " + blePairsObserved + " | Rechazos BLE: " +
             monitor.RejectedEvents + " | Cola: " + monitor.AppQueuePending,
             panelSmall);
-        GUI.Label(new Rect(x + 11f, 587f, pw - 120f, 39f),
-            monitor.CaptureSaving ? monitor.CaptureFileStatus : experimentStatus, panelSmall);
-        if(GUI.Button(new Rect(x+pw-102f,587f,91f,39f),"COPIAR",compact))
-            experimentStatus=monitor.CopyGameCapture()?"CSV copiado.":"Finalizar primero.";
+        GUI.Label(new Rect(x + 11f, 583f, pw - 120f, 55f),
+            monitor.ExportBusy ? monitor.ExportStatus :
+            (monitor.CaptureSaving || monitor.CaptureFileStatus.StartsWith("ERROR") ||
+             !string.IsNullOrEmpty(monitor.SavedCapturePath) ?
+                monitor.CaptureFileStatus : experimentStatus), panelSmall);
+        if(GUI.Button(new Rect(x+pw-114f,587f,103f,39f),"4. RESCATE",compact))
+            monitor.RequestExport(true);
         float diagnosticWidth=(pw-26f)/2f;
-        if(GUI.Button(new Rect(x+10f,647f,diagnosticWidth,38f),monitor.RawActive?"RAW: ON":"RAW: OFF",compact))
-            monitor.ToggleRawCapture();
-        if(GUI.Button(new Rect(x+16f+diagnosticWidth,647f,diagnosticWidth,38f),monitor.SyncLabel,compact))
+        if(GUI.Button(new Rect(x+10f,647f,diagnosticWidth,38f),
+            showArchivedSessions?"CERRAR LISTA":"SESIONES",compact))
+        {
+            showArchivedSessions=!showArchivedSessions;
+            if(showArchivedSessions){archivePage=0;monitor.ScanSessionHistory();}
+        }
+        if(GUI.Button(new Rect(x+16f+diagnosticWidth,647f,diagnosticWidth,38f),
+            monitor.SyncLabel,compact))
             monitor.MarkVideoSync();
-        GUI.Label(new Rect(x+10f,688f,pw-20f,48f),monitor.RawStatus+" n="+monitor.RawCount+" | "+monitor.CaptureFileStatus,panelSmall);
+        GUI.Label(new Rect(x+10f,688f,pw-20f,48f),
+            monitor.RawStatus+" n="+monitor.RawCount+" | "+
+            (monitor.ExportBusy || monitor.ExportStatus.StartsWith("ERROR") ||
+             monitor.ExportStatus.StartsWith("EXPORTADO") ?
+                monitor.ExportStatus : monitor.CaptureFileStatus),panelSmall);
+        if(showArchivedSessions)DrawArchiveBrowser(x,pw);
+    }
+
+    private void DrawArchiveBrowser(float x, float pw)
+    {
+        // Overlay is confined to the diagnostic sidebar, not the avatar.
+        Draw(new Rect(x+5f,252f,pw-10f,381f),new Color(0.055f,0.11f,0.18f));
+        GUI.Label(new Rect(x+15f,259f,pw-30f,31f),
+            "SESIONES PRIVADAS - elegir una",panelSmall);
+        if(monitor.ScanningSessions)
+        {
+            GUI.Label(new Rect(x+15f,300f,pw-30f,90f),
+                "Buscando y verificando SHA256...",panelSmall);
+            return;
+        }
+        BiofitBLEMonitor.StoredSession[] items=monitor.StoredSessions;
+        if(items.Length==0)
+        {
+            GUI.Label(new Rect(x+15f,300f,pw-30f,90f),
+                monitor.ArchiveStatus,panelSmall);
+            return;
+        }
+        int first=archivePage*4;
+        for(int i=0;i<4 && first+i<items.Length;i++)
+        {
+            int index=first+i;
+            var item=items[index];
+            float yy=296f+i*70f;
+            string state=item.MainValid?"SHA OK":"INCOMPLETO / ERROR SHA";
+            string raw=item.RawValid?" | RAW OK":(item.RawPartial?" | RAW PARCIAL":"");
+            string name=System.IO.Path.GetFileName(item.MainPath);
+            // Filename keeps the session timestamp and the stable pairing ID.
+            string shown=name.Length>35?name.Substring(0,35)+"...":name;
+            if(GUI.Button(new Rect(x+15f,yy,pw-30f,33f),
+                (monitor.SelectedStoredSession==index?"[ELEGIDA] ":"")+
+                shown,compact))
+                monitor.SelectStoredSession(index);
+            GUI.Label(new Rect(x+18f,yy+33f,pw-36f,28f),
+                state+raw,panelSmall);
+        }
+        if(GUI.Button(new Rect(x+15f,584f,95f,37f),"ANTERIOR",compact) && archivePage>0)
+            archivePage--;
+        GUI.Label(new Rect(x+120f,589f,pw-240f,28f),
+            (archivePage+1)+"/"+((items.Length+3)/4),panelSmall);
+        if(GUI.Button(new Rect(x+pw-111f,584f,95f,37f),"SIGUIENTE",compact) &&
+           (archivePage+1)*4<items.Length)
+            archivePage++;
+        // ARCHIVO and RESCATE above the overlay export the selected item.
     }
 
     private static void Draw(Rect rect, Color color)
