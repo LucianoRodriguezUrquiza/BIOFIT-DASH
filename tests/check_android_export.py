@@ -39,8 +39,15 @@ for token in ("MediaStore$Downloads", "openOutputStream", "relative_path",
               "BiofitCaptureArchive.Verify", "SaveToDownloads"):
     assert token in csharp, f"required direct Downloads API missing: {token}"
 ui = screen.read_text()
-assert 'monitor.ExportGameCapture()' in ui
+assert 'monitor.RequestExport(false)' in ui, 'ARCHIVO must start async MediaStore export'
+assert 'monitor.RequestExport(true)' in ui, 'RESCATE must expose independent SAF selector'
+assert 'monitor.ScanSessionHistory()' in ui, 'user must recover older sessions'
+java096 = (root / 'Assets/BIOFIT/AndroidPlugins/BiofitExportBridge.java').read_text()
+for token in ('ACTION_CREATE_DOCUMENT', 'startSaf(', 'startDownloads(', 'SHA-256',
+              'IS_PENDING', 'openOutputStream(', 'openInputStream(', 'BUFFER = 65536',
+              'UnitySendMessage(', 'copyAndVerify('):
+    assert token in java096, f'missing dual streaming export requirement: {token}'
 assert 'exportPending' not in ui, "ARCHIVO should not wait for a picker"
 assert "BiofitAndroidExport.LastStatus" in (root / "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs").read_text()
-print("PASS: direct MediaStore Downloads bridge and unused legacy Java source syntax")
+print("PASS: legacy MediaStore + new async MediaStore/SAF source contracts and history UI")
 print("Note: static checks do not prove an Android APK runs on a phone")
