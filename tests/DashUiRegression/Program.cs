@@ -155,15 +155,29 @@ class Program
               !BiofitAndroidExport.IsFinalStatus("SELECCIONAR_DESTINO"),
             "picker request is not misreported as a completed save");
         UnityEngine.GUI.ClickNext="3. ARCHIVO";gui.Invoke(game,null);
-        Check(UnityEngine.GUI.ClickNext==null,"actual archive button invokes export");
+        Check(UnityEngine.GUI.ClickNext==null,"archive button requests asynchronous export");
+        int ticks=0;
+        while(monitor.ExportBusy && ticks++<200)
+            System.Threading.Thread.Sleep(20);
         string path=System.IO.Path.Combine(UnityEngine.Application.persistentDataPath,
             "BiofitEditorExports",System.IO.Path.GetFileName(monitor.SavedCapturePath));
-        Check(System.IO.File.Exists(path) &&
+        Check(!monitor.ExportBusy && System.IO.File.Exists(path) &&
               BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(path)) &&
-              BiofitAndroidExport.LastStatus.StartsWith("EDITOR:"),
-              "GUI ARCHIVO saves complete CSV without chooser or clipboard");
-        UnityEngine.GUI.ClickNext="COPIAR";gui.Invoke(game,null);
-        Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("filas_total="),"clipboard fallback retained");
+              monitor.ExportStatus.Contains("EDITOR:"),
+              "GUI ARCHIVO exports validated CSV off the UI thread");
+        UnityEngine.GUI.ClickNext="SESIONES";gui.Invoke(game,null);
+        ticks=0;
+        while(monitor.ScanningSessions && ticks++<200)
+            System.Threading.Thread.Sleep(20);
+        Check(monitor.StoredSessions.Length>0 &&
+              monitor.StoredSessions[0].MainValid,"history finds SHA-valid previous capture");
+        monitor.SelectStoredSession(0);
+        UnityEngine.GUI.ClickNext="4. RESCATE";gui.Invoke(game,null);
+        ticks=0;
+        while(monitor.ExportBusy && ticks++<200)
+            System.Threading.Thread.Sleep(20);
+        Check(!monitor.ExportBusy && monitor.ExportStatus.Contains("EDITOR:"),
+              "GUI RESCATE uses independent selected-session path");
         Console.WriteLine("PASS: " + checks +
             " UI/unilateral host checks; no actual Unity or Android render.");
     }
