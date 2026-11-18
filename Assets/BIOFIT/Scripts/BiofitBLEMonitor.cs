@@ -200,7 +200,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     long size=0;
                     try { size=new System.IO.FileInfo(path).Length; } catch(System.Exception) {}
                     string status=partial?"PARCIAL":(valid?"SHA OK":"ERROR SHA");
-                    string rawStatus=rawValid?" + RAW OK":(rawPart?" + RAW PARCIAL":"");
+                    string rawStatus=rawValid?" + RAW OK":(System.IO.File.Exists(raw)?" + RAW SHA ERROR":(rawPart?" + RAW PARCIAL":""));
                     list.Add(new StoredSession {
                         MainPath=path,RawPath=raw,MainValid=valid,RawValid=rawValid,
                         MainPartial=partial,RawPartial=rawPart,
@@ -254,7 +254,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     throw new System.IO.InvalidDataException("CSV principal incompleto o SHA incorrecto");
                 if(!System.IO.File.Exists(raw))return new[]{selected};
                 if(!BiofitCaptureArchive.VerifyFileStreaming(raw))
-                    throw new System.IO.InvalidDataException("RAW no valido, originales conservados");
+                    return new[]{selected}; // Preserve invalid RAW; allow rescuing valid master.
                 return new[]{selected,raw};
             });
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -424,7 +424,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gCompressed = TimeCompressedEvents;
         gAlignedEvents = alignedEvents;
         gNearMisses = jumpDetector.NearMisses;
-        lastGameSummary = ""; SavedCapturePath = ""; selectedStoredSession=-1; CaptureFileStatus = "Grabando";
+        lastGameSummary = ""; SavedCapturePath = ""; selectedStoredSession=-1; ExportStatus="Exportacion no iniciada"; CaptureFileStatus = "Grabando";
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,1,left.readiness.Detail(MonotonicNow));
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,2,right.readiness.Detail(MonotonicNow));
         foreach (Tracker tracker in new[] { left, right })
