@@ -375,10 +375,10 @@ public sealed class BiofitDashGame : MonoBehaviour
     {
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
-        GUI.Label(new Rect(x + 12f, 149f, pw - 223f, 34f),
+        GUI.Label(new Rect(x + 12f, 149f, pw - 272f, 34f),
             "v0.9.6.1", info);
-        // EXP and RAW intentionally next to each other on the same top row.
-        if (GUI.Button(new Rect(x + pw - 213f, 149f, 97f, 32f),
+        // EXP and RAW together. Extra RAW width accommodates RAW: ESPERE.
+        if (GUI.Button(new Rect(x + pw - 252f, 149f, 108f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
         {
             soloDiagnostic.SetExperimentalMode(!soloDiagnostic.ExperimentalMode);
@@ -390,7 +390,7 @@ public sealed class BiofitDashGame : MonoBehaviour
                 "EXP ACTIVO: umbral unilateral minimo 0.15 g" :
                 "EXP OFF: umbrales >= 0.25 g restaurados";
         }
-        if (GUI.Button(new Rect(x + pw - 111f, 149f, 100f, 32f),
+        if (GUI.Button(new Rect(x + pw - 136f, 149f, 125f, 32f),
             monitor.RawButtonLabel, compact))
             monitor.ToggleRawCapture();
         string phase = monitor.RawStatus.StartsWith("RAW OFF: primero") ?
