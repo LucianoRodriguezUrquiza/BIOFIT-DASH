@@ -376,7 +376,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
         GUI.Label(new Rect(x + 12f, 149f, pw - 223f, 34f),
-            "v0.9.6", info);
+            "v0.9.6.1", info);
         // EXP and RAW intentionally next to each other on the same top row.
         if (GUI.Button(new Rect(x + pw - 213f, 149f, 97f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
@@ -391,9 +391,13 @@ public sealed class BiofitDashGame : MonoBehaviour
                 "EXP OFF: umbrales >= 0.25 g restaurados";
         }
         if (GUI.Button(new Rect(x + pw - 111f, 149f, 100f, 32f),
-            monitor.RawActive ? "RAW: ON" : "RAW: OFF", compact))
+            monitor.RawButtonLabel, compact))
             monitor.ToggleRawCapture();
-        string phase = monitor.ExportBusy ? "EXPORTANDO - ver progreso abajo" :
+        string phase = monitor.RawStatus.StartsWith("RAW OFF: primero") ?
+            "RAW: PRESIONAR INICIAR PRIMERO" :
+            monitor.RawStatus.StartsWith("RAW OFF: conectar") ?
+            "RAW: CONECTAR AMBOS SENSORES" :
+            monitor.ExportBusy ? "EXPORTANDO - ver progreso abajo" :
             monitor.CaptureSaving ? "FINALIZANDO - esperando CSV" :
             monitor.GameCaptureActive ? "GRABANDO: " + monitor.CaptureStage :
             monitor.ExportStatus.StartsWith("ERROR") ? "ERROR EXPORTAR - ver abajo" :
@@ -406,7 +410,7 @@ public sealed class BiofitDashGame : MonoBehaviour
 
         float cw = (pw - 32f) / 3f;
         if (GUI.Button(new Rect(x + 10f, 208f, cw, 38f),
-            "1. INICIAR", compact))
+            "INICIAR", compact))
         {
             bool started = monitor.StartGameCapture();
             if (started)
@@ -423,13 +427,13 @@ public sealed class BiofitDashGame : MonoBehaviour
                 "Ya existe un registro activo.";
         }
         if (GUI.Button(new Rect(x + 16f + cw, 208f, cw, 38f),
-            "2. FINALIZAR", compact))
+            "FINALIZAR", compact))
         {
             monitor.StopGameCapture();
             experimentStatus = monitor.CaptureFileStatus;
         }
         if (GUI.Button(new Rect(x + 22f + 2f*cw, 208f, cw, 38f),
-            "3. ARCHIVO", compact))
+            "ARCHIVO", compact))
         {
             monitor.RequestExport(false);
             experimentStatus = monitor.ExportStatus;
@@ -491,12 +495,25 @@ public sealed class BiofitDashGame : MonoBehaviour
             "Pares: " + blePairsObserved + " | Rechazos BLE: " +
             monitor.RejectedEvents + " | Cola: " + monitor.AppQueuePending,
             panelSmall);
+        // Do not put the long RAW summary (hundreds of characters) inside
+        // the narrow 55px capture status. Full diagnostics remain in CSV.
+        string shortCapture = monitor.CaptureFileStatus;
+        if(shortCapture.StartsWith("CSV guardado SHA256 OK"))
+            shortCapture=shortCapture.Contains("ERROR RAW") ?
+                "CSV OK; RAW ERROR: revisar SESIONES" :
+                shortCapture.Contains("+ RAW:") ? "CSV + RAW privados SHA256 OK" :
+                "CSV privado SHA256 OK";
+        string shortExport=monitor.ExportStatus;
+        if(shortExport.StartsWith("EXPORTADO"))
+            shortExport="EXPORTADO y verificado en destino";
         GUI.Label(new Rect(x + 11f, 583f, pw - 120f, 55f),
-            monitor.ExportBusy ? monitor.ExportStatus :
-            (monitor.CaptureSaving || monitor.CaptureFileStatus.StartsWith("ERROR") ||
-             !string.IsNullOrEmpty(monitor.SavedCapturePath) ?
-                monitor.CaptureFileStatus : experimentStatus), panelSmall);
-        if(GUI.Button(new Rect(x+pw-114f,587f,103f,39f),"4. RESCATE",compact))
+            monitor.ExportBusy || monitor.ExportStatus.StartsWith("ERROR") ||
+            monitor.ExportStatus.StartsWith("EXPORTADO") ?
+                shortExport : (monitor.CaptureSaving ||
+                monitor.CaptureFileStatus.StartsWith("ERROR") ||
+                !string.IsNullOrEmpty(monitor.SavedCapturePath) ?
+                shortCapture : experimentStatus), panelSmall);
+        if(GUI.Button(new Rect(x+pw-114f,587f,103f,39f),"RESCATE",compact))
             monitor.RequestExport(true);
         float diagnosticWidth=(pw-26f)/2f;
         if(GUI.Button(new Rect(x+10f,647f,diagnosticWidth,38f),
@@ -508,11 +525,10 @@ public sealed class BiofitDashGame : MonoBehaviour
         if(GUI.Button(new Rect(x+16f+diagnosticWidth,647f,diagnosticWidth,38f),
             monitor.SyncLabel,compact))
             monitor.MarkVideoSync();
-        GUI.Label(new Rect(x+10f,688f,pw-20f,48f),
-            monitor.RawStatus+" n="+monitor.RawCount+" | "+
-            (monitor.ExportBusy || monitor.ExportStatus.StartsWith("ERROR") ||
-             monitor.ExportStatus.StartsWith("EXPORTADO") ?
-                monitor.ExportStatus : monitor.CaptureFileStatus),panelSmall);
+        // Separate RAW status from archive/export state. Show the precise
+        // prerequisite or ACK failure rather than truncate it after export.
+        GUI.Label(new Rect(x+10f,688f,pw-20f,50f),
+            monitor.RawStatus+"\nRAW IZQ/DER: "+monitor.RawCount,panelSmall);
         if(showArchivedSessions)DrawArchiveBrowser(x,pw);
     }
 
