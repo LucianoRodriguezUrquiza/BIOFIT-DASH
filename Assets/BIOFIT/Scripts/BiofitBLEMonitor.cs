@@ -36,6 +36,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private int rawEpoch, rawSegment, syncNumber;
     private double nextRawDiagnostic, previousUpdate, updateGapMax, eventQueueSum, eventQueueMax;
     private int perfEvents;
+    // Opt-in. Old fw2.2.7 or unqualified UP pairs keep the 900ms cooldown.
+    public bool PhaseFastPairs { get; set; }
+    public bool LastPairedWasFastPhase { get; private set; }
+    public int FastPhasePairCount => jumpDetector.FastPhasePairsAccepted;
     public bool RawActive => rawActive;
     public string RawCount => rawCapture==null?"0":rawCapture.LeftCount+"/"+rawCapture.RightCount;
     public string RawStatus { get; private set; } = "RAW OFF (20 Hz opcional)";
@@ -1066,14 +1070,20 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         CurrentEventTrace = "seq=" + sequence + " sensorMs=" + millis + " callbackS=" +
             callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture);
         dispatchStarted=MonotonicNow; currentCallbackSeconds=callbackSeconds;
+        bool phaseEvidence = (b[3] & 0x10) != 0; // fw2.2.8 V2 EVENT flag bit4
         bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 &&
-            jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG);
+            jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG,
+                phaseEvidence, PhaseFastPairs);
+        LastPairedWasFastPhase = paired && jumpDetector.LastPairUsedFastPhase;
         if (fresh && eventType == 3)
             eventCapture.RecordDiagnostic(receivedSeconds, state.id,
                 "BILATERAL_DECISION=" + (timeAligner.IsReady(callbackSeconds) ?
                     jumpDetector.LastDecision.ToString() : "ClockNotReady") + " " + CurrentEventTrace +
                 " pairClockS=" + pairSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) +
                 " cooldownRejected=" + jumpDetector.PairCooldownRejected +
+                " phaseHint=" + (phaseEvidence ? 1 : 0) +
+                " phaseMode=" + (PhaseFastPairs ? 1 : 0) +
+                " fastPhasePair=" + (LastPairedWasFastPhase ? 1 : 0) +
                 (jumpDetector.LastDecision == BiofitBilateralJumpDetector.Decision.Paired ||
                  jumpDetector.LastDecision == BiofitBilateralJumpDetector.Decision.PairCooldown ?
                     " gapMs=" + jumpDetector.LastPairGapMs.ToString("F3",System.Globalization.CultureInfo.InvariantCulture) +
@@ -1084,6 +1094,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
         if (paired)
         {
+            if (LastPairedWasFastPhase)
+                eventCapture.RecordDiagnostic(receivedSeconds,0,
+                    "PHASE_FAST_ACCEPTED pairS=" +
+                    pairSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) +
+                    " intervalS=" + jumpDetector.LastPairIntervalSeconds.ToString("F6",
+                        System.Globalization.CultureInfo.InvariantCulture));
             Debug.Log("BIOFIT: POSIBLE SALTO BILATERAL (NO CONFIRMADO), intervalo " +
                       jumpDetector.LastPairGapMs.ToString("F0") + " ms");
             // ReadEvent se ejecuta desde Update(), en el hilo principal.
@@ -1100,7 +1116,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
         string eventName = eventType == 1 ? "MOV_ON" :
                            eventType == 2 ? "MOV_OFF" : "UP_IMPULSE";
-        state.lastEvent = eventName + "   t=" + millis + " ms   seq=" + sequence +
+        state.lastEvent = eventName + (eventType == 3 ? " fase=" +
+            (phaseEvidence ? "REARME" : "SIN_PRUEBA") : "") +
+            "   t=" + millis + " ms   seq=" + sequence +
                           "   giro=" + gyroDps.ToString("F1") + " deg/s" +
                           "   Z=" + verticalG.ToString("+0.000;-0.000;0.000") + " g";
 
