@@ -49,6 +49,59 @@ public static class BiofitCaptureArchive
         }
         return finished && rows==total && events==expectedEvents;
     }
+    // Fixed-memory verification of already-closed private CSVs. Preserve the
+    // original Verify(string) for legacy regression callers.
+    public static bool VerifyFileStreaming(string path)
+    {
+        if(string.IsNullOrEmpty(path) || !File.Exists(path))return false;
+        try
+        {
+            using(var reader=new StreamReader(path,new UTF8Encoding(false,true),true))
+            using(var digest=SHA256.Create())
+            {
+                int rows=0,events=0,total=-1,expectedEvents=-1;
+                bool finished=false,header=false;
+                string line;
+                while((line=reader.ReadLine())!=null)
+                {
+                    if(line.StartsWith("# END_BIOFIT sha256=",StringComparison.Ordinal))
+                    {
+                        if(reader.ReadLine()!=null || !header)return false;
+                        digest.TransformFinalBlock(new byte[0],0,0);
+                        string hash=BitConverter.ToString(digest.Hash).Replace("-","").ToLowerInvariant();
+                        return line=="# END_BIOFIT sha256="+hash &&
+                               finished && rows==total && events==expectedEvents;
+                    }
+                    if(!header)
+                    {
+                        if(!line.StartsWith("tipo;etapa;",StringComparison.Ordinal))return false;
+                        header=true;
+                    }
+                    else if(line.StartsWith("# filas_total=",StringComparison.Ordinal))
+                    {
+                        if(!int.TryParse(line.Split(';')[0].Substring(14),
+                            NumberStyles.Integer,CultureInfo.InvariantCulture,out total))return false;
+                        finished=line.EndsWith("finalizada=1",StringComparison.Ordinal);
+                    }
+                    else if(line.StartsWith("# filas_eventos=",StringComparison.Ordinal))
+                    {
+                        if(!int.TryParse(line.Split(';')[0].Substring(16),
+                            NumberStyles.Integer,CultureInfo.InvariantCulture,out expectedEvents))return false;
+                    }
+                    else if(!line.StartsWith("#",StringComparison.Ordinal))
+                    {
+                        if(line.Split(';').Length!=15)return false;
+                        rows++; if(line.StartsWith("EV;",StringComparison.Ordinal))events++;
+                    }
+                    byte[] part=Utf8.GetBytes(line+"\n");
+                    digest.TransformBlock(part,0,part.Length,part,0);
+                }
+                return false;
+            }
+        }
+        catch(Exception){return false;}
+    }
+
     public static string FindNewestValid(string directory)
     {
         // APK updates retain Application.persistentDataPath when package/signature match.
@@ -63,7 +116,7 @@ public static class BiofitCaptureArchive
             {
                 try
                 {
-                    if (!Verify(File.ReadAllText(path, Utf8))) continue;
+                    if (!VerifyFileStreaming(path)) continue;
                     DateTime written = File.GetLastWriteTimeUtc(path);
                     if (written >= newestTime)
                     {
