@@ -4,5 +4,6 @@
 <Compile Include="Program.cs" />
 <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs" />
 <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashCore.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitJumpBuffer.cs" />
 <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventGate.cs" />
 </ItemGroup></Project>
