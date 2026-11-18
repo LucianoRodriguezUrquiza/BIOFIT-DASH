@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,33 +48,50 @@ public sealed class BiofitSessionFile
         lock(gate) { if(!closed) { closed=true; queue.CompleteAdding(); } }
         return worker;
     }
+    private static void WriteAndHash(StreamWriter writer, HashAlgorithm digest, string line)
+    {
+        writer.WriteLine(line);
+        byte[] bytes=new UTF8Encoding(false).GetBytes(line+"\n");
+        digest.TransformBlock(bytes,0,bytes.Length,bytes,0);
+    }
     private void Write(string header)
     {
         try
         {
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
-            using(var file = new FileStream(partial,FileMode.CreateNew,FileAccess.Write,FileShare.Read))
-            using(var writer = new StreamWriter(file,new UTF8Encoding(false)))
+            using(var file=new FileStream(partial,FileMode.CreateNew,FileAccess.Write,FileShare.Read))
+            using(var writer=new StreamWriter(file,new UTF8Encoding(false)))
+            using(var digest=SHA256.Create())
             {
-                writer.NewLine="\n";writer.WriteLine(header);
+                writer.NewLine="\n";
+                WriteAndHash(writer,digest,header);
                 int sinceFlush=0;
                 while(!queue.IsCompleted)
                 {
-                    if(queue.TryTake(out string row,250)) { writer.WriteLine(row); sinceFlush++; }
-                    if(sinceFlush>=100 || queue.Count==0) { writer.Flush(); sinceFlush=0; }
+                    if(queue.TryTake(out string row,250))
+                    {
+                        WriteAndHash(writer,digest,row);
+                        sinceFlush++;
+                    }
+                    if(sinceFlush>=100 || queue.Count==0)
+                    {
+                        writer.Flush();
+                        sinceFlush=0;
+                    }
                 }
-                if(Error.Length!=0) throw new IOException(Error);
-                writer.WriteLine("# filas_total="+count+"; finalizada=1");
-                writer.WriteLine("# filas_eventos="+events+"; descartadas_por_limite="+rejected);
-                writer.Flush(); file.Flush(true);
+                if(Error.Length!=0)throw new IOException(Error);
+                WriteAndHash(writer,digest,"# filas_total="+count+"; finalizada=1");
+                WriteAndHash(writer,digest,"# filas_eventos="+events+"; descartadas_por_limite="+rejected);
+                digest.TransformFinalBlock(new byte[0],0,0);
+                string hash=BitConverter.ToString(digest.Hash).Replace("-","").ToLowerInvariant();
+                writer.WriteLine("# END_BIOFIT sha256="+hash);
+                writer.Flush();
+                file.Flush(true);
             }
-            // Finalization/hashing is also off the Unity thread.
-            string body=File.ReadAllText(partial,new UTF8Encoding(false,true));
-            string archive=BiofitCaptureArchive.Build(body,"");
-            if(!BiofitCaptureArchive.Verify(archive)) throw new InvalidDataException("Recuento de sesion inconsistente");
-            File.WriteAllText(partial,archive,new UTF8Encoding(false));
-            using(var file=new FileStream(partial,FileMode.Open,FileAccess.Write,FileShare.Read))file.Flush(true);
-            if(!BiofitCaptureArchive.Verify(File.ReadAllText(partial)))throw new IOException("SHA256 de sesion incorrecto");
+            // The verified source remains .partial until its complete footer
+            // is validated. No full-file string or rewrite is required.
+            if(!BiofitCaptureArchive.VerifyFileStreaming(partial))
+                throw new InvalidDataException("SHA256/recuento de archivo privado incorrecto");
             File.Move(partial,Path);
         }
         catch(Exception ex) { Interlocked.Exchange(ref error,ex.Message); }
