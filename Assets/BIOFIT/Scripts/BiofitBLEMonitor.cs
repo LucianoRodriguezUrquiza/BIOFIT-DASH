@@ -39,7 +39,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     // Opt-in. Old fw2.2.7 or unqualified UP pairs keep the 900ms cooldown.
     public bool PhaseFastPairs { get; set; }
     public bool LastPairedWasFastPhase { get; private set; }
-    public int FastPhasePairCount => jumpDetector.FastPhasePairsAccepted;
+    private int phaseFastPairsAtCaptureStart;
+    public int FastPhasePairCount =>
+        jumpDetector.FastPhasePairsAccepted - phaseFastPairsAtCaptureStart;
     public bool RawActive => rawActive;
     public string RawCount => rawCapture==null?"0":rawCapture.LeftCount+"/"+rawCapture.RightCount;
     public string RawStatus { get; private set; } = "RAW OFF (20 Hz opcional)";
@@ -472,6 +474,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gLeftOn = left.movOn; gRightOn = right.movOn;
         gLeftUp = left.upImpulses; gRightUp = right.upImpulses;
         gPairs = jumpDetector.BilateralCandidates;
+        phaseFastPairsAtCaptureStart = jumpDetector.FastPhasePairsAccepted;
         gCompressed = TimeCompressedEvents;
         gAlignedEvents = alignedEvents;
         gNearMisses = jumpDetector.NearMisses;
@@ -595,6 +598,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             "DER MOV_ON=" + (right.movOn - gRightOn) +
             " UP=" + (right.upImpulses - gRightUp) + "\n" +
             "PARES UP=" + (jumpDetector.BilateralCandidates - gPairs) +
+            " | PARES FASE RAPIDOS=" + FastPhasePairCount +
             " | EVENTOS=" + eventCapture.EventRows +
             " | DESCARTADOS=" + DroppedEventCount +
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
