@@ -150,7 +150,7 @@ class Program
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
         string savedCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
         Check(savedCsv.Contains("MODO_EXP_UMBRAL_ON") && savedCsv.Contains("MODO_EXP_UMBRAL_OFF") && savedCsv.Contains("SYNC 001"),"actual GUI EXP and video marks survive archive");
-        Check(savedCsv.Contains("CONTROL_VERSION=0.9.8") && savedCsv.Contains("JUMP_COMMAND id=1 source=MANUAL result=Accepted"),
+        Check(savedCsv.Contains("CONTROL_VERSION=0.9.9") && savedCsv.Contains("JUMP_COMMAND id=1 source=MANUAL result=Accepted"),
             "shared manual command and version preserved in private CSV");
         Check(System.IO.File.ReadAllText(monitor.SavedCapturePath).Contains("PRIMER_ESTADO_SALTO"),
             "first animated simulation frame has a distinct timestamp marker");
@@ -227,7 +227,7 @@ class Program
         pairCallback.Invoke(game,new object[]{20f}); // second accepted pair near landing
         var slot=(BiofitJumpBuffer)typeof(BiofitDashGame).GetField("jumpBuffer",fieldFlags).GetValue(game);
         Check(slot.Pending && core.SuccessfulJumps==1,
-            "real UI callback arms exactly one 120ms slot, no premature jump");
+            "real UI callback arms exactly one 180ms slot, no premature jump");
         var update=typeof(BiofitDashGame).GetMethod("Update",fieldFlags);
         for(int f=0;f<10 && core.SuccessfulJumps==1;f++)update.Invoke(game,null);
         Check(core.SuccessfulJumps==2 && !slot.Pending &&
