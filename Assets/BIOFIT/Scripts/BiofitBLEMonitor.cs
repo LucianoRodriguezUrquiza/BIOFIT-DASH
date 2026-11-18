@@ -139,7 +139,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         string errors="";
         foreach(var link in new[]{leftRaw,rightRaw})
-            if(link!=null)try { await link.SetAsync(false,null); }catch(Exception ex){errors+=ex.Message+" ";}
+        {
+            if(link==null) {errors+="GATT RAW no disponible; ";continue;}
+            try { await link.SetAsync(false,null); }
+            catch(Exception ex){errors+=ex.Message+" ";}
+        }
         return errors;
     }
     private void ReceiveRaw(byte id,byte[] bytes,int epoch)
