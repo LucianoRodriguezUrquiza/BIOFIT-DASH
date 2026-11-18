@@ -11,6 +11,7 @@
     <Compile Include="../ReceiverRegression/ApiShims.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashGame.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashCore.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitJumpBuffer.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashLayout.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSingleFootDiagnostic.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs" />
