@@ -28,12 +28,12 @@ Modo BLE nuevo **`BLE: FASE EXP`** (quinto estado del botón que antes solo reco
 `BiofitBilateralJumpDetector.ProcessImpulse` recibe dos parámetros opcionales adicionales `phaseEvidence=false`, `phaseFastEnabled=false` para compatibilidad con código y tests previos. Cada candidato pendiente de tobillo almacena el bit de evidencia de ese UP (no la evidencia del pie contrario).
 
 - Cada par bilateral debe seguir aprobando `UP >= 0.12g`, restricción por tobillo `>= 320ms`, diferencia entre sensores `<=180ms`, relojes alineados, secuencia fresca y protección antigüedad de la puerta BLE.
-- Si **los dos** UP tienen bit4 y `FASE EXP` está activo, el intervalo mínimo entre pares pasa de 900ms a **500ms** solo para ESE par.
+- Si **los dos** UP tienen bit4 y `FASE EXP` está activo, el intervalo mínimo entre pares pasa de 900ms a **600ms** solo para ESE par.
 - Si falta un solo bit4 o no está seleccionado el modo experimental, el par exige los **900ms** originales. Ningún positivo de aceleración aislado o de un solo pie puede saltar el límite.
 - Contadores y diagnóstico: `BILATERAL_DECISION=... phaseHint=X phaseMode=X fastPhasePair=X`, `PHASE_FAST_ACCEPTED`, `PAR_FASE_RAPIDO_VALIDADO`, HUD `faseRap N`.
 - Se mantiene **`BiofitJumpBuffer.WindowSeconds=0.180d`**. Solo **un** comando bilateral anticipado, entrada reconocida cuando el cubo está DESCENDIENDO y a <=180ms del suelo; expira por reloj REAL 180ms desde admisión; no encola, no prolonga ni acumula, se cancela en pausa/game-over/reset. Si llega demasiado temprano se rechaza (`Airborne`); no ejecuta luego una cadena. La física del cubo sigue igual (velocidad inicial 575, gravedad 1560).
 
-**Ejemplo matemático hipotético:** par inicial t=0, cubo aterriza ~0.75 s, segundo movimiento real en t~0.62 s con ambos bits válidos. Filtro de 500ms lo deja pasar, el cubo sigue descendiendo con ~130ms pendientes y el único buffer lo ejecuta una vez al aterrizar. Antes el par en t~0.62 era bloqueado por 900ms. El tiempo exacto y detección en Android son pendientes de validación real.
+**Ejemplo matemático hipotético:** par inicial t=0, cubo aterriza ~0.75 s, segundo movimiento real en t~0.62 s con ambos bits válidos. Filtro de 600ms lo deja pasar, el cubo sigue descendiendo con ~130ms pendientes y el único buffer lo ejecuta una vez al aterrizar. Antes el par en t~0.62 era bloqueado por 900ms. El tiempo exacto y detección en Android son pendientes de validación real.
 
 **Compatibilidad:** Unity v0.9.10 sobre dos firmwares v2.2.7 funciona en modo BILATERAL y, si el usuario selecciona FASE EXP por error, cae al cooldown normal de 900ms porque faltan bits nuevos. App v0.9.9 puede leer el firmware v2.2.8 por BLE normal porque ignora ese bit; no habilita fast pairing.
 
@@ -50,7 +50,7 @@ Literatura orientadora (no valida automáticamente parámetros de BIOFIT):
 
 ## Controles de seguridad, pruebas y aceptación
 
-- **Regresión C# `tests/JumpControl`**: 900ms heredado aunque lleguen flags, 500ms mínimo en fase, evidencia ausente en cualquier tobillo bloquea fast, después de 900ms fallback normal, caso nuevo real t+620ms → buffer 180ms → UNA ejecución al contacto del cubo, sin cola.
+- **Regresión C# `tests/JumpControl`**: 900ms heredado aunque lleguen flags, 600ms mínimo en fase, evidencia ausente en cualquier tobillo bloquea fast, después de 900ms fallback normal, caso nuevo real t+620ms → buffer 180ms → UNA ejecución al contacto del cubo, sin cola.
 - **Regresiones existentes C#**: receiver, UI, RAW/CSV/SHA, recuperación, export Java, archivo/retención, compatibilidad de sensores originales.
 - **Firmware:** pruebas C++ host sobre la cabecera real (sucesión positiva sin fase negativa, exigencia de quietud continua, rechazo giro, replay rollover) + contratos de Arduino/NVS y **compilación separada de sketches** por Arduino CLI (requiere revisar estado de PR #3).
 - **No hay prueba de Unity Editor real, BLE Android ni APK firmada en este entorno.** Los jobs C# son de host y los de Arduino no hacen flashing. No prometer resultado humano hasta Android.
