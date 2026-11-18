@@ -75,6 +75,12 @@ class Program
    // Real receiver integration: RAW never enters pending gameplay packets.
    var m=new BiofitBLEMonitor();var lr=new Characteristic();var rr=new Characteristic();var lc=new Characteristic();var rconf=new Characteristic();
    ConnectForTest(m,new BiofitRawLink(lr,lc),new BiofitRawLink(rr,rconf));
+   m.ToggleRawCapture();
+   Check(!m.RawActive && m.RawStatus.Contains("primero pulse INICIAR") &&
+         m.RawButtonLabel=="RAW: OFF","RAW cannot silently start outside a recorded session");
+   await m.SetRawCaptureAsync(false);
+   Check(lc.Calls.Count==0 && rconf.Calls.Count==0,
+       "no spurious STREAM0 requests before any STREAM1 attempt");
    Check(m.StartGameCapture(),"streaming game session");await m.SetRawCaptureAsync(true);
    Check(m.RawActive,"both links enabled");var stale=lr.Callback;
    var capture=(BiofitEventCapture)typeof(BiofitBLEMonitor).GetField("eventCapture",Hidden).GetValue(m);
@@ -94,6 +100,9 @@ class Program
    await m.SetRawCaptureAsync(false);
    Check(lc.Calls.Count(x=>x=="STREAM,1")==2 && lc.Calls.Count(x=>x=="STREAM,0")==2,"repeated RAW toggles serialize commands");
    Check(m.StopGameCapture(),"async stop accepted");await m.CaptureCompletion;
+   Check(lc.Calls.Count(x=>x=="STREAM,0")==2 &&
+         rconf.Calls.Count(x=>x=="STREAM,0")==2,
+       "FINALIZAR must not re-send STREAM0 after both trackers acknowledged OFF");
    Check(File.Exists(m.SavedCapturePath),"streamed session finalized");
    csv=File.ReadAllText(m.SavedCapturePath);
    Check(BiofitCaptureArchive.Verify(csv) && csv.Split('\n').Count(x=>x.StartsWith("APP;"))==12000,"all critical rows beyond 6000 preserved");
