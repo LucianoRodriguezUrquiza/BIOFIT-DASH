@@ -60,6 +60,26 @@ class Program
         g.EstimatedSecondsUntilLanding<=.075,"real descending physics reaches 75ms before landing");
   return g;
  }
+ static void CheckNew180msWindow() {
+   var g=Game();
+   Check(g.Jump(),"180ms window: first jump");
+   for(int i=0;i<100 && g.EstimatedSecondsUntilLanding>.160d;i++)
+    g.Step(1f/60f);
+   double remaining=g.EstimatedSecondsUntilLanding;
+   Check(g.JumpAltitude>0f && remaining>.120d && remaining<=.160d,
+    "180ms window test targets actual 120-160ms remaining; v098 would reject");
+   var b=new BiofitJumpBuffer();double t=10+g.Elapsed;
+   Check(b.Submit(g,t,0,"BILATERAL",500,true)==BiofitDashCore.JumpResult.Buffered &&
+         b.Pending,"new v099 admission in 120-180ms zone");
+   BiofitJumpBuffer.Outcome state=default(BiofitJumpBuffer.Outcome);
+   for(int frame=0;frame<20 && state.State==BiofitJumpBuffer.Completion.None;frame++){
+    g.Step(1f/60f);
+    state=b.Tick(g,t+(frame+1)/60d);
+   }
+   Check(state.State==BiofitJumpBuffer.Completion.Executed &&
+         !b.Pending && g.SuccessfulJumps==2 && state.AgeMilliseconds<=180.1,
+         "150ms-early second input executes once, not a stored queue");
+  }
  static void CheckJumpBuffer() {
   var early=Game();Check(early.Jump(),"early setup");
   Advance(early,.30,60);
@@ -134,6 +154,7 @@ class Program
  }
  static void Main(string[] args) {
   CheckJumpBuffer();
+  CheckNew180msWindow();
   var d=new BiofitBilateralJumpDetector();Check(Pair(d,10),"A isolated pair");
   Check(!d.ProcessImpulse(1,10,.25f)&&!d.ProcessImpulse(2,10.02,.25f),"duplicate impulses cannot act");
   foreach(int fps in new[]{30,60,120})foreach(double t in new[]{.8,.9,1.0,1.2})Cadence(t,fps,t==.8?3:5,t==.8?3:5);
