@@ -28,6 +28,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     private int bleJumpsAccepted;
     private int jumpCommandNumber;
     private BiofitDashCore.JumpResult lastJumpResult;
+    private readonly BiofitJumpBuffer jumpBuffer = new BiofitJumpBuffer();
     private int clampedFrames;
     private float nextFrameDiagnostic;
     private string lastInput = "ESPACIO o boton SALTAR";
@@ -64,6 +65,7 @@ public sealed class BiofitDashGame : MonoBehaviour
 
     private void OnDisable()
     {
+        jumpBuffer.Clear();
         if (monitor != null)
         {
             monitor.BilateralJumpCandidate -= OnCandidatePair;
@@ -90,9 +92,11 @@ public sealed class BiofitDashGame : MonoBehaviour
         lastInput = "PAR BLE EXPERIMENTAL (" + gapMs.ToString("F0") + " ms)";
         bool jumped = SubmitJump(0, "BILATERAL");
         if (jumped) bleJumpsAccepted++;
-        monitor.RecordDecision(0,jumped ? "PAR_SALTO" : "PAR_RECHAZADO_" + lastJumpResult);
-        monitor.RecordGameAction(jumped ?
-            "SALTO_BLE_REALIZADO" : "SALTO_BLE_NO_REALIZADO");
+        bool buffered = lastJumpResult == BiofitDashCore.JumpResult.Buffered;
+        monitor.RecordDecision(0, jumped ? "PAR_SALTO" :
+            buffered ? "PAR_BUFFERED_120MS" : "PAR_RECHAZADO_" + lastJumpResult);
+        monitor.RecordGameAction(jumped ? "SALTO_BLE_REALIZADO" :
+            buffered ? "SALTO_BLE_BUFFERED" : "SALTO_BLE_NO_REALIZADO");
     }
 
     private void OnSingleCandidate(byte foot, float verticalG,
@@ -159,6 +163,24 @@ public sealed class BiofitDashGame : MonoBehaviour
             }
         }
         game.Step(dt);
+        BiofitJumpBuffer.Outcome completed = jumpBuffer.Tick(game, MonotonicSeconds());
+        if (completed.State != BiofitJumpBuffer.Completion.None)
+        {
+            monitor.RecordControlDiagnostic("JUMP_BUFFER_" + completed.State +
+                " id=" + completed.CommandId + " source=" + completed.Source +
+                " elapsedMs=" + completed.AgeMilliseconds.ToString("F1",
+                    System.Globalization.CultureInfo.InvariantCulture));
+            if (completed.State == BiofitJumpBuffer.Completion.Executed)
+            {
+                TrackAcceptedJump(completed.Foot, completed.Source);
+                if (completed.Source == "BILATERAL")
+                {
+                    bleJumpsAccepted++;
+                    monitor.RecordDecision(0, "PAR_SALTO_BUFFERED");
+                    monitor.RecordGameAction("SALTO_BLE_REALIZADO");
+                }
+            }
+        }
         if (visualJumpPending && game.JumpAltitude > 0f)
         {
             double now = System.Diagnostics.Stopwatch.GetTimestamp() /
@@ -180,13 +202,26 @@ public sealed class BiofitDashGame : MonoBehaviour
         acceptedJumpSource = source;
     }
 
+    private static double MonotonicSeconds()
+    {
+        return System.Diagnostics.Stopwatch.GetTimestamp() /
+            (double)System.Diagnostics.Stopwatch.Frequency;
+    }
+
     private bool SubmitJump(byte foot, string source)
     {
-        BiofitDashCore.JumpResult result = game.TryJump();
+        int id = ++jumpCommandNumber;
+        // Only a valid BILATERAL pair may use the 120ms assist.
+        // Solo diagnostics and manual input retain v0.9.7 immediate semantics.
+        BiofitDashCore.JumpResult result = jumpBuffer.Submit(
+            game, MonotonicSeconds(), foot, source, id, source == "BILATERAL");
         lastJumpResult = result;
-        monitor.RecordControlDiagnostic("JUMP_COMMAND id=" + (++jumpCommandNumber) +
+        monitor.RecordControlDiagnostic("JUMP_COMMAND id=" + id +
             " source=" + source + " result=" + result +
-            " altitude=" + game.JumpAltitude.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
+            " altitude=" + game.JumpAltitude.ToString("F3",
+                System.Globalization.CultureInfo.InvariantCulture) +
+            " timeToLandMs=" + (game.EstimatedSecondsUntilLanding * 1000d).ToString("F1",
+                System.Globalization.CultureInfo.InvariantCulture) +
             " gameJumps=" + game.SuccessfulJumps);
         if (result == BiofitDashCore.JumpResult.Accepted) TrackAcceptedJump(foot, source);
         return result == BiofitDashCore.JumpResult.Accepted;
@@ -203,6 +238,7 @@ public sealed class BiofitDashGame : MonoBehaviour
 
     private void ResetGame()
     {
+        jumpBuffer.Clear(); // Never carry a command into a new run.
         visualJumpPending = false;
         game.StartNewGame();
         lastInput = "NUEVA PARTIDA";
@@ -405,7 +441,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
         GUI.Label(new Rect(x + 12f, 149f, pw - 272f, 34f),
-            "v0.9.7", info);
+            "v0.9.8", info);
         // EXP and RAW together. Extra RAW width accommodates RAW: ESPERE.
         if (GUI.Button(new Rect(x + pw - 252f, 149f, 108f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
@@ -444,12 +480,13 @@ public sealed class BiofitDashGame : MonoBehaviour
             bool started = monitor.StartGameCapture();
             if (started)
             {
+                jumpBuffer.Clear();
                 soloDiagnostic.Reset();
                 singleCandidates = 0;
                 singleJumps = 0;
                 blePairsObserved = bleJumpAttempts = bleJumpsAccepted = jumpCommandNumber = clampedFrames = 0;
                 nextFrameDiagnostic = 0;
-                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.7 pairCooldownS=0.90 sameAnkleS=0.32 noJumpBuffer=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
+                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.8 pairCooldownS=0.90 sameAnkleS=0.32 jumpBufferMs=120 oneSlot=1 bilateralOnly=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
                 monitor.RecordGameAction(soloDiagnostic.ExperimentalMode ? "MODO_EXP_UMBRAL_ON" : "MODO_EXP_UMBRAL_OFF");
                 monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
                 monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
@@ -525,7 +562,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             "  ocupado " + r.GameUnavailable, panelSmall);
         GUI.Label(new Rect(x + 11f, 562f, pw - 22f, 27f),
             "Pares " + blePairsObserved + " | intentos " + bleJumpAttempts +
-            " | saltos " + bleJumpsAccepted,
+            " | saltos " + bleJumpsAccepted + (jumpBuffer.Pending ? " | BUF" : ""),
             panelSmall);
         // Do not put the long RAW summary (hundreds of characters) inside
         // the narrow 55px capture status. Full diagnostics remain in CSV.
