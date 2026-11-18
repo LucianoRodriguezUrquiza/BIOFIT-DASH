@@ -192,9 +192,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     string expected=partial?path.Substring(0,path.Length-8):path;
                     string raw=System.IO.Path.Combine(root,"RawCaptures",System.IO.Path.GetFileNameWithoutExtension(expected)+"_RAW.csv");
                     bool valid=false,rawValid=false;
-                    try { if(!partial)valid=BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(path)); }
+                    try { if(!partial)valid=BiofitCaptureArchive.VerifyFileStreaming(path); }
                     catch(System.Exception) {}
-                    try { if(System.IO.File.Exists(raw))rawValid=BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(raw)); }
+                    try { if(System.IO.File.Exists(raw))rawValid=BiofitCaptureArchive.VerifyFileStreaming(raw); }
                     catch(System.Exception) {}
                     bool rawPart=System.IO.File.Exists(raw+".partial");
                     long size=0;
@@ -250,10 +250,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             string raw=System.IO.Path.Combine(root,"RawCaptures",System.IO.Path.GetFileNameWithoutExtension(selected)+"_RAW.csv");
             string[] paths=await Task.Run(()=>
             {
-                if(!System.IO.File.Exists(selected) || !BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(selected)))
+                if(!System.IO.File.Exists(selected) || !BiofitCaptureArchive.VerifyFileStreaming(selected))
                     throw new System.IO.InvalidDataException("CSV principal incompleto o SHA incorrecto");
                 if(!System.IO.File.Exists(raw))return new[]{selected};
-                if(!BiofitCaptureArchive.Verify(System.IO.File.ReadAllText(raw)))
+                if(!BiofitCaptureArchive.VerifyFileStreaming(raw))
                     throw new System.IO.InvalidDataException("RAW no valido, originales conservados");
                 return new[]{selected,raw};
             });
@@ -412,7 +412,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public bool StartGameCapture()
     {
         if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || !RawOperation.IsCompleted) return false;
-        string name="BIOFIT_v095_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
+        string name="BIOFIT_v096_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
         rawCapture=null;rawSegment=0;syncNumber=0;SyncLabel="SYNC VIDEO";
