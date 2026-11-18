@@ -495,7 +495,7 @@ public sealed class BiofitDashGame : MonoBehaviour
                 singleJumps = 0;
                 blePairsObserved = bleJumpAttempts = bleJumpsAccepted = jumpCommandNumber = clampedFrames = 0;
                 nextFrameDiagnostic = 0;
-                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.10 pairCooldownS=0.90 fastPhaseMinGapS=0.50 bothEvidence=1 sameAnkleS=0.32 jumpBufferMs=180 oneSlot=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
+                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.10 pairCooldownS=0.90 fastPhaseMinGapS=0.60 bothEvidence=1 sameAnkleS=0.32 jumpBufferMs=180 oneSlot=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
                 monitor.RecordGameAction(soloDiagnostic.ExperimentalMode ? "MODO_EXP_UMBRAL_ON" : "MODO_EXP_UMBRAL_OFF");
                 monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
                 monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
