@@ -152,9 +152,69 @@ class Program
   Check(buffer.Submit(game,600.95,0,"BILATERAL",8,true)==BiofitDashCore.JumpResult.Accepted &&
         !buffer.Pending,"at 900ms a normal 60FPS cube is already grounded: immediate jump");
  }
+ static bool PhasePair(BiofitBilateralJumpDetector d, double t,
+                       bool leftReady, bool rightReady, bool fastMode,
+                       double gap=.015)
+ {
+   Check(!d.ProcessImpulse(1,t,.26f,leftReady,fastMode),"first phase ankle waits");
+   return d.ProcessImpulse(2,t+gap,.26f,rightReady,fastMode);
+ }
+ static void CheckPhaseGatedControl() {
+   // All v0.9.9 callers with 3 arguments have EXACTLY the old 900ms behavior.
+   var old = new BiofitBilateralJumpDetector();
+   Check(PhasePair(old,100,true,true,false),"legacy first pair");
+   Check(!PhasePair(old,100.62,true,true,false),"legacy ignores flags and retains 900ms");
+   Check(old.PairCooldownRejected==1,"old mode suppression reason");
+   Check(PhasePair(old,101.03,false,false,false),"legacy pair after cooldown still works");
+
+   var d=new BiofitBilateralJumpDetector();
+   Check(PhasePair(d,10,true,true,true),"experimental initial pair");
+   Check(!PhasePair(d,10.35,true,true,true),"even qualified phase cannot bypass 500ms");
+   Check(d.LastDecision==BiofitBilateralJumpDetector.Decision.PairCooldown,
+        "fast phase still has a short safety floor");
+   Check(!PhasePair(d,10.55,true,false,true),
+        "single-ankle evidence cannot bypass 900ms");
+   Check(d.PairCooldownRejected==2,"both disallowed candidates counted");
+   Check(PhasePair(d,10.71,true,true,true),
+        "both new-cycle flags permit second distinct pair before 900ms");
+   Check(d.LastPairUsedFastPhase && d.FastPhasePairsAccepted==1,
+        "fast proof is explicitly counted, not confused with normal pair");
+   Check(!PhasePair(d,11.25,false,true,true),
+        "positive acceleration from one unqualified ankle is not a new fast pair");
+   Check(PhasePair(d,11.67,false,false,true),
+        "phase mode falls back to ordinary 900ms on unqualified pairs");
+   Check(!d.LastPairUsedFastPhase,"fallback was normal, not phase-fast");
+
+   // The fast accepted event can actually reach the pre-landing buffer.
+   var detector=new BiofitBilateralJumpDetector();
+   var game=Game();var buffer=new BiofitJumpBuffer();
+   Check(PhasePair(detector,200,true,true,true),"fast+buffer first physical pair");
+   Check(buffer.Submit(game,300,0,"BILATERAL",1,true)==
+     BiofitDashCore.JumpResult.Accepted,"initial first rise acts immediately");
+   Advance(game,.62,60);
+   Check(game.EstimatedSecondsUntilLanding>0 &&
+         game.EstimatedSecondsUntilLanding<=BiofitJumpBuffer.WindowSeconds,
+         "game genuinely descending inside 180ms prelanding window");
+   Check(PhasePair(detector,200.62,true,true,true),
+        "second phase-confirmed cycle is admitted before cube landing");
+   Check(buffer.Submit(game,300.62,0,"BILATERAL",2,true)==
+         BiofitDashCore.JumpResult.Buffered,
+         "second physical rise really enters one-slot buffer");
+   Check(!PhasePair(detector,200.90,true,true,true),
+         "braking artifact at 280ms blocked from reaching buffer");
+   BiofitJumpBuffer.Outcome consumed=default(BiofitJumpBuffer.Outcome);
+   for(int frame=0;frame<14 && consumed.State==BiofitJumpBuffer.Completion.None;frame++) {
+      game.Step(1f/60);
+      consumed=buffer.Tick(game,300.62+(frame+1)/60d);
+   }
+   Check(consumed.State==BiofitJumpBuffer.Completion.Executed &&
+       consumed.CommandId==2 && game.SuccessfulJumps==2 && !buffer.Pending,
+       "fast phase command executes EXACTLY ONCE at grounded game transition");
+ }
  static void Main(string[] args) {
   CheckJumpBuffer();
   CheckNew180msWindow();
+  CheckPhaseGatedControl();
   var d=new BiofitBilateralJumpDetector();Check(Pair(d,10),"A isolated pair");
   Check(!d.ProcessImpulse(1,10,.25f)&&!d.ProcessImpulse(2,10.02,.25f),"duplicate impulses cannot act");
   foreach(int fps in new[]{30,60,120})foreach(double t in new[]{.8,.9,1.0,1.2})Cadence(t,fps,t==.8?3:5,t==.8?3:5);
