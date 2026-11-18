@@ -52,7 +52,88 @@ class Program
    Console.WriteLine($"original replay {Path.GetFileName(path)} pairs={paired} cooldown={d.PairCooldownRejected}");
   }
  }
+ static BiofitDashCore DescendingNearGround() {
+  var g=Game();Check(g.Jump(),"setup: initial cube launch");
+  for(int i=0;i<100 && g.EstimatedSecondsUntilLanding>.075;i++)
+   g.Step(1f/60f);
+  Check(g.JumpAltitude>0 && g.EstimatedSecondsUntilLanding>0 &&
+        g.EstimatedSecondsUntilLanding<=.075,"real descending physics reaches 75ms before landing");
+  return g;
+ }
+ static void CheckJumpBuffer() {
+  var early=Game();Check(early.Jump(),"early setup");
+  Advance(early,.30,60);
+  var buffer=new BiofitJumpBuffer();
+  Check(buffer.Submit(early,100+early.Elapsed,0,"BILATERAL",1,true)==
+        BiofitDashCore.JumpResult.Airborne && !buffer.Pending,
+        "too-early bilateral command is not queued");
+  Check(buffer.Submit(early,100+early.Elapsed,0,"MANUAL",2,false)==
+        BiofitDashCore.JumpResult.Airborne,
+        "manual input never buffers, unchanged v097 behavior");
+  var game=DescendingNearGround();buffer.Clear();
+  double t=200+game.Elapsed;
+  Check(buffer.Submit(game,t,0,"BILATERAL",3,true)==
+        BiofitDashCore.JumpResult.Buffered && buffer.Pending,
+        "one prelanding valid pair reserves at most 120ms");
+  Check(buffer.Submit(game,t+.010,0,"BILATERAL",4,true)==
+        BiofitDashCore.JumpResult.AlreadyBuffered,
+        "second input cannot be stacked or extend expiry");
+  Check(buffer.Tick(game,t+.011).State==BiofitJumpBuffer.Completion.None,
+        "cannot execute while airborne");
+  BiofitJumpBuffer.Outcome result=default(BiofitJumpBuffer.Outcome);
+  for(int i=0;i<10 && result.State==BiofitJumpBuffer.Completion.None;i++){
+   game.Step(1f/60f);
+   result=buffer.Tick(game,t+.011+(i+1)/60d);
+  }
+  Check(result.State==BiofitJumpBuffer.Completion.Executed &&
+        result.CommandId==3 && result.Source=="BILATERAL" &&
+        result.AgeMilliseconds<=120.1 && !buffer.Pending &&
+        game.SuccessfulJumps==2,
+        "single buffered command executes once after landing in 120ms");
+  Check(buffer.Tick(game,t+.2).State==BiofitJumpBuffer.Completion.None &&
+        game.SuccessfulJumps==2,
+        "no second execution after buffer consumption");
+
+  game=DescendingNearGround();buffer.Clear();
+  t=300+game.Elapsed;
+  Check(buffer.Submit(game,t,0,"BILATERAL",5,true)==BiofitDashCore.JumpResult.Buffered,
+        "stall setup");
+  // Unity stalls beyond the real-time TTL; old signal may not trigger on landing.
+  Advance(game,.100,60);
+  result=buffer.Tick(game,t+.121);
+  Check(result.State==BiofitJumpBuffer.Completion.Expired &&
+        !buffer.Pending && game.SuccessfulJumps==1,
+        "stalled callback expires: no delayed automatic jump");
+
+  game=DescendingNearGround();buffer.Clear();t=400+game.Elapsed;
+  Check(buffer.Submit(game,t,0,"BILATERAL",6,true)==BiofitDashCore.JumpResult.Buffered,
+        "pause setup");
+  game.TogglePause();result=buffer.Tick(game,t+.03);
+  Check(result.State==BiofitJumpBuffer.Completion.Cancelled &&
+        !buffer.Pending && game.SuccessfulJumps==1,
+        "pause cancels pending command without execution");
+
+  game=DescendingNearGround();buffer.Clear();t=500+game.Elapsed;
+  Check(buffer.Submit(game,t,0,"BILATERAL",7,true)==BiofitDashCore.JumpResult.Buffered,
+        "reset setup");
+  buffer.Clear();game.StartNewGame();
+  Check(!buffer.Pending && buffer.Tick(game,t+.03).State==BiofitJumpBuffer.Completion.None &&
+        game.SuccessfulJumps==0,
+        "restart cannot inherit old jump");
+
+  // At 60FPS the cube lands around 0.77s, before the 0.90s detector
+  // allows a new pair. Buffering alone cannot speed up this cooldown.
+  game=Game();var d=new BiofitBilateralJumpDetector();
+  Check(Pair(d,600),"initial bilateral pair");
+  Check(game.Jump(),"first actual jump");
+  Advance(game,.90,60);
+  Check(Pair(d,600.90),"next eligible pair after 900ms");
+  buffer.Clear();
+  Check(buffer.Submit(game,600.90,0,"BILATERAL",8,true)==BiofitDashCore.JumpResult.Accepted &&
+        !buffer.Pending,"at 900ms a normal 60FPS cube is already grounded: immediate jump");
+ }
  static void Main(string[] args) {
+  CheckJumpBuffer();
   var d=new BiofitBilateralJumpDetector();Check(Pair(d,10),"A isolated pair");
   Check(!d.ProcessImpulse(1,10,.25f)&&!d.ProcessImpulse(2,10.02,.25f),"duplicate impulses cannot act");
   foreach(int fps in new[]{30,60,120})foreach(double t in new[]{.8,.9,1.0,1.2})Cadence(t,fps,t==.8?3:5,t==.8?3:5);
