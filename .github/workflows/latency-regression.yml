@@ -14,6 +14,7 @@ jobs:
       - run: dotnet run --project tests/DashUiRegression
       - run: dotnet run --project tests/PhaseAudit
       - run: dotnet run --project tests/RawRegression
+      - run: dotnet run --project tests/ArchiveRecovery096
       - run: python3 tests/check_android_export.py
   android-export-source:
     runs-on: ubuntu-latest
@@ -29,6 +30,8 @@ jobs:
           javac -Xlint:all -classpath "$ANDROID_HOME/platforms/android-35/android.jar" -d /tmp/biofit-java Assets/Plugins/Android/BiofitExport.androidlib/src/main/java/com/biofit/export/CsvExportActivity.java
           test -s /tmp/biofit-java/com/biofit/export/CsvExportActivity.class
           javap -classpath /tmp/biofit-java com.biofit.export.CsvExportActivity
+          javac -Xlint:deprecation -classpath "$ANDROID_HOME/platforms/android-35/android.jar" -d /tmp/biofit-java tests/Export096/UnityPlayer.java Assets/BIOFIT/AndroidPlugins/BiofitExportBridge.java
+          test -s /tmp/biofit-java/com/biofit/game/BiofitExportBridge.class
 
   phase-firmware-replay:
     runs-on: ubuntu-latest
