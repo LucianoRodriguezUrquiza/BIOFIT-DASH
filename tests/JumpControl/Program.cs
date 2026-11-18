@@ -169,9 +169,9 @@ class Program
 
    var d=new BiofitBilateralJumpDetector();
    Check(PhasePair(d,10,true,true,true),"experimental initial pair");
-   Check(!PhasePair(d,10.35,true,true,true),"even qualified phase cannot bypass 500ms");
+   Check(!PhasePair(d,10.35,true,true,true),"even qualified phase cannot bypass 600ms");
    Check(d.LastDecision==BiofitBilateralJumpDetector.Decision.PairCooldown,
-        "fast phase still has a short safety floor");
+        "fast phase still has a 600ms safety floor");
    Check(!PhasePair(d,10.55,true,false,true),
         "single-ankle evidence cannot bypass 900ms");
    Check(d.PairCooldownRejected==2,"both disallowed candidates counted");
