@@ -12,6 +12,9 @@ public sealed class BiofitBilateralJumpDetector
     public const float MaxPairGapSeconds = 0.18f;
     public const float SameAnkleRefractorySeconds = 0.32f;
     public const float PairCooldownSeconds = 0.90f;
+    // EXPERIMENTAL: only for TWO firmware-confirmed phase evidence flags.
+    // Do not use a shorter timer on ordinary +Z accelerations alone.
+    public const float PhaseFastMinGapSeconds = 0.50f;
 
     public float MinimumVerticalGThreshold { get; private set; } = MinimumVerticalG;
     public float MaxPairGapWindowSeconds { get; private set; } = MaxPairGapSeconds;
@@ -22,7 +25,11 @@ public sealed class BiofitBilateralJumpDetector
     private struct PendingImpulse
     {
         public double Time, PreviousAccepted;
-        public PendingImpulse(double time, double previous) { Time = time; PreviousAccepted = previous; }
+        public bool PhaseEvidence;
+        public PendingImpulse(double time, double previous, bool phaseEvidence)
+        {
+            Time = time; PreviousAccepted = previous; PhaseEvidence = phaseEvidence;
+        }
     }
     private readonly List<PendingImpulse> pendingLeft = new List<PendingImpulse>(16);
     private readonly List<PendingImpulse> pendingRight = new List<PendingImpulse>(16);
@@ -36,6 +43,8 @@ public sealed class BiofitBilateralJumpDetector
         OutsideWindow, PairCooldown, Paired }
     public Decision LastDecision { get; private set; }
     public int PairCooldownRejected { get; private set; }
+    public bool LastPairUsedFastPhase { get; private set; }
+    public int FastPhasePairsAccepted { get; private set; }
     public double LastPairIntervalSeconds { get; private set; } = double.NaN;
 
     public int LeftUpCandidates { get; private set; }
@@ -66,8 +75,10 @@ public sealed class BiofitBilateralJumpDetector
     }
 
     /// <param name="eventSeconds">Reloj compartido y monotónico, double.</param>
-    public bool ProcessImpulse(byte trackerId, double eventSeconds, float verticalG)
+    public bool ProcessImpulse(byte trackerId, double eventSeconds, float verticalG,
+        bool phaseEvidence = false, bool phaseFastEnabled = false)
     {
+        LastPairUsedFastPhase = false;
         if ((trackerId != 1 && trackerId != 2) ||
             double.IsNaN(eventSeconds) || double.IsInfinity(eventSeconds) ||
             float.IsNaN(verticalG) || float.IsInfinity(verticalG))
@@ -130,8 +141,11 @@ public sealed class BiofitBilateralJumpDetector
 
             LastPairGapMs = (float)(bestGap * 1000d);
             LastPairIntervalSeconds = lastPairSeconds == -10000d ? double.NaN : pairTime - lastPairSeconds;
-            // Temporal suppression only: this cannot identify a physical landing.
-            if (pairTime - lastPairSeconds < PairCooldownSeconds)
+            // Fast phase mode needs independently qualified READY->UP cycles
+            // on BOTH ankles. A single strong +Z impulse is never sufficient.
+            bool eligibleFast = phaseFastEnabled && phaseEvidence && other.PhaseEvidence;
+            double cooldown = eligibleFast ? PhaseFastMinGapSeconds : PairCooldownSeconds;
+            if (pairTime - lastPairSeconds < cooldown)
             {
                 LastDecision = Decision.PairCooldown;
                 PairCooldownRejected++;
@@ -155,6 +169,9 @@ public sealed class BiofitBilateralJumpDetector
 
             own.Clear();
             lastPairSeconds = pairTime;
+            LastPairUsedFastPhase = eligibleFast &&
+                LastPairIntervalSeconds < PairCooldownSeconds;
+            if (LastPairUsedFastPhase) FastPhasePairsAccepted++;
             LastDecision = Decision.Paired;
             BilateralCandidates++;
             LastPairGapMs = (float)(bestGap * 1000d);
@@ -178,7 +195,7 @@ public sealed class BiofitBilateralJumpDetector
                          " aislado; esperando otro tobillo";
         }
 
-        own.Add(new PendingImpulse(eventSeconds, lastSame));
+        own.Add(new PendingImpulse(eventSeconds, lastSame, phaseEvidence));
         if (own.Count > 16)
             own.RemoveAt(0);
         return false;
