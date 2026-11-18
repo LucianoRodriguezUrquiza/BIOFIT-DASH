@@ -18,7 +18,7 @@ El usuario solicita una ventana anticipada de ~0,1–0,2 s pero **sin acumulaci�
 - **Sin modificación de la física** del cubo, gravedad, altura, FPS clamp, detectores BLE, umbrales, UUID, ESP32, firmware v2.2.7, NVS, sesiones ni exportación.
 - **Contabilización:** `JUMP_COMMAND result=Buffered` al admitir el único comando; `JUMP_BUFFER_Executed id=...` y `SALTO_BLE_REALIZADO` solo al ejecutarlo. `JUMP_BUFFER_Expired` / `Cancelled` dejan evidencia de intentos no ejecutados; `AlreadyBuffered` se rechaza sin una segunda ejecución. En el panel aparece `BUF` si hay un comando esperando.
 - La regla solo se aplica a `source=BILATERAL`. Para diagnósticos unilaterales y botón/teclado, la semántica de v0.9.7 continúa inalterada.
-- Identificador de archivos de nuevas sesiones `BIOFIT_v097_...` **sin cambios** (mantiene el formato y la lectura de histórico), aunque la etiqueta UI y `CONTROL_VERSION` muestran v0.9.8; no asumir que el prefijo del CSV es la única fuente de versión.
+- Nuevas sesiones se denominan `BIOFIT_v098_...` y su pareja `_RAW.csv`; el escáner existente `BIOFIT_v0*` conserva acceso a las capturas anteriores v095/v096/v097. El formato SHA256, columnas y exportación se mantienen intactos.
 
 ## Límites explícitos
 
