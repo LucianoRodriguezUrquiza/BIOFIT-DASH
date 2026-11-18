@@ -213,6 +213,33 @@ class Program
               chainCsv.Contains("JUMP_COMMAND id=6 source=BILATERAL result=Paused") &&
               chainCsv.Contains("PAR_RECHAZADO_Paused") && !chainCsv.Contains("PAR_CUBO_OCUPADO"),
             "five commands and exact paused rejection persist; no false airborne diagnosis");
+
+        // Integration test bypasses BLE pair cooldown deliberately: exercise
+        // DashGame callback -> buffer -> Step/Update -> same CSV. Real radio
+        // can still reject such a pair upstream at 900ms.
+        core.StartNewGame();
+        UnityEngine.GUI.ClickNext="INICIAR";gui.Invoke(game,null);
+        pairCallback.Invoke(game,new object[]{20f}); // immediate first jump
+        for(int f=0;f<100 && core.EstimatedSecondsUntilLanding>.075;f++)
+            core.Step(1f/60f);
+        Check(core.JumpAltitude>0f && core.EstimatedSecondsUntilLanding<=.075d,
+            "game descending in real core before second accepted callback");
+        pairCallback.Invoke(game,new object[]{20f}); // second accepted pair near landing
+        var slot=(BiofitJumpBuffer)typeof(BiofitDashGame).GetField("jumpBuffer",fieldFlags).GetValue(game);
+        Check(slot.Pending && core.SuccessfulJumps==1,
+            "real UI callback arms exactly one 120ms slot, no premature jump");
+        var update=typeof(BiofitDashGame).GetMethod("Update",fieldFlags);
+        for(int f=0;f<10 && core.SuccessfulJumps==1;f++)update.Invoke(game,null);
+        Check(core.SuccessfulJumps==2 && !slot.Pending &&
+              (int)typeof(BiofitDashGame).GetField("bleJumpsAccepted",fieldFlags).GetValue(game)==2,
+              "actual game Update executes buffered bilateral command exactly once");
+        UnityEngine.GUI.ClickNext="FINALIZAR";gui.Invoke(game,null);
+        monitor.CaptureCompletion.GetAwaiter().GetResult();
+        var bufferedCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
+        Check(bufferedCsv.Contains("JUMP_COMMAND id=2 source=BILATERAL result=Buffered") &&
+              bufferedCsv.Contains("JUMP_BUFFER_Executed id=2") &&
+              bufferedCsv.Split(new[]{"SALTO_BLE_REALIZADO"},StringSplitOptions.None).Length-1==2,
+              "buffer admission and one true execution are recorded in final SHA CSV");
         Console.WriteLine("PASS: " + checks +
             " UI/unilateral host checks; no actual Unity or Android render.");
     }
