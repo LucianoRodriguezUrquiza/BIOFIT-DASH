@@ -25,6 +25,11 @@ public sealed class BiofitDashGame : MonoBehaviour
     private int singleJumps;
     private int blePairsObserved;
     private int bleJumpAttempts;
+    private int bleJumpsAccepted;
+    private int jumpCommandNumber;
+    private BiofitDashCore.JumpResult lastJumpResult;
+    private int clampedFrames;
+    private float nextFrameDiagnostic;
     private string lastInput = "ESPACIO o boton SALTAR";
     private GUIStyle heading, info, helper, control, center;
     private Texture2D spikeTex;
@@ -76,12 +81,16 @@ public sealed class BiofitDashGame : MonoBehaviour
     {
         blePairsObserved++;
         monitor.RecordGameAction("PAR_BLE_DETECTADO");
-        if (bleMode != 1 || !monitor.BothTrackersConnected) return;
+        if (bleMode != 1 || !monitor.BothTrackersConnected)
+        {
+            monitor.RecordDecision(0, "PAR_IGNORADO_MODO_O_CONEXION");
+            return;
+        }
         bleJumpAttempts++;
         lastInput = "PAR BLE EXPERIMENTAL (" + gapMs.ToString("F0") + " ms)";
-        bool jumped = game.Jump();
-        if (jumped) TrackAcceptedJump(0, "BILATERAL");
-        monitor.RecordDecision(0,jumped ? "PAR_SALTO" : "PAR_CUBO_OCUPADO");
+        bool jumped = SubmitJump(0, "BILATERAL");
+        if (jumped) bleJumpsAccepted++;
+        monitor.RecordDecision(0,jumped ? "PAR_SALTO" : "PAR_RECHAZADO_" + lastJumpResult);
         monitor.RecordGameAction(jumped ?
             "SALTO_BLE_REALIZADO" : "SALTO_BLE_NO_REALIZADO");
     }
@@ -111,13 +120,12 @@ public sealed class BiofitDashGame : MonoBehaviour
 
         singleCandidates++;
         monitor.RecordGameAction("UP_SOLO_CANDIDATO");
-        bool jumped = game.Jump();
+        bool jumped = SubmitJump(foot, side);
         soloDiagnostic.RecordGameResult(foot, jumped);
-        monitor.RecordDecision(foot,jumped ? "SALTO" : "CUBO_OCUPADO");
+        monitor.RecordDecision(foot,jumped ? "SALTO" : "RECHAZADO_" + lastJumpResult);
         if (jumped)
         {
             singleJumps++;
-            TrackAcceptedJump(foot, side);
         }
         lastInput = "UP SOLO " + side + " (" + verticalG.ToString("F2") +
             " g)" + (jumped ? " SALTO" : " CUBO OCUPADO");
@@ -140,6 +148,16 @@ public sealed class BiofitDashGame : MonoBehaviour
         }
 
         float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.05f);
+        if (Time.deltaTime > 0.05f && game.Playing && !game.Paused)
+        {
+            clampedFrames++;
+            if (Time.realtimeSinceStartup >= nextFrameDiagnostic)
+            {
+                nextFrameDiagnostic = Time.realtimeSinceStartup + 1f;
+                monitor.RecordControlDiagnostic("FRAME_CLAMP count=" + clampedFrames +
+                    " realDt=" + Time.deltaTime.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + " simulatedDt=0.05");
+            }
+        }
         game.Step(dt);
         if (visualJumpPending && game.JumpAltitude > 0f)
         {
@@ -162,11 +180,22 @@ public sealed class BiofitDashGame : MonoBehaviour
         acceptedJumpSource = source;
     }
 
+    private bool SubmitJump(byte foot, string source)
+    {
+        BiofitDashCore.JumpResult result = game.TryJump();
+        lastJumpResult = result;
+        monitor.RecordControlDiagnostic("JUMP_COMMAND id=" + (++jumpCommandNumber) +
+            " source=" + source + " result=" + result +
+            " altitude=" + game.JumpAltitude.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
+            " gameJumps=" + game.SuccessfulJumps);
+        if (result == BiofitDashCore.JumpResult.Accepted) TrackAcceptedJump(foot, source);
+        return result == BiofitDashCore.JumpResult.Accepted;
+    }
+
     private void Jump(string input)
     {
-        if (game.Jump())
+        if (SubmitJump(0, "MANUAL"))
         {
-            TrackAcceptedJump(0, "MANUAL");
             lastInput = input;
             monitor.RecordGameAction("SALTO_MANUAL");
         }
@@ -376,7 +405,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
         GUI.Label(new Rect(x + 12f, 149f, pw - 272f, 34f),
-            "v0.9.6.1", info);
+            "v0.9.7", info);
         // EXP and RAW together. Extra RAW width accommodates RAW: ESPERE.
         if (GUI.Button(new Rect(x + pw - 252f, 149f, 108f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
@@ -418,6 +447,9 @@ public sealed class BiofitDashGame : MonoBehaviour
                 soloDiagnostic.Reset();
                 singleCandidates = 0;
                 singleJumps = 0;
+                blePairsObserved = bleJumpAttempts = bleJumpsAccepted = jumpCommandNumber = clampedFrames = 0;
+                nextFrameDiagnostic = 0;
+                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.7 pairCooldownS=0.90 sameAnkleS=0.32 noJumpBuffer=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
                 monitor.RecordGameAction(soloDiagnostic.ExperimentalMode ? "MODO_EXP_UMBRAL_ON" : "MODO_EXP_UMBRAL_OFF");
                 monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
                 monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
@@ -492,8 +524,8 @@ public sealed class BiofitDashGame : MonoBehaviour
             "  anti " + r.Refractory + "  salto " + r.Jumped +
             "  ocupado " + r.GameUnavailable, panelSmall);
         GUI.Label(new Rect(x + 11f, 562f, pw - 22f, 27f),
-            "Pares: " + blePairsObserved + " | Rechazos BLE: " +
-            monitor.RejectedEvents + " | Cola: " + monitor.AppQueuePending,
+            "Pares " + blePairsObserved + " | intentos " + bleJumpAttempts +
+            " | saltos " + bleJumpsAccepted,
             panelSmall);
         // Do not put the long RAW summary (hundreds of characters) inside
         // the narrow 55px capture status. Full diagnostics remain in CSV.

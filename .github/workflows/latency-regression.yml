@@ -5,6 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -12,6 +14,8 @@ jobs:
       - run: dotnet run --project tests/ReceiverRegression
       - run: dotnet run --project tests/AndroidDownloadsRegression
       - run: dotnet run --project tests/DashUiRegression
+      - run: dotnet run --project tests/JumpControl
+      - run: python3 tests/JumpControl/compare_cooldowns.py
       - run: dotnet run --project tests/PhaseAudit
       - run: dotnet run --project tests/RawRegression
       - run: dotnet run --project tests/ArchiveRecovery096

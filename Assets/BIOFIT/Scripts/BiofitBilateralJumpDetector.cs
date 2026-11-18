@@ -19,11 +19,24 @@ public sealed class BiofitBilateralJumpDetector
     // Dos BLE independientes pueden entregar notificaciones por lotes.
     // Guardamos candidatos recientes por pie y emparejamos el mas cercano
     // en tiempo DEL SENSOR ALINEADO, no necesariamente el ultimo recibido.
-    private readonly List<double> pendingLeft = new List<double>(16);
-    private readonly List<double> pendingRight = new List<double>(16);
+    private struct PendingImpulse
+    {
+        public double Time, PreviousAccepted;
+        public PendingImpulse(double time, double previous) { Time = time; PreviousAccepted = previous; }
+    }
+    private readonly List<PendingImpulse> pendingLeft = new List<PendingImpulse>(16);
+    private readonly List<PendingImpulse> pendingRight = new List<PendingImpulse>(16);
     private double lastLeftAccepted = -10000d;
     private double lastRightAccepted = -10000d;
     private double lastPairSeconds = -10000d;
+
+    // Decision for EVERY processed UP, including a matched pair suppressed by cooldown.
+    // Names describe software decisions, never a biomechanical phase.
+    public enum Decision { Invalid, BelowThreshold, SameAnkleRefractory, WaitingForOther,
+        OutsideWindow, PairCooldown, Paired }
+    public Decision LastDecision { get; private set; }
+    public int PairCooldownRejected { get; private set; }
+    public double LastPairIntervalSeconds { get; private set; } = double.NaN;
 
     public int LeftUpCandidates { get; private set; }
     public int RightUpCandidates { get; private set; }
@@ -58,10 +71,14 @@ public sealed class BiofitBilateralJumpDetector
         if ((trackerId != 1 && trackerId != 2) ||
             double.IsNaN(eventSeconds) || double.IsInfinity(eventSeconds) ||
             float.IsNaN(verticalG) || float.IsInfinity(verticalG))
+        {
+            LastDecision = Decision.Invalid;
             return false;
+        }
 
         if (verticalG < MinimumVerticalGThreshold)
         {
+            LastDecision = Decision.BelowThreshold;
             WeakRejected++;
             LastStatus = "Impulso insuficiente (< " +
                          MinimumVerticalGThreshold.ToString("F2") + " g)";
@@ -72,6 +89,7 @@ public sealed class BiofitBilateralJumpDetector
         // Eventos de un mismo sensor conservan orden de secuencia.
         if (eventSeconds - lastSame < SameAnkleRefractorySeconds)
         {
+            LastDecision = Decision.SameAnkleRefractory;
             RepeatedRejected++;
             LastStatus = "Impulso repetido de un mismo tobillo";
             return false;
@@ -88,14 +106,14 @@ public sealed class BiofitBilateralJumpDetector
             RightUpCandidates++;
         }
 
-        List<double> own = trackerId == 1 ? pendingLeft : pendingRight;
-        List<double> opposite = trackerId == 1 ? pendingRight : pendingLeft;
+        List<PendingImpulse> own = trackerId == 1 ? pendingLeft : pendingRight;
+        List<PendingImpulse> opposite = trackerId == 1 ? pendingRight : pendingLeft;
 
         int bestIndex = -1;
         double bestGap = double.PositiveInfinity;
         for (int i = 0; i < opposite.Count; i++)
         {
-            double gap = Math.Abs(eventSeconds - opposite[i]);
+            double gap = Math.Abs(eventSeconds - opposite[i].Time);
             if (gap < bestGap)
             {
                 bestGap = gap;
@@ -105,19 +123,39 @@ public sealed class BiofitBilateralJumpDetector
 
         if (bestIndex >= 0 && bestGap <= MaxPairGapWindowSeconds)
         {
-            double otherTime = opposite[bestIndex];
+            PendingImpulse other = opposite[bestIndex];
+            double otherTime = other.Time;
             opposite.RemoveAt(bestIndex);
             double pairTime = Math.Max(eventSeconds, otherTime);
 
-            // Un mismo salto no puede aportar varios pares cercanos.
+            LastPairGapMs = (float)(bestGap * 1000d);
+            LastPairIntervalSeconds = lastPairSeconds == -10000d ? double.NaN : pairTime - lastPairSeconds;
+            // Temporal suppression only: this cannot identify a physical landing.
             if (pairTime - lastPairSeconds < PairCooldownSeconds)
             {
+                LastDecision = Decision.PairCooldown;
+                PairCooldownRejected++;
+                // A consumed, suppressed pair must not restart the per-ankle
+                // refractory and hide the next pair AFTER the 900ms interval.
+                // Roll back only this pair's timestamps, never a newer pending UP
+                // delivered by the other connection. Freshness/sequence gate remains upstream.
+                if (trackerId == 1)
+                {
+                    lastLeftAccepted = lastSame;
+                    if (lastRightAccepted == otherTime) lastRightAccepted = other.PreviousAccepted;
+                }
+                else
+                {
+                    lastRightAccepted = lastSame;
+                    if (lastLeftAccepted == otherTime) lastLeftAccepted = other.PreviousAccepted;
+                }
                 LastStatus = "Par descartado por tiempo de seguridad";
                 return false;
             }
 
             own.Clear();
             lastPairSeconds = pairTime;
+            LastDecision = Decision.Paired;
             BilateralCandidates++;
             LastPairGapMs = (float)(bestGap * 1000d);
             LastStatus = "POSIBLE SALTO BILATERAL (NO CONFIRMADO)";
@@ -126,6 +164,7 @@ public sealed class BiofitBilateralJumpDetector
 
         if (bestIndex >= 0 && bestGap < 1.2d)
         {
+            LastDecision = Decision.OutsideWindow;
             NearMisses++;
             LastNearMissGapMs = (float)(bestGap * 1000d);
             LastStatus = "UP no emparejado: separacion " +
@@ -134,11 +173,12 @@ public sealed class BiofitBilateralJumpDetector
         }
         else
         {
+            LastDecision = Decision.WaitingForOther;
             LastStatus = "UP " + (trackerId == 1 ? "izquierdo" : "derecho") +
                          " aislado; esperando otro tobillo";
         }
 
-        own.Add(eventSeconds);
+        own.Add(new PendingImpulse(eventSeconds, lastSame));
         if (own.Count > 16)
             own.RemoveAt(0);
         return false;

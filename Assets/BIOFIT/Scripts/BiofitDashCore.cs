@@ -74,14 +74,21 @@ public sealed class BiofitDashCore
         if (Playing && !GameOver) Paused = !Paused;
     }
 
-    public bool Jump()
+    public enum JumpResult { Accepted, NotPlaying, GameOver, Paused, Airborne }
+    // One immediate command API for all input sources. No buffer or auto-repeat:
+    // an airborne command cannot turn into a phantom jump after landing.
+    public JumpResult TryJump()
     {
-        if (!Playing || GameOver || Paused || JumpAltitude > 0.001f || velocityY > 0f)
-            return false;
+        if (GameOver) return JumpResult.GameOver;
+        if (!Playing) return JumpResult.NotPlaying;
+        if (Paused) return JumpResult.Paused;
+        if (JumpAltitude > 0.001f || velocityY > 0f) return JumpResult.Airborne;
         velocityY = 575f;
         SuccessfulJumps++;
-        return true;
+        return JumpResult.Accepted;
     }
+
+    public bool Jump() => TryJump() == JumpResult.Accepted;
 
     public void Step(float dt)
     {

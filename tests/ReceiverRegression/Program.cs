@@ -53,6 +53,8 @@ class Program {
   for(int i=0;i<12;i++)update.Invoke(q,null);
   Check(qActions==0,"unsynchronized queue cannot jump");
   Check((int)typeof(BiofitBLEMonitor).GetField("pendingCount",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(q)==0,"queue drained including disconnect");
+  Check(UnityEngine.GUIUtility.systemCopyBuffer.Contains("BILATERAL_DECISION=Paired") &&
+        UnityEngine.GUIUtility.systemCopyBuffer.Contains("BILATERAL_DECISION=WaitingForOther"),"actual receiver stores bilateral decisions and timestamp trace");
   Check(System.IO.File.Exists(m.SavedCapturePath),"capture saved to disk");
   string archive=System.IO.File.ReadAllText(m.SavedCapturePath);
   Check(BiofitCaptureArchive.Verify(archive),"saved archive hash and counts valid");

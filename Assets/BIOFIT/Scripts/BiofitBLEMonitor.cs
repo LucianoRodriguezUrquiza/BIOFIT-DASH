@@ -458,7 +458,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public bool StartGameCapture()
     {
         if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || !RawOperation.IsCompleted) return false;
-        string name="BIOFIT_v096_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
+        string name="BIOFIT_v097_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
         rawCapture=null;rawSegment=0;syncNumber=0;SyncLabel="SYNC VIDEO";
@@ -486,6 +486,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         return gameCaptureActive &&
             eventCapture.MarkGameStage(stage, Time.realtimeSinceStartup);
+    }
+
+    public void RecordControlDiagnostic(string detail)
+    {
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, 0, detail);
     }
 
     public void RecordGameAction(string action)
@@ -1063,6 +1068,16 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         dispatchStarted=MonotonicNow; currentCallbackSeconds=callbackSeconds;
         bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 &&
             jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG);
+        if (fresh && eventType == 3)
+            eventCapture.RecordDiagnostic(receivedSeconds, state.id,
+                "BILATERAL_DECISION=" + (timeAligner.IsReady(callbackSeconds) ?
+                    jumpDetector.LastDecision.ToString() : "ClockNotReady") + " " + CurrentEventTrace +
+                " pairClockS=" + pairSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) +
+                " cooldownRejected=" + jumpDetector.PairCooldownRejected +
+                (jumpDetector.LastDecision == BiofitBilateralJumpDetector.Decision.Paired ||
+                 jumpDetector.LastDecision == BiofitBilateralJumpDetector.Decision.PairCooldown ?
+                    " gapMs=" + jumpDetector.LastPairGapMs.ToString("F3",System.Globalization.CultureInfo.InvariantCulture) +
+                    " intervalS=" + jumpDetector.LastPairIntervalSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) : ""));
         if (fresh && eventType == 3)
             AnkleUpCandidate?.Invoke(state.id, verticalG,
                 eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));

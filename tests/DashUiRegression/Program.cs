@@ -150,6 +150,8 @@ class Program
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
         string savedCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
         Check(savedCsv.Contains("MODO_EXP_UMBRAL_ON") && savedCsv.Contains("MODO_EXP_UMBRAL_OFF") && savedCsv.Contains("SYNC 001"),"actual GUI EXP and video marks survive archive");
+        Check(savedCsv.Contains("CONTROL_VERSION=0.9.7") && savedCsv.Contains("JUMP_COMMAND id=1 source=MANUAL result=Accepted"),
+            "shared manual command and version preserved in private CSV");
         Check(System.IO.File.ReadAllText(monitor.SavedCapturePath).Contains("PRIMER_ESTADO_SALTO"),
             "first animated simulation frame has a distinct timestamp marker");
         Check(BiofitAndroidExport.IsFinalStatus("GUARDADO: CSV verificado (123 bytes)") &&
@@ -183,6 +185,34 @@ class Program
             System.Threading.Thread.Sleep(20);
         Check(!monitor.ExportBusy && monitor.ExportStatus.Contains("EDITOR:"),
               "GUI RESCATE uses independent selected-session path");
+        // Real detector -> real Dash callback -> shared command -> real physics.
+        // Connection flags/Unity API are host shims, not a radio test.
+        var fieldFlags=BindingFlags.Instance|BindingFlags.NonPublic;
+        foreach(string side in new[]{"left","right"}) {
+            var tracker=typeof(BiofitBLEMonitor).GetField(side,fieldFlags).GetValue(monitor);
+            tracker.GetType().GetField("connection").SetValue(tracker,"CONECTADO - NOTIFICACIONES ACTIVAS");
+        }
+        typeof(BiofitDashGame).GetField("bleMode",fieldFlags).SetValue(game,1);
+        var core=(BiofitDashCore)typeof(BiofitDashGame).GetField("game",fieldFlags).GetValue(game);
+        core.PracticeMode=true;core.StartNewGame();
+        UnityEngine.GUI.ClickNext="INICIAR";gui.Invoke(game,null);
+        var pairCallback=typeof(BiofitDashGame).GetMethod("OnCandidatePair",fieldFlags);
+        var detector=new BiofitBilateralJumpDetector();
+        for(int n=0;n<5;n++) {
+            if(n>0)for(int f=0;f<60;f++)core.Step(1f/60);
+            detector.ProcessImpulse(1,100+n,.25f);
+            if(detector.ProcessImpulse(2,100+n+.02,.25f))pairCallback.Invoke(game,new object[]{20f});
+        }
+        Check(core.SuccessfulJumps==5 && (int)typeof(BiofitDashGame).GetField("bleJumpsAccepted",fieldFlags).GetValue(game)==5,
+            "real Dash callback routes five detector pairs to five immediate core jumps");
+        core.TogglePause();pairCallback.Invoke(game,new object[]{20f});
+        UnityEngine.GUI.ClickNext="FINALIZAR";gui.Invoke(game,null);
+        monitor.CaptureCompletion.GetAwaiter().GetResult();
+        string chainCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
+        Check(chainCsv.Contains("JUMP_COMMAND id=5 source=BILATERAL result=Accepted") &&
+              chainCsv.Contains("JUMP_COMMAND id=6 source=BILATERAL result=Paused") &&
+              chainCsv.Contains("PAR_RECHAZADO_Paused") && !chainCsv.Contains("PAR_CUBO_OCUPADO"),
+            "five commands and exact paused rejection persist; no false airborne diagnosis");
         Console.WriteLine("PASS: " + checks +
             " UI/unilateral host checks; no actual Unity or Android render.");
     }
