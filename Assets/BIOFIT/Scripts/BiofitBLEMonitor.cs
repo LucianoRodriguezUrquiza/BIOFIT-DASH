@@ -49,7 +49,35 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,SyncLabel+" callbackClockS="+
             MonotonicNow.ToString("F6",System.Globalization.CultureInfo.InvariantCulture));
     }
-    public void ToggleRawCapture() { if(RawOperation.IsCompleted && !CaptureSaving) RawOperation=SetRawCaptureAsync(!rawActive); }
+    // The RAW switch is meaningful only during an active capture. Show an
+    // actionable reason instead of silently ignoring taps after ARCHIVO.
+    // Do not label a partially acknowledged BLE start as fully enabled.
+    public string RawButtonLabel => !RawOperation.IsCompleted ? "RAW: ESPERE" :
+        rawActive ? "RAW: ON" : "RAW: OFF";
+    public void ToggleRawCapture()
+    {
+        if(CaptureSaving)
+        {
+            RawStatus="RAW: esperar FINALIZANDO; no cambiar durante el cierre";
+            return;
+        }
+        if(!RawOperation.IsCompleted)
+        {
+            RawStatus="RAW: esperar respuesta BLE; no volver a tocar";
+            return;
+        }
+        if(!rawActive && !gameCaptureActive)
+        {
+            RawStatus="RAW OFF: primero pulse INICIAR; despues RAW";
+            return;
+        }
+        if(!rawActive && (!BothTrackersConnected || leftRaw==null || rightRaw==null))
+        {
+            RawStatus="RAW OFF: conectar ambos tobillos en DIAGNOSTICO BLE";
+            return;
+        }
+        RawOperation=SetRawCaptureAsync(!rawActive);
+    }
     public async Task SetRawCaptureAsync(bool enabled)
     {
         await rawTransition.WaitAsync();
@@ -416,6 +444,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
         rawCapture=null;rawSegment=0;syncNumber=0;SyncLabel="SYNC VIDEO";
+        RawStatus="RAW OFF: sesion iniciada, pulsar RAW para activar";
         if (!eventCapture.BeginGame(Time.realtimeSinceStartup)) return false;
         gameCaptureActive = true;
         gLeftOn = left.movOn; gRightOn = right.movOn;
