@@ -30,6 +30,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private readonly System.Threading.SemaphoreSlim rawTransition = new System.Threading.SemaphoreSlim(1,1);
     private readonly object rawReceiveGate = new object();
     private volatile bool rawActive;
+    // Tracks any STREAM,1 attempt until both STREAM,0 ACKs are confirmed.
+    // Prevents repeated spurious STREAM,0 calls on pause or after FINALIZAR.
+    private bool rawMayBeStreaming;
     private int rawEpoch, rawSegment, syncNumber;
     private double nextRawDiagnostic, previousUpdate, updateGapMax, eventQueueSum, eventQueueMax;
     private int perfEvents;
@@ -83,6 +86,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         await rawTransition.WaitAsync();
         try
         {
+            if(!enabled && !rawMayBeStreaming)
+            {
+                lock(rawReceiveGate) { rawActive=false;rawEpoch++; }
+                RawStatus="RAW OFF: ambos STREAM,0 ya confirmados o RAW nunca activado";
+                return;
+            }
             if(enabled && (!gameCaptureActive || !BothTrackersConnected || leftRaw==null || rightRaw==null))
             { RawStatus="RAW: iniciar captura y conectar ambos sensores";return; }
             lock(rawReceiveGate) { rawActive=false;rawEpoch++; }
@@ -96,6 +105,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 }
                 if(rawCapture.File.Error.Length!=0) throw new System.IO.IOException(rawCapture.File.Error);
                 rawCapture.Segment="RAW_SEG_"+(++rawSegment);
+                // A partially delivered STREAM,1 may start a remote stream even
+                // when ACK is lost. Keep stop attempts enabled until confirmed.
+                rawMayBeStreaming=true;
                 int epoch=rawEpoch;
                 lock(rawReceiveGate)rawActive=true;
                 RawStatus="RAW activando ambos...";
@@ -106,13 +118,15 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             else
             {
                 string errors=await StopRawLinks();
-                RawStatus=errors.Length==0?"RAW OFF":"RAW OFF local; STREAM,0 no confirmado: "+errors;
+                if(errors.Length==0)rawMayBeStreaming=false;
+                RawStatus=errors.Length==0?"RAW OFF (ambos STREAM,0 confirmados)":"RAW OFF local; STREAM,0 no confirmado: "+errors;
             }
         }
         catch(Exception ex)
         {
             lock(rawReceiveGate) { rawActive=false;rawEpoch++; }
             string cleanup=await StopRawLinks();
+            if(cleanup.Length==0)rawMayBeStreaming=false;
             RawStatus="ERROR RAW: "+ex.Message+" "+cleanup;
         }
         finally
