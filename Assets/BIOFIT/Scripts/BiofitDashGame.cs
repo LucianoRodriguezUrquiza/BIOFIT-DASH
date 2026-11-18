@@ -517,7 +517,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     private void DrawArchiveBrowser(float x, float pw)
     {
         // Overlay is confined to the diagnostic sidebar, not the avatar.
-        Draw(new Rect(x+5f,252f,pw-10f,381f),new Color(0.055f,0.11f,0.18f));
+        Draw(new Rect(x+5f,252f,pw-10f,320f),new Color(0.055f,0.11f,0.18f));
         GUI.Label(new Rect(x+15f,259f,pw-30f,31f),
             "SESIONES PRIVADAS - elegir una",panelSmall);
         if(monitor.ScanningSessions)
@@ -533,8 +533,8 @@ public sealed class BiofitDashGame : MonoBehaviour
                 monitor.ArchiveStatus,panelSmall);
             return;
         }
-        int first=archivePage*4;
-        for(int i=0;i<4 && first+i<items.Length;i++)
+        int first=archivePage*3;
+        for(int i=0;i<3 && first+i<items.Length;i++)
         {
             int index=first+i;
             var item=items[index];
@@ -551,12 +551,12 @@ public sealed class BiofitDashGame : MonoBehaviour
             GUI.Label(new Rect(x+18f,yy+33f,pw-36f,28f),
                 state+raw,panelSmall);
         }
-        if(GUI.Button(new Rect(x+15f,584f,95f,37f),"ANTERIOR",compact) && archivePage>0)
+        if(GUI.Button(new Rect(x+15f,527f,95f,37f),"ANTERIOR",compact) && archivePage>0)
             archivePage--;
-        GUI.Label(new Rect(x+120f,589f,pw-240f,28f),
-            (archivePage+1)+"/"+((items.Length+3)/4),panelSmall);
-        if(GUI.Button(new Rect(x+pw-111f,584f,95f,37f),"SIGUIENTE",compact) &&
-           (archivePage+1)*4<items.Length)
+        GUI.Label(new Rect(x+120f,532f,pw-240f,28f),
+            (archivePage+1)+"/"+((items.Length+2)/3),panelSmall);
+        if(GUI.Button(new Rect(x+pw-111f,527f,95f,37f),"SIGUIENTE",compact) &&
+           (archivePage+1)*3<items.Length)
             archivePage++;
         // ARCHIVO and RESCATE above the overlay export the selected item.
     }
