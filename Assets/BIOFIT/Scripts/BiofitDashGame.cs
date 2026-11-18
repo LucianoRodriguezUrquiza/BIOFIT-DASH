@@ -94,7 +94,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         if (jumped) bleJumpsAccepted++;
         bool buffered = lastJumpResult == BiofitDashCore.JumpResult.Buffered;
         monitor.RecordDecision(0, jumped ? "PAR_SALTO" :
-            buffered ? "PAR_BUFFERED_120MS" : "PAR_RECHAZADO_" + lastJumpResult);
+            buffered ? "PAR_BUFFERED_180MS" : "PAR_RECHAZADO_" + lastJumpResult);
         monitor.RecordGameAction(jumped ? "SALTO_BLE_REALIZADO" :
             buffered ? "SALTO_BLE_BUFFERED" : "SALTO_BLE_NO_REALIZADO");
     }
@@ -441,7 +441,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
         GUI.Label(new Rect(x + 12f, 149f, pw - 272f, 34f),
-            "v0.9.8", info);
+            "v0.9.9", info);
         // EXP and RAW together. Extra RAW width accommodates RAW: ESPERE.
         if (GUI.Button(new Rect(x + pw - 252f, 149f, 108f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
@@ -486,7 +486,7 @@ public sealed class BiofitDashGame : MonoBehaviour
                 singleJumps = 0;
                 blePairsObserved = bleJumpAttempts = bleJumpsAccepted = jumpCommandNumber = clampedFrames = 0;
                 nextFrameDiagnostic = 0;
-                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.8 pairCooldownS=0.90 sameAnkleS=0.32 jumpBufferMs=120 oneSlot=1 bilateralOnly=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
+                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.9 pairCooldownS=0.90 sameAnkleS=0.32 jumpBufferMs=180 oneSlot=1 bilateralOnly=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
                 monitor.RecordGameAction(soloDiagnostic.ExperimentalMode ? "MODO_EXP_UMBRAL_ON" : "MODO_EXP_UMBRAL_OFF");
                 monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
                 monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
