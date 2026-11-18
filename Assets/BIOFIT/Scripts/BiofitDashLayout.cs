@@ -32,7 +32,9 @@ public static class BiofitDashLayout
         float scale = Math.Min(screenWidth / MinVirtualWidth,
             screenHeight / VirtualHeight);
         float width = screenWidth / scale;
-        float sidebarWidth = Math.Min(412f, Math.Max(350f, width * 0.275f));
+        // Widen diagnostic sidebar ~20% at 1536x691 so buttons/labels stay readable.
+        // Keep >=650 virtual pixels for gameplay even on the 1120px minimum canvas.
+        float sidebarWidth = Math.Min(500f, Math.Max(410f, width * 0.30f));
         float sidebarX = width - sidebarWidth - 18f;
         float gameX = 20f;
         float gameWidth = showPanel ? sidebarX - gameX - 16f : width - 40f;
