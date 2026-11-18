@@ -167,6 +167,15 @@ class Program
    Check(old.PairCooldownRejected==1,"old mode suppression reason");
    Check(PhasePair(old,101.03,false,false,false),"legacy pair after cooldown still works");
 
+   var lower=new BiofitBilateralJumpDetector();
+   Check(PhasePair(lower,50,true,true,true),"fast lower-bound initial pair");
+   Check(!PhasePair(lower,50.55,true,true,true),
+         "even two strong phase flags cannot bypass 600ms fast floor");
+   Check(lower.LastDecision==BiofitBilateralJumpDetector.Decision.PairCooldown,
+         "600ms floor produces explicit cooldown rejection");
+   Check(PhasePair(lower,50.65,true,true,true),
+         "rejected earlier phase candidate does not postpone genuine next cycle");
+
    var d=new BiofitBilateralJumpDetector();
    Check(PhasePair(d,10,true,true,true),"experimental initial pair");
    Check(!PhasePair(d,10.35,true,true,true),"even qualified phase cannot bypass 600ms");
