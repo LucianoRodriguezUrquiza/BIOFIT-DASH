@@ -20,6 +20,48 @@ class Program {
  static void Read(BiofitBLEMonitor m,byte[] b,double t,bool status=false) {
   typeof(BiofitBLEMonitor).GetMethod(status?"ReadStatus":"ReadEvent",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(m,new[]{Wrap(b,t,status)});
  }
+ static void CycleIntegration() {
+  var m=new BiofitBLEMonitor();int pairs=0;m.BilateralJumpCandidate+=g=>pairs++;
+  var flags=BindingFlags.Instance|BindingFlags.NonPublic;
+  foreach(string side in new[]{"left","right"}){
+   var tracker=typeof(BiofitBLEMonitor).GetField(side,flags).GetValue(m);
+   tracker.GetType().GetField("connection").SetValue(tracker,"CONECTADO - NOTIFICACIONES ACTIVAS");
+  }
+  double now=Stopwatch.GetTimestamp()/(double)Stopwatch.Frequency;
+  for(int i=0;i<12;i++)for(byte id=1;id<=2;id++)Read(m,Packet(id,true,(ushort)i,(uint)(100000+100*i)),now-1.1+.1*i,true);
+  m.LiftCycleMode=true;m.StartGameCapture();
+  var transport=typeof(BiofitBLEMonitor).GetMethod("ReadTransport",flags);
+  Action<byte,int> firmware=(id,version)=>{var b=new byte[20];b[0]=2;b[1]=id;b[2]=3;BitConverter.GetBytes((ushort)version).CopyTo(b,18);transport.Invoke(m,new[]{Wrap(b,now)});};
+  Action<byte,ushort,uint,bool> onset=(id,seq,ms,marker)=>{var b=Packet(id,false,seq,ms);b[2]=4;b[3]=(byte)(marker?0xa0:0x80);Read(m,b,now);};
+  firmware(1,229);firmware(2,228);
+  onset(1,1,101100,true);onset(2,1,101110,true);
+  Check(!m.CycleFirmwareReady&&pairs==0,"mixed firmware fails closed");
+  firmware(2,229);Check(m.CycleFirmwareReady,"both real version pages enable experimental mode");
+  Read(m,Packet(1,false,2,101100),now);Read(m,Packet(2,false,2,101110),now);
+  Check(pairs==0,"legacy UP cannot operate experimental mode");
+  onset(1,3,101100,false);onset(2,3,101110,false);
+  Check(pairs==0,"new type without algorithm marker cannot operate");
+  onset(1,4,101100,true);onset(2,4,101110,true);
+  Check(pairs==1&&m.CyclePairCount==1,"real EVENT parser -> freshness/sequence -> cycle pair");
+  onset(1,4,101100,true);onset(2,4,101110,true);
+  Check(pairs==1&&m.RejectedEvents==2,"duplicate onset notifications rejected");
+  onset(1,5,100000,true);onset(2,5,100010,true);
+  Check(pairs==1&&m.RejectedEvents==4,"late onset never treated as a new lift");
+  int epoch=m.ControlEpoch;m.LiftCycleMode=false;
+  Check(m.ControlEpoch==epoch+1,"changing algorithm invalidates pending control state");
+  onset(1,6,101100,true);onset(2,6,101110,true);
+  Check(pairs==1,"new events ignored for legacy actions but their sequences consumed");
+  Read(m,Packet(1,false,7,101100),now);Read(m,Packet(2,false,7,101110),now);
+  Check(pairs==2,"legacy path still accepts original UP after new channel traffic");
+  var diag=new byte[20];diag[0]=3;diag[1]=1;diag[2]=3;diag[3]=4;
+  BitConverter.GetBytes((short)-500).CopyTo(diag,8);transport.Invoke(m,new[]{Wrap(diag,now)});
+  m.RecordGameAction("BLE_CICLO_EXPERIMENTAL");m.RecordGameAction("SALTO_BLE_BUFFERED");
+  m.StopGameCapture();m.CaptureCompletion.GetAwaiter().GetResult();
+  string csv=System.IO.File.ReadAllText(m.SavedCapturePath);
+  Check(csv.Contains("LIFT_ONSET")&&csv.Contains("LIFT_PAIR=Paired")&&csv.Contains("velocityMmS=-500"),"new onset/decision/signed state retained in verified archive");
+  Check(csv.Contains("BLE_CICLO_EXPERIMENTAL")&&csv.Contains("SALTO_BLE_BUFFERED"),"mode and buffer APP events are not silently dropped");
+  Check(BiofitCaptureArchive.Verify(csv),"new event type preserves archive contract");
+ }
  static void Main() {
   var m=new BiofitBLEMonitor(); int solo=0,pairs=0;
   m.AnkleUpCandidate+=(a,b,c)=>solo++;m.BilateralJumpCandidate+=g=>pairs++;
@@ -143,6 +185,7 @@ class Program {
     UnityEngine.Application.persistentDataPath=originalPath;
     System.IO.File.Delete(obstructed);
   }
+  CycleIntegration();
   Console.WriteLine("PASS: "+checks+" receiver integration checks using API shims (not a Unity build).");
  }
 }

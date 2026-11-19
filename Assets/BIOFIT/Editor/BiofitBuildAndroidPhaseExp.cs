@@ -8,7 +8,7 @@ using UnityEngine;
 // Editor-only. Never changes firmware, NVS, package ID, signing or stored sessions.
 public static class BiofitBuildAndroidPhaseExp
 {
-    [MenuItem("BIOFIT/Compilar APK Android v0.9.10 FASE EXP")]
+    [MenuItem("BIOFIT/Compilar APK Android v0.9.11 CICLO EXP")]
     public static void Build()
     {
         if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
@@ -27,7 +27,7 @@ public static class BiofitBuildAndroidPhaseExp
             throw new InvalidOperationException("No hay escenas activas en Build Profiles.");
         string folder = Path.Combine(Directory.GetCurrentDirectory(),"Builds");
         Directory.CreateDirectory(folder);
-        string output = Path.Combine(folder,"BIOFIT_v0910_FASE_EXP.apk");
+        string output = Path.Combine(folder,"BIOFIT_v0911_CICLO_EXP.apk");
         bool oldBundle = EditorUserBuildSettings.buildAppBundle;
         try
         {

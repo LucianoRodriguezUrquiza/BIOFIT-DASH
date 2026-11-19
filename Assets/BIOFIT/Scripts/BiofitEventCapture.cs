@@ -81,7 +81,7 @@ public sealed class BiofitEventCapture
         if (RowSink == null && rows.Count >= MaxRows) { DroppedRows++; return; }
         // Misma cabecera de 15 columnas; este evento proviene de Unity,
         // NO del sensor. Las columnas de la IMU quedan vacias.
-        if (action != "MODO_EXP_UMBRAL_ON" && action != "MODO_EXP_UMBRAL_OFF" && action != "SALTO_MANUAL" && action != "PAR_BLE_DETECTADO" &&
+        if (action != "BLE_CICLO_EXPERIMENTAL" && action != "SALTO_BLE_BUFFERED" && action != "MODO_EXP_UMBRAL_ON" && action != "MODO_EXP_UMBRAL_OFF" && action != "SALTO_MANUAL" && action != "PAR_BLE_DETECTADO" &&
             action != "SALTO_BLE_REALIZADO" &&
             action != "SALTO_BLE_NO_REALIZADO" &&
             action != "BLE_ACTIVADO" && action != "BLE_DESACTIVADO" &&
@@ -170,7 +170,7 @@ public sealed class BiofitEventCapture
 
         string name = eventType == 1 ? "MOV_ON" :
                       eventType == 2 ? "MOV_OFF" :
-                      eventType == 3 ? "UP_IMPULSE" : "OTRO";
+                      eventType == 3 ? "UP_IMPULSE" : eventType==4 ? "LIFT_ONSET" : "OTRO";
 
         // Formato CSV compatible con separador de listas habitual de Excel ES.
         AddRow("EV;" + stage + ";" +

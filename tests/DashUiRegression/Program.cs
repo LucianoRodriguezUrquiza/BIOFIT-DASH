@@ -150,7 +150,7 @@ class Program
         Check(!monitor.GameCaptureActive && System.IO.File.Exists(monitor.SavedCapturePath),"actual finish button saves archive");
         string savedCsv=System.IO.File.ReadAllText(monitor.SavedCapturePath);
         Check(savedCsv.Contains("MODO_EXP_UMBRAL_ON") && savedCsv.Contains("MODO_EXP_UMBRAL_OFF") && savedCsv.Contains("SYNC 001"),"actual GUI EXP and video marks survive archive");
-        Check(savedCsv.Contains("CONTROL_VERSION=0.9.10") && savedCsv.Contains("JUMP_COMMAND id=1 source=MANUAL result=Accepted"),
+        Check(savedCsv.Contains("CONTROL_VERSION=0.9.11") && savedCsv.Contains("JUMP_COMMAND id=1 source=MANUAL result=Accepted"),
             "shared manual command and version preserved in private CSV");
         Check(System.IO.File.ReadAllText(monitor.SavedCapturePath).Contains("PRIMER_ESTADO_SALTO"),
             "first animated simulation frame has a distinct timestamp marker");
@@ -240,6 +240,25 @@ class Program
               bufferedCsv.Contains("JUMP_BUFFER_Executed id=2") &&
               bufferedCsv.Split(new[]{"SALTO_BLE_REALIZADO"},StringSplitOptions.None).Length-1==2,
               "buffer admission and one true execution are recorded in final SHA CSV");
+        // Real GUI mode guard and pending-slot cancellation on connection loss.
+        typeof(BiofitDashGame).GetField("bleMode",fieldFlags).SetValue(game,3);
+        UnityEngine.GUI.ClickNext="BLE: SOLO DER";gui.Invoke(game,null);
+        Check((int)typeof(BiofitDashGame).GetField("bleMode",fieldFlags).GetValue(game)==0,
+            "older firmware can turn BLE OFF; mode selection cannot trap the user");
+        foreach(string side in new[]{"left","right"}) {
+            var tracker=typeof(BiofitBLEMonitor).GetField(side,fieldFlags).GetValue(monitor);
+            tracker.GetType().GetField("firmwareVersion").SetValue(tracker,229);
+        }
+        typeof(BiofitDashGame).GetField("bleMode",fieldFlags).SetValue(game,3);
+        UnityEngine.GUI.ClickNext="BLE: SOLO DER";gui.Invoke(game,null);
+        Check(monitor.LiftCycleMode,"real GUI explicitly enables compatible new algorithm");
+        core.StartNewGame();core.Jump();for(int i=0;i<40;i++)core.Step(1f/60);
+        double now=System.Diagnostics.Stopwatch.GetTimestamp()/(double)System.Diagnostics.Stopwatch.Frequency;
+        Check(slot.Submit(core,now,0,"LIFT_CYCLE",99,true,.3,now)==BiofitDashCore.JumpResult.Buffered,"experimental slot established for cancellation test");
+        var left=typeof(BiofitBLEMonitor).GetField("left",fieldFlags).GetValue(monitor);
+        left.GetType().GetField("connection").SetValue(left,"DESCONECTADO");
+        update.Invoke(game,null);
+        Check(!slot.Pending&&core.SuccessfulJumps==1,"real Update cancels slot on disconnect before physics can execute it");
         Console.WriteLine("PASS: " + checks +
             " UI/unilateral host checks; no actual Unity or Android render.");
     }

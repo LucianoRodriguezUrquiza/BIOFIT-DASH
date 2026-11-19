@@ -27,5 +27,6 @@
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSessionFile.cs" />
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitRawCapture.cs" />
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitRawLink.cs" />
+<Compile Include="../../Assets/BIOFIT/Scripts/BiofitLiftPairDetector.cs" />
 </ItemGroup>
 </Project>

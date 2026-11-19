@@ -21,7 +21,7 @@ namespace UnityEngine {
  public class GUIStyleState { public Color textColor; }
  public class GUIStyle { public int fontSize; public FontStyle fontStyle; public bool wordWrap; public TextAnchor alignment; public GUIStyleState normal=new GUIStyleState(); public GUIStyle(object o){} }
  public class GUISkin { public object label,button; }
- public static partial class GUI { public static Matrix4x4 matrix; public static GUISkin skin=new GUISkin(); public static void Box(Rect r,string s){} public static void Label(Rect r,string s,GUIStyle st){} public static string ClickNext; public static bool Button(Rect r,string s,GUIStyle st){if(ClickNext!=s)return false;ClickNext=null;return true;} public static Vector2 BeginScrollView(Rect r,Vector2 v,Rect c,bool h,bool b)=>v; public static void EndScrollView(){} }
+ public static partial class GUI { public static bool enabled=true; public static Matrix4x4 matrix; public static GUISkin skin=new GUISkin(); public static void Box(Rect r,string s){} public static void Label(Rect r,string s,GUIStyle st){} public static string ClickNext; public static bool Button(Rect r,string s,GUIStyle st){if(!enabled || ClickNext!=s)return false;ClickNext=null;return true;} public static Vector2 BeginScrollView(Rect r,Vector2 v,Rect c,bool h,bool b)=>v; public static void EndScrollView(){} }
  public static class GUIUtility { public static string systemCopyBuffer; }
 }
 #if !DASH_UI_TESTS

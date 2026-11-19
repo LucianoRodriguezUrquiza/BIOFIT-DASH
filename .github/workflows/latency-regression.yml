@@ -14,6 +14,7 @@ jobs:
       - run: dotnet run --project tests/ReceiverRegression
       - run: dotnet run --project tests/AndroidDownloadsRegression
       - run: dotnet run --project tests/DashUiRegression
+      - run: dotnet run --project tests/LiftCycle
       - run: dotnet run --project tests/JumpControl
       - run: python3 tests/JumpControl/compare_cooldowns.py
       - run: dotnet run --project tests/PhaseAudit

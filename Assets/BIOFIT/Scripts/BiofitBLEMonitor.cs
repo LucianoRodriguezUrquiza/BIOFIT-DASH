@@ -37,7 +37,20 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private double nextRawDiagnostic, previousUpdate, updateGapMax, eventQueueSum, eventQueueMax;
     private int perfEvents;
     // Opt-in. Old fw2.2.7 or unqualified UP pairs keep the 900ms cooldown.
-    public bool PhaseFastPairs { get; set; }
+    public bool PhaseFastPairs { get; set; } // retained for offline v0910 replay, not selected by UI
+    private readonly BiofitLiftPairDetector liftPairs = new BiofitLiftPairDetector();
+    private bool liftCycleMode;
+    public int ControlEpoch { get; private set; }
+    public bool LiftCycleMode {
+        get => liftCycleMode;
+        set { if(liftCycleMode==value)return;liftCycleMode=value;InvalidateControl(); }
+    }
+    public bool CycleFirmwareReady => BothTrackersConnected && left.firmwareVersion==229 && right.firmwareVersion==229;
+    public double LastCyclePairSeconds => liftPairs.LastPairSeconds;
+    private int cyclePairsAtCaptureStart;
+    public int CyclePairCount => liftPairs.Pairs-cyclePairsAtCaptureStart;
+    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();ControlEpoch++;}
+
     public bool LastPairedWasFastPhase { get; private set; }
     private int phaseFastPairsAtCaptureStart;
     public int FastPhasePairCount =>
@@ -464,7 +477,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public bool StartGameCapture()
     {
         if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || !RawOperation.IsCompleted) return false;
-        string name="BIOFIT_v0910_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
+        string name="BIOFIT_v0911_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
         rawCapture=null;rawSegment=0;syncNumber=0;SyncLabel="SYNC VIDEO";
@@ -475,6 +488,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         gLeftUp = left.upImpulses; gRightUp = right.upImpulses;
         gPairs = jumpDetector.BilateralCandidates;
         phaseFastPairsAtCaptureStart = jumpDetector.FastPhasePairsAccepted;
+        cyclePairsAtCaptureStart = liftPairs.Pairs;
         gCompressed = TimeCompressedEvents;
         gAlignedEvents = alignedEvents;
         gNearMisses = jumpDetector.NearMisses;
@@ -599,6 +613,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " UP=" + (right.upImpulses - gRightUp) + "\n" +
             "PARES UP=" + (jumpDetector.BilateralCandidates - gPairs) +
             " | PARES FASE RAPIDOS=" + FastPhasePairCount +
+            " | PARES CICLO=" + CyclePairCount +
             " | EVENTOS=" + eventCapture.EventRows +
             " | DESCARTADOS=" + DroppedEventCount +
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
@@ -666,6 +681,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         public readonly byte id;
         public string connection = "Sin conectar";
         public string lastEvent = "Todavia no hay eventos";
+        public int firmwareVersion;
         public bool moving;
         public int movOn, movOff, upImpulses;
         public uint lastSensorEventMs;
@@ -889,7 +905,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 tracker.statusWindowStart = 0; tracker.lastStatusCallback = 0;
                 tracker.statusInWindow = 0; tracker.statusHz = 0;
                 inputEngine.ProcessEvent(packet.expectedId, 2, Time.realtimeSinceStartup);
-                timeAligner.Reset(packet.expectedId); jumpDetector.ClearPending();
+                timeAligner.Reset(packet.expectedId); InvalidateControl(); tracker.firmwareVersion=0;
                 continue;
             }
             if (packet.generation != tracker.generation) continue;
@@ -960,6 +976,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         byte[] b = packet.bytes;
         if (b.Length != 20 || b[1] != packet.expectedId) return;
+        if (b[0] == 3) {
+            eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,
+                "LIFT_STATE sensorMs="+U32(b,4)+" state="+b[2]+" reason="+b[3]+
+                " velocityMmS="+I16(b,8)+" minVelocityMmS="+I16(b,10)+
+                " onsets="+U16(b,12)+" rearms="+U16(b,14)+" faults="+U16(b,16)+" fwVersion="+U16(b,18));
+            return;
+        }
         if (b[0] == 2) { ReadDetectorPage(packet); return; }
         if (b[0] != 1) return;
         Tracker tracker = packet.expectedId == 1 ? left : right;
@@ -984,6 +1007,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                       new[]{"rearms","blockMask","blockedSamples","calSamples","restRejected","fwVersion"};
         string detail="FW2 page="+page+" sensorMs="+U32(b,4)+" flags="+b[3];
         for(int i=0;i<6;i++) detail+=" "+names[i]+"="+((page==0&&(i==2||i==3))?I16(b,8+i*2):(int)U16(b,8+i*2));
+        if(page==3) tracker.firmwareVersion=U16(b,18);
         if(page==0) tracker.detector=detail; else tracker.configPages[page]=detail;
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,detail);
     }
@@ -1003,6 +1027,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             case 1: state.moving = true; state.movOn++; break;
             case 2: state.moving = false; state.movOff++; break;
             case 3: state.upImpulses++; break;
+            case 4: break; // LIFT_ONSET extension; still passes common sequence/age gate
             default: return;
         }
 
@@ -1055,7 +1080,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         }
         if (timeAligned != previousUsedAlignedTime)
         {
-            jumpDetector.ClearPending();
+            InvalidateControl();
             previousUsedAlignedTime = timeAligned;
         }
         bool sequenceValid = state.gate.ObserveSequence(sequence);
@@ -1069,17 +1094,17 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             eventCapture.RecordDiagnostic(receivedSeconds, state.id,
                 "RECHAZO_" + rejection + " seq=" + sequence + " fwQueueMs=" + firmwareQueueMs);
         }
-        else inputEngine.ProcessEvent(state.id, eventType,
+        else if(eventType<=3) inputEngine.ProcessEvent(state.id, eventType,
             eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
         CurrentEventTrace = "seq=" + sequence + " sensorMs=" + millis + " callbackS=" +
             callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture);
         dispatchStarted=MonotonicNow; currentCallbackSeconds=callbackSeconds;
         bool phaseEvidence = (b[3] & 0x10) != 0; // fw2.2.8 V2 EVENT flag bit4
-        bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 &&
+        bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 && !LiftCycleMode &&
             jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG,
                 phaseEvidence, PhaseFastPairs);
         LastPairedWasFastPhase = paired && jumpDetector.LastPairUsedFastPhase;
-        if (fresh && eventType == 3)
+        if (fresh && eventType == 3 && !LiftCycleMode)
             eventCapture.RecordDiagnostic(receivedSeconds, state.id,
                 "BILATERAL_DECISION=" + (timeAligner.IsReady(callbackSeconds) ?
                     jumpDetector.LastDecision.ToString() : "ClockNotReady") + " " + CurrentEventTrace +
@@ -1096,6 +1121,14 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             AnkleUpCandidate?.Invoke(state.id, verticalG,
                 eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
 
+        if(eventType==4) {
+            bool eligible=fresh && timeAligner.IsReady(callbackSeconds) && LiftCycleMode && CycleFirmwareReady && (b[3]&0x20)!=0;
+            paired=eligible && liftPairs.Observe(state.id,pairSeconds,verticalG);
+            eventCapture.RecordDiagnostic(receivedSeconds,state.id,
+                "LIFT_PAIR="+(eligible?liftPairs.LastDecision.ToString():"IgnoredOrUnavailable")+" "+CurrentEventTrace+
+                " enabled="+LiftCycleMode+" fwReady="+CycleFirmwareReady+" fresh="+fresh+
+                " pairClockS="+pairSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture));
+        }
         if (paired)
         {
             if (LastPairedWasFastPhase)
@@ -1105,9 +1138,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     " intervalS=" + jumpDetector.LastPairIntervalSeconds.ToString("F6",
                         System.Globalization.CultureInfo.InvariantCulture));
             Debug.Log("BIOFIT: POSIBLE SALTO BILATERAL (NO CONFIRMADO), intervalo " +
-                      jumpDetector.LastPairGapMs.ToString("F0") + " ms");
+                      (eventType==4?liftPairs.LastGapMs:jumpDetector.LastPairGapMs).ToString("F0") + " ms");
             // ReadEvent se ejecuta desde Update(), en el hilo principal.
-            BilateralJumpCandidate?.Invoke(jumpDetector.LastPairGapMs);
+            BilateralJumpCandidate?.Invoke(eventType==4?(float)liftPairs.LastGapMs:jumpDetector.LastPairGapMs);
         }
         // La demora es SOLO el exceso respecto del mejor anclaje STATUS;
         // no se interpreta como latencia BLE absoluta.
@@ -1119,7 +1152,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             timeAligned, relativeDelayMs);
 
         string eventName = eventType == 1 ? "MOV_ON" :
-                           eventType == 2 ? "MOV_OFF" : "UP_IMPULSE";
+                           eventType == 2 ? "MOV_OFF" : eventType==4 ? "LIFT_ONSET" : "UP_IMPULSE";
         state.lastEvent = eventName + (eventType == 3 ? " fase=" +
             (phaseEvidence ? "REARME" : "SIN_PRUEBA") : "") +
             "   t=" + millis + " ms   seq=" + sequence +

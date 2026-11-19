@@ -16,7 +16,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     private readonly BiofitDashCore game = new BiofitDashCore();
 
     private BiofitBLEMonitor monitor;
-    // OFF=0, bilateral LEGACY=1, unilateral izquierda=2, derecha=3, bilateral FASE=4.
+    // OFF=0, bilateral LEGACY=1, unilateral izquierda=2, derecha=3, CICLO EXP=4.
     // Los modos 2 y 3 sirven para diagnosticar la cadena BLE, NO saltos reales.
     private int bleMode;
     private byte thresholdFoot = 1;
@@ -27,6 +27,7 @@ public sealed class BiofitDashGame : MonoBehaviour
     private int bleJumpAttempts;
     private int bleJumpsAccepted;
     private int jumpCommandNumber;
+    private int inputEpoch;
     private BiofitDashCore.JumpResult lastJumpResult;
     private readonly BiofitJumpBuffer jumpBuffer = new BiofitJumpBuffer();
     private int clampedFrames;
@@ -59,14 +60,16 @@ public sealed class BiofitDashGame : MonoBehaviour
     private void OnEnable()
     {
         if (monitor == null) monitor = GetComponent<BiofitBLEMonitor>();
-        monitor.PhaseFastPairs = bleMode == 4;
+        monitor.PhaseFastPairs = false;
+        monitor.LiftCycleMode = bleMode == 4;
+        inputEpoch = monitor.ControlEpoch;
         monitor.BilateralJumpCandidate += OnCandidatePair;
         monitor.AnkleUpCandidate += OnSingleCandidate;
     }
 
     private void OnDisable()
     {
-        if (monitor != null) monitor.PhaseFastPairs = false;
+        if (monitor != null) {monitor.PhaseFastPairs = false;monitor.LiftCycleMode=false;}
         jumpBuffer.Clear();
         if (monitor != null)
         {
@@ -90,17 +93,18 @@ public sealed class BiofitDashGame : MonoBehaviour
             monitor.RecordDecision(0, "PAR_IGNORADO_MODO_O_CONEXION");
             return;
         }
+        if (bleMode==4 && (!monitor.CycleFirmwareReady || !monitor.ClockAlignmentReady)) {
+            monitor.RecordControlDiagnostic("LIFT_BLOCKED firmware229 and current clock anchors required on BOTH trackers");return;
+        }
+        CheckInputEpoch();
         bleJumpAttempts++;
-        if (bleMode == 4 && monitor.LastPairedWasFastPhase)
-            monitor.RecordGameAction("PAR_FASE_RAPIDO_VALIDADO");
-        lastInput = (bleMode == 4 ? "PAR FASE " : "PAR BLE ") +
-            (monitor.LastPairedWasFastPhase ? "RAPIDO " : "") +
+        lastInput = (bleMode == 4 ? "PAR CICLO " : "PAR BLE ") +
             "(" + gapMs.ToString("F0") + " ms)";
-        bool jumped = SubmitJump(0, "BILATERAL");
+        bool jumped = SubmitJump(0, bleMode==4 ? "LIFT_CYCLE" : "BILATERAL");
         if (jumped) bleJumpsAccepted++;
         bool buffered = lastJumpResult == BiofitDashCore.JumpResult.Buffered;
         monitor.RecordDecision(0, jumped ? "PAR_SALTO" :
-            buffered ? "PAR_BUFFERED_180MS" : "PAR_RECHAZADO_" + lastJumpResult);
+            buffered ? (bleMode==4?"PAR_BUFFERED_300MS":"PAR_BUFFERED_180MS") : "PAR_RECHAZADO_" + lastJumpResult);
         monitor.RecordGameAction(jumped ? "SALTO_BLE_REALIZADO" :
             buffered ? "SALTO_BLE_BUFFERED" : "SALTO_BLE_NO_REALIZADO");
     }
@@ -145,6 +149,7 @@ public sealed class BiofitDashGame : MonoBehaviour
 
     private void Update()
     {
+        CheckInputEpoch();
         Keyboard keys = Keyboard.current;
         if (keys != null)
         {
@@ -154,7 +159,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             if (keys.rKey.wasPressedThisFrame)
                 ResetGame();
             if (keys.pKey.wasPressedThisFrame)
-                game.TogglePause();
+                ToggleGamePause();
         }
 
         float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.05f);
@@ -179,7 +184,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             if (completed.State == BiofitJumpBuffer.Completion.Executed)
             {
                 TrackAcceptedJump(completed.Foot, completed.Source);
-                if (completed.Source == "BILATERAL")
+                if ((completed.Source == "BILATERAL" || completed.Source == "LIFT_CYCLE"))
                 {
                     bleJumpsAccepted++;
                     monitor.RecordDecision(0, "PAR_SALTO_BUFFERED");
@@ -217,10 +222,12 @@ public sealed class BiofitDashGame : MonoBehaviour
     private bool SubmitJump(byte foot, string source)
     {
         int id = ++jumpCommandNumber;
-        // Only a valid BILATERAL pair may use the 120ms assist.
+        // Only accepted bilateral commands can use the bounded landing assist.
         // Solo diagnostics and manual input retain v0.9.7 immediate semantics.
         BiofitDashCore.JumpResult result = jumpBuffer.Submit(
-            game, MonotonicSeconds(), foot, source, id, source == "BILATERAL");
+            game, MonotonicSeconds(), foot, source, id, source == "BILATERAL" || source == "LIFT_CYCLE",
+            source=="LIFT_CYCLE"?BiofitJumpBuffer.CycleWindowSeconds:BiofitJumpBuffer.WindowSeconds,
+            source=="LIFT_CYCLE"?monitor.LastCyclePairSeconds:double.NaN);
         lastJumpResult = result;
         monitor.RecordControlDiagnostic("JUMP_COMMAND id=" + id +
             " source=" + source + " result=" + result +
@@ -242,9 +249,24 @@ public sealed class BiofitDashGame : MonoBehaviour
         }
     }
 
+    private void ClearBuffered(string reason)
+    {
+        if(jumpBuffer.Pending) monitor.RecordControlDiagnostic("JUMP_BUFFER_Cancelled reason="+reason);
+        jumpBuffer.Clear();
+    }
+    private void CheckInputEpoch()
+    {
+        if(inputEpoch!=monitor.ControlEpoch || !monitor.BothTrackersConnected ||
+            (bleMode==4 && (!monitor.ClockAlignmentReady || !monitor.CycleFirmwareReady)))
+            ClearBuffered("mode_clock_connection");
+        inputEpoch=monitor.ControlEpoch;
+    }
+    private void OnApplicationPause(bool paused) { if(paused) ClearBuffered("application_pause"); }
+    private void ToggleGamePause() { ClearBuffered("pause_toggle");game.TogglePause(); }
+
     private void ResetGame()
     {
-        jumpBuffer.Clear(); // Never carry a command into a new run.
+        ClearBuffered("restart"); // Never carry a command into a new run.
         visualJumpPending = false;
         game.StartNewGame();
         lastInput = "NUEVA PARTIDA";
@@ -327,43 +349,50 @@ public sealed class BiofitDashGame : MonoBehaviour
             showTestPanel = !showTestPanel;
         if (GUI.Button(new Rect(controlsX + 439f, 29f, 118f, 46f),
             game.Paused ? "REANUDAR" : "PAUSA", compact))
-            game.TogglePause();
+            ToggleGamePause();
         if (GUI.Button(new Rect(controlsX + 568f, 29f, 126f, 46f),
             "REINICIAR", compact))
             ResetGame();
 
         string modeLabel = bleMode == 0 ? "BLE: OFF" :
-            bleMode == 1 ? "BLE: BILATERAL" :
+            bleMode == 1 ? "BLE: BILATERAL LEGACY" :
             bleMode == 2 ? "BLE: SOLO IZQ" :
-            bleMode == 3 ? "BLE: SOLO DER" : "BLE: FASE EXP";
+            bleMode == 3 ? "BLE: SOLO DER" : "BLE: CICLO EXP";
         if (GUI.Button(new Rect(controlsX, 83f, 315f, 43f),
             modeLabel, compact))
         {
             int next = (bleMode + 1) % 5;
+            bool cycleUnavailable=next==4 && !monitor.CycleFirmwareReady;
+            // Older firmware must still be able to leave SOLO DER / turn BLE off.
+            if(cycleUnavailable) next=0;
             if (next != 0 && !monitor.BothTrackersConnected)
                 lastInput = "Faltan trackers para activar BLE";
             else
             {
+                ClearBuffered("mode_change");
                 bleMode = next;
-                monitor.PhaseFastPairs = bleMode == 4;
+                monitor.PhaseFastPairs = false;
+                monitor.LiftCycleMode = bleMode == 4;
+                inputEpoch = monitor.ControlEpoch;
                 string action = bleMode == 0 ? "BLE_MODO_APAGADO" :
                     bleMode == 1 ? "BLE_ACTIVADO" :
                     bleMode == 2 ? "BLE_SOLO_IZQUIERDO" :
-                    bleMode == 3 ? "BLE_SOLO_DERECHO" : "BLE_FASE_EXPERIMENTAL";
+                    bleMode == 3 ? "BLE_SOLO_DERECHO" : "BLE_CICLO_EXPERIMENTAL";
                 monitor.RecordGameAction(action);
                 monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
                 monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
                 lastInput = "Modo BLE: " + (bleMode == 0 ? "OFF" :
                     bleMode == 1 ? "BILATERAL" :
                     bleMode == 2 ? "SOLO IZQ" :
-                    bleMode == 3 ? "SOLO DER" : "FASE EXP (FW2.2.8)");
+                    bleMode == 3 ? "SOLO DER" : "CICLO EXP v1 (FW2.2.9)");
+                if(cycleUnavailable) lastInput="BLE OFF; CICLO requiere FW 2.2.9 confirmado en ambos sensores";
             }
         }
         string connection = monitor.BothTrackersConnected ? "2/2" : "ESPERANDO";
         string sync = monitor.ClockAlignmentReady ? "ALINEADO" : "SIN ANCLAS";
         GUI.Label(new Rect(controlsX + 327f, 86f, 359f, 40f),
             "Sensores: " + connection + "   Reloj: " + sync +
-            "\n" + monitor.ReadinessSummary, hudStatus);
+            "\n" + (bleMode==4 ? "Ciclo v1 / FW229 / min600 / buf300 ms" : monitor.ReadinessSummary), hudStatus);
 
         // Game and diagnostics occupy separate, non-overlapping rectangles.
         GUI.BeginGroup(new Rect(layout.GameX, BiofitDashLayout.WorldTop,
@@ -450,7 +479,7 @@ public sealed class BiofitDashGame : MonoBehaviour
         Draw(new Rect(x, BiofitDashLayout.WorldTop, pw,
             BiofitDashLayout.WorldHeight), new Color(0.09f, 0.16f, 0.24f));
         GUI.Label(new Rect(x + 12f, 149f, pw - 272f, 34f),
-            "v0.9.10", info);
+            "v0.9.11", info);
         // EXP and RAW together. Extra RAW width accommodates RAW: ESPERE.
         if (GUI.Button(new Rect(x + pw - 252f, 149f, 108f, 32f),
             soloDiagnostic.ExperimentalMode ? "EXP: SI" : "EXP: NO", compact))
@@ -495,7 +524,7 @@ public sealed class BiofitDashGame : MonoBehaviour
                 singleJumps = 0;
                 blePairsObserved = bleJumpAttempts = bleJumpsAccepted = jumpCommandNumber = clampedFrames = 0;
                 nextFrameDiagnostic = 0;
-                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.10 pairCooldownS=0.90 fastPhaseMinGapS=0.60 bothEvidence=1 sameAnkleS=0.32 jumpBufferMs=180 oneSlot=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
+                monitor.RecordControlDiagnostic("CONTROL_VERSION=0.9.11 legacyCooldownS=0.90 cycleMinPairS=0.60 onsetG=0.12 legacyBufferMs=180 cycleBufferMs=300 oneSlot=1 bleMode=" + bleMode + " practice=" + game.PracticeMode);
                 monitor.RecordGameAction(soloDiagnostic.ExperimentalMode ? "MODO_EXP_UMBRAL_ON" : "MODO_EXP_UMBRAL_OFF");
                 monitor.RecordSingleFootConfig(1,soloDiagnostic.LeftThresholdG);
                 monitor.RecordSingleFootConfig(2,soloDiagnostic.RightThresholdG);
@@ -531,19 +560,22 @@ public sealed class BiofitDashGame : MonoBehaviour
         }
 
         float labelW = pw - 150f;
+        bool beforeThresholdControls=GUI.enabled;
+        GUI.enabled=beforeThresholdControls && bleMode!=4;
         if (GUI.Button(new Rect(x + 12f, 341f, 53f, 38f), "-", compact))
             monitor.AdjustJumpThreshold(-0.02f);
         GUI.Label(new Rect(x + 72f, 347f, labelW, 30f),
-            "UP: " + monitor.MinUpG.ToString("F2") + " g", panelSmall);
+            bleMode==4 ? "CICLO: 0.12 g fijo" : "UP: " + monitor.MinUpG.ToString("F2") + " g", panelSmall);
         if (GUI.Button(new Rect(x + pw - 66f, 341f, 53f, 38f), "+", compact))
             monitor.AdjustJumpThreshold(+0.02f);
 
         if (GUI.Button(new Rect(x + 12f, 386f, 53f, 38f), "-", compact))
             monitor.AdjustPairWindow(-0.02f);
         GUI.Label(new Rect(x + 72f, 392f, labelW, 30f),
-            "PAR: " + monitor.PairWindowMs.ToString("F0") + " ms", panelSmall);
+            bleMode==4 ? "PAR: 180 ms fijo" : "PAR: " + monitor.PairWindowMs.ToString("F0") + " ms", panelSmall);
         if (GUI.Button(new Rect(x + pw - 66f, 386f, 53f, 38f), "+", compact))
             monitor.AdjustPairWindow(+0.02f);
+        GUI.enabled=beforeThresholdControls;
 
         if (GUI.Button(new Rect(x + 12f, 431f, 53f, 38f), "-", compact))
         {
@@ -571,7 +603,7 @@ public sealed class BiofitDashGame : MonoBehaviour
             "  ocupado " + r.GameUnavailable, panelSmall);
         GUI.Label(new Rect(x + 11f, 562f, pw - 22f, 27f),
             "Pares " + blePairsObserved + " | intentos " + bleJumpAttempts +
-            " | saltos " + bleJumpsAccepted + " | faseRap " + monitor.FastPhasePairCount +
+            " | saltos " + bleJumpsAccepted + " | ciclo " + monitor.CyclePairCount +
             (jumpBuffer.Pending ? " | BUF" : ""),
             panelSmall);
         // Do not put the long RAW summary (hundreds of characters) inside

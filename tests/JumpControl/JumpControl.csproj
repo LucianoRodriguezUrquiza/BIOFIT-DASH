@@ -6,4 +6,5 @@
 <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashCore.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitJumpBuffer.cs" />
 <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventGate.cs" />
+<Compile Include="../../Assets/BIOFIT/Scripts/BiofitLiftPairDetector.cs" />
 </ItemGroup></Project>

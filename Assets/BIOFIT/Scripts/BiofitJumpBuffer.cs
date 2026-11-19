@@ -7,7 +7,8 @@ using System;
 /// </summary>
 public sealed class BiofitJumpBuffer
 {
-    public const double WindowSeconds = 0.180d;
+    public const double WindowSeconds = 0.180d; // legacy unchanged
+    public const double CycleWindowSeconds = 0.300d; // EXP onset-to-execution ceiling
     private bool pending;
     private double armedAt, expiresAt;
     private byte pendingFoot;
@@ -38,11 +39,18 @@ public sealed class BiofitJumpBuffer
     }
 
     public BiofitDashCore.JumpResult Submit(BiofitDashCore game, double nowSeconds,
-        byte foot, string source, int commandId, bool allowBuffer)
+        byte foot, string source, int commandId, bool allowBuffer, double windowSeconds = WindowSeconds, double originSeconds = double.NaN)
     {
         if (game == null) throw new ArgumentNullException(nameof(game));
         if (double.IsNaN(nowSeconds) || double.IsInfinity(nowSeconds))
             throw new ArgumentOutOfRangeException(nameof(nowSeconds));
+        if (double.IsNaN(windowSeconds) || windowSeconds <= 0 || windowSeconds > .300d)
+            throw new ArgumentOutOfRangeException(nameof(windowSeconds));
+        if (double.IsInfinity(originSeconds)) return BiofitDashCore.JumpResult.InputExpired;
+        double origin = double.IsNaN(originSeconds) ? nowSeconds : Math.Min(nowSeconds,originSeconds);
+        double deadline = origin + windowSeconds;
+        // Experimental inputs retain their sensor-aligned age, not a fresh TTL on receipt.
+        if (double.IsInfinity(origin) || nowSeconds > deadline) return BiofitDashCore.JumpResult.InputExpired;
         var result = game.TryJump();
         if (result == BiofitDashCore.JumpResult.Accepted)
         {
@@ -56,11 +64,14 @@ public sealed class BiofitJumpBuffer
             return BiofitDashCore.JumpResult.AlreadyBuffered;
         if (pending) Clear(); // Expired: never accumulate/refresh an old slot.
         double landingSeconds = game.EstimatedSecondsUntilLanding;
-        if (landingSeconds <= 0d || landingSeconds > WindowSeconds)
+        // Euler integration + frame quantization can land later than the continuous
+        // estimate. Experimental admission reserves two recent simulation steps.
+        if(!double.IsNaN(originSeconds)) landingSeconds += 2d*game.LastStepSeconds;
+        if (landingSeconds <= 0d || landingSeconds > deadline-nowSeconds)
             return BiofitDashCore.JumpResult.Airborne;
         pending = true;
         armedAt = nowSeconds;
-        expiresAt = nowSeconds + WindowSeconds;
+        expiresAt = deadline;
         pendingFoot = foot;
         pendingSource = source;
         pendingCommandId = commandId;
@@ -80,7 +91,7 @@ public sealed class BiofitJumpBuffer
             return cancelled;
         }
         // Strict expiry: a stalled Unity frame must not execute an old command.
-        if (double.IsNaN(nowSeconds) || nowSeconds > expiresAt)
+        if (double.IsNaN(nowSeconds) || double.IsInfinity(nowSeconds) || nowSeconds < armedAt || nowSeconds > expiresAt)
         {
             var expired = new Outcome(Completion.Expired, pendingFoot,
                 pendingSource, pendingCommandId, age);

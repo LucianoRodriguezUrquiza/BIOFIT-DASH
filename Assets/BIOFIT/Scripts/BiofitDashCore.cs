@@ -45,6 +45,7 @@ public sealed class BiofitDashCore
     public float Distance { get; private set; }
     public float Speed { get; private set; }
     public float Elapsed { get; private set; }
+    public float LastStepSeconds { get; private set; }
     public int ObstaclesPassed { get; private set; }
     public int BestObstaclesPassed { get; private set; }
     public int SuccessfulJumps { get; private set; }
@@ -61,6 +62,7 @@ public sealed class BiofitDashCore
         JumpAltitude = 0f;
         velocityY = 0f;
         Elapsed = 0f;
+        LastStepSeconds = 0f;
         Distance = 0f;
         Speed = 280f;
         ObstaclesPassed = 0;
@@ -74,7 +76,7 @@ public sealed class BiofitDashCore
         if (Playing && !GameOver) Paused = !Paused;
     }
 
-    public enum JumpResult { Accepted, NotPlaying, GameOver, Paused, Airborne, Buffered, AlreadyBuffered }
+    public enum JumpResult { Accepted, NotPlaying, GameOver, Paused, Airborne, Buffered, AlreadyBuffered, InputExpired }
     /// <summary>
     /// Physics-based remaining airborne time. Infinity unless descending.
     /// This estimates game landing time, NOT physical foot contact or BLE latency.
@@ -111,6 +113,7 @@ public sealed class BiofitDashCore
         dt = Math.Max(0f, Math.Min(dt, 0.05f));
         if (dt <= 0f) return;
 
+        LastStepSeconds = dt;
         Elapsed += dt;
         Speed = Math.Min(405f, 280f + Elapsed * 1.6f);
         Distance += Speed * dt;
