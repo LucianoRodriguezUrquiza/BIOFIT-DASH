@@ -74,6 +74,28 @@ namespace Biofit.GeomeTryOriginal.Editor
                 EditorSceneManager.OpenScene(Scene("Main Menu"));
         }
 
+        [MenuItem("BIOFIT/GeomeTry ORIGINAL/4. Activar URP original para probar en Play")]
+        public static void EnableOriginalPreview()
+        {
+            Verify();
+            if (!EditorUtility.DisplayDialog("Cambiar render solo en esta copia",
+                "La vista previa del GeomeTry original necesita URP 2D. Este cambio afecta temporalmente a la configuracion grafica de esta copia del proyecto, no al firmware, los mapas ni la fisica. ¿Continuar?",
+                "Activar URP", "Cancelar")) return;
+            var urp = AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(Prefix + "Settings/UniversalRP.asset");
+            if (urp == null) throw new InvalidOperationException("No se encontró el asset URP original.");
+            QualitySettings.renderPipeline = null;
+            GraphicsSettings.defaultRenderPipeline = urp;
+            UnityEngine.Debug.Log("Vista previa GeomeTry: URP original activado. Usa opcion 5 para restaurar.");
+        }
+
+        [MenuItem("BIOFIT/GeomeTry ORIGINAL/5. Restaurar render BIOFIT de esta copia")]
+        public static void RestoreBiofitPreview()
+        {
+            QualitySettings.renderPipeline = null;
+            GraphicsSettings.defaultRenderPipeline = null; // base v0.9.11 uses Built-in
+            UnityEngine.Debug.Log("Render BIOFIT restaurado a Built-in en esta copia.");
+        }
+
         [MenuItem("BIOFIT/GeomeTry ORIGINAL/3. Compilar APK Android original + BLE LEGACY")]
         public static void BuildAndroid()
         {
