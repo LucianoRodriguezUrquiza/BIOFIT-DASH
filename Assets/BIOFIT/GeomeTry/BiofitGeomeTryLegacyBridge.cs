@@ -44,6 +44,8 @@ namespace Biofit.GeomeTryOriginal
             root.AddComponent<BiofitGeomeTryLegacyBridge>();
 #if UNITY_ANDROID && !UNITY_EDITOR
             Screen.orientation = ScreenOrientation.LandscapeLeft;
+            // Preserve original GeomeTry's GetMouseButton(0) held-touch input.
+            Input.simulateMouseWithTouches = true;
 #endif
         }
 
