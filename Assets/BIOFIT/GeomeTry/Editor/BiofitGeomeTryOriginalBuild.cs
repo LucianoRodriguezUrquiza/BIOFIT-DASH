@@ -131,7 +131,7 @@ namespace Biofit.GeomeTryOriginal.Editor
                 "Sprites/Character/Wave/Wave001",
                 "Sprites/Obstacles/Tile/smallTile"
             })
-                if (Resources.Load<Sprite>(resource) == null)
+                if (Resources.LoadAll<Sprite>(resource).Length == 0)
                     throw new InvalidOperationException(
                         "PNG de GeomeTry no importado correctamente: " + resource);
 
