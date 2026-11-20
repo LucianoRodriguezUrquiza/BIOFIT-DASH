@@ -27,7 +27,7 @@ sub = module / "Assets/Resources/maps/BASE"
 expect = {
     "StereoMadness": "0af72f78ccc80ad982fcb7aabc0c39387bb2350c",
     "BackOnTrack": "47e10ff7f5b48a8045e3ddcfdd20e1dce2c0deda",
-    "Polargeist": "fe4af269c83b2984c643d6f3282799152ea84dc",
+    "Polargeist": "fe4af269c83b2984c643d6f3282799152ea84dc4",
     "JumpyNightmare": "7c0b86d610daf6b79654b3edeacb5e412dcc2c80"
 }
 for name, sha in expect.items():
