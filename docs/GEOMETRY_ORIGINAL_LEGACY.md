@@ -170,3 +170,23 @@ diferencias imprevistas en lugar de borrar cambios locales. No borres la
 carpeta \`Library\`, no hagas reset, clean ni descartes modificaciones.
 Volver a abrir Unity y verificar Console: las 3 imagenes deben importarse.
 Si quedan errores de compilacion o prefabs, reportar la primera linea roja.
+
+
+## Compatibilidad Windows: verificación de mapas CRLF (2026-11-20)
+
+En Unity 6000.3.28f1 para Windows, el menú `1. Verificar fuente y mapas` devolvía
+`Mapa original modificado: ... StereoMadness.json` aun cuando el mapa estaba
+copiado desde el submódulo original. El verificador de editor comparaba el SHA-1
+Git de los **bytes del checkout** sin contemplar que Git para Windows puede
+convertir los saltos de línea LF del repositorio a CRLF en el disco.
+
+Se corrigió **solo el verificador**: acepta el SHA-1 exacto del Git blob
+original o el mismo SHA-1 tras convertir únicamente `CRLF -> LF` en memoria.
+Si los bytes difieren por cualquier otra razón, el comando seguirá deteniéndose
+con un error explícito y valores de hash. No modifica ni regraba los JSON, ni
+relaja la comprobación de su contenido. Los tests host validan el caso LF/CRLF.
+
+Para aplicar la corrección a `BIOFIT-GeomeTry-ORIGINAL-CORREGIDO`:
+**cerrar Unity** y ejecutar `git pull --ff-only origin feat/geometry-original-legacy-bridge`
+desde esa carpeta, sin borrar `Library` ni archivos locales; reabrir Unity y
+repetir `BIOFIT > GeomeTry ORIGINAL > 1. Verificar fuente y mapas`.
