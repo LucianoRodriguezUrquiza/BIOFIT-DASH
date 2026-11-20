@@ -49,10 +49,42 @@ namespace Biofit.GeomeTryOriginal
 #endif
         }
 
+        // Fail visibly in Editor when an imported original scene is absent
+        // from Unity's enabled Build Scene List. GameManager.SceneExists()
+        // otherwise discards the click without reporting any error.
+        private static void VerifyMenuNavigationInEditor()
+        {
+#if UNITY_EDITOR
+            foreach (string target in new[] { "Main Menu", "Level Selection", "Level" })
+            {
+                bool found = false;
+                for (int i = 0;
+                     i < UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings;
+                     i++)
+                {
+                    string path = UnityEngine.SceneManagement.SceneUtility
+                        .GetScenePathByBuildIndex(i);
+                    if (System.IO.Path.GetFileNameWithoutExtension(path) == target)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    UnityEngine.Debug.LogError(
+                        "BIOFIT GeomeTry: la escena '" + target +
+                        "' no esta habilitada en Build Settings. Los botones " +
+                        "pueden animarse sin navegar. Ejecuta la verificacion " +
+                        "BIOFIT > GeomeTry ORIGINAL > 1. Verificar fuente y mapas.");
+            }
+#endif
+        }
+
         private void OnEnable()
         {
             monitor = GetComponent<BiofitBLEMonitor>();
             if (monitor == null) { enabled = false; return; }
+            VerifyMenuNavigationInEditor();
             monitor.ShowDiagnostics = false;
             monitor.PhaseFastPairs = false;
             monitor.LiftCycleMode = false;
