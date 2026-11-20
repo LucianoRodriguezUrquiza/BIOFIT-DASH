@@ -28,7 +28,7 @@ namespace Biofit.GeomeTryOriginal.Editor
         private static readonly string[] MapBlobs = {
             "0af72f78ccc80ad982fcb7aabc0c39387bb2350c",
             "47e10ff7f5b48a8045e3ddcfdd20e1dce2c0deda",
-            "fe4af269c83b2984c643d6f3282799152ea84dc",
+            "fe4af269c83b2984c643d6f3282799152ea84dc4",
             "7c0b86d610daf6b79654b3edeacb5e412dcc2c80"
         };
 
