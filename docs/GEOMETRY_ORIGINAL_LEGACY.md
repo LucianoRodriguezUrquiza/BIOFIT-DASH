@@ -238,3 +238,40 @@ No hace falta volver a clonar, reimportar todos los assets ni ejecutar otra
 vez los scripts de conversión. El firmware y la selección del canal BLE
 **BILATERAL LEGACY** siguen intactos. Los checks host no garantizan todavía
 el funcionamiento del juego bajo Unity/Android real.
+
+
+## Entrada BLE en orbes originales y ruta de selección (20/11/2026)
+
+La auditoría de `Polargeist` y `JumpyNightmare` identificó que el código
+original `JumpOrb.OnTriggerStay2D` solo aceptaba `Input.GetKey(Space)` o
+`Input.GetMouseButton(0)`. Llamar exclusivamente `Cube.onClick()` no
+activaba los orbes mediante las Waveshare.
+
+El puente mantiene **BILATERAL LEGACY**, sin tocar umbrales/ventanas/cooldowns,
+y añade un pulso opcional de **un solo consumo dentro del siguiente paso
+físico** para los orbes. Un parche limitado a la **copia importada** de
+`JumpOrb.cs` amplía únicamente su condición de entrada: si el collider es un
+`Cube`, puede consumir ese pulso BLE. El valor original de los saltos de
+orbes (12,5 / 20 / 27) y el resto de `OnTriggerStay2D` permanecen intactos.
+Si llega sin orb bajo contacto, el pulso caduca. No se implementa una cola
+ni se mantienen pulsaciones artificiales.
+
+Asimismo se corrige la capitalización de la ruta del controlador
+`LevelSelectionManager` en la copia importada de
+`"Maps/Base"` a `"maps/BASE"`, que coincide con el directorio existente;
+los archivos JSON siguen idénticos. El submódulo original completo permanece
+prístino e inalterado. La nave y la wave conservan su entrada táctil original;
+**no se afirma que puedan pilotarse con BLE**.
+
+**Importante para la copia ya existente:** tras cerrar Unity y hacer
+`git pull --ff-only origin feat/geometry-original-legacy-bridge`, ejecutar
+también `powershell -NoProfile -ExecutionPolicy Bypass -File
+".\\tools\\apply_geometry_compat.ps1"` desde
+`BIOFIT-GeomeTry-ORIGINAL-CORREGIDO`. El script vuelve a comprobar las
+correcciones ya aplicadas (PNG, Camera), agrega solo las dos compatibilidades
+nuevas y rechaza sobrescribir diferencias locales inesperadas.
+
+El verificador de Unity ahora informa si falta el parche del orbe.
+El CI verifica la existencia del puente y la conservación del archivo
+`JumpOrb.cs` original. La interacción real con orbes sigue pendiente de
+Play Mode en Unity y de una APK física Android.
