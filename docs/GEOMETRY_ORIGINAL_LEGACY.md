@@ -56,7 +56,8 @@ ni anticipación de aterrizaje, ni cambia los saltos físicos. Las órdenes
 en aire pueden no hacer nada. No se promete que cada gesto produzca salto:
 el detector legacy mantiene su cooldown y su ambigüedad biomecánica.
 `Ship` y `Wave` siguen con el input clásico de toque mantenido de
-GeomeTry; no se añade control BLE de vuelo por ahora.
+GeomeTry; en Android se activa explícitamente la simulación táctil del botón
+izquierdo del ratón. No se añade control BLE de vuelo por ahora.
 
 Para que coexistan el input clásico de GeomeTry y el Input System de BIOFIT,
 en esta rama únicamente se cambia `activeInputHandler: 1` a `2 (Both)`.
@@ -86,9 +87,11 @@ La señal BLE no se interpreta como un salto humano confirmado.
    el submódulo completo; se resolverá URP 17.3.0. Comprobá la Console.
 4. Menú **BIOFIT > GeomeTry ORIGINAL > 1. Verificar fuente y mapas**.
    Verifica cuatro JSON con hashes de blob Git, escenas y prefabs.
-5. Menú **2. Abrir Main Menu original**. Play: probá pantalla táctil,
-   selección, nivel, salto, muerte, nave, wave y orbes. Confirmá que no hay
-   errores de referencias, Input/URP ni escenas.
+5. Menú **2. Abrir Main Menu original**. Para ver exactamente los materiales
+   originales en Editor, usá **4. Activar URP original para probar en Play**
+   (solo en la copia); al terminar podrás usar **5. Restaurar render BIOFIT**.
+   Play: probá pantalla táctil, selección, nivel, salto, muerte, nave, wave y
+   orbes. Confirmá que no hay errores de referencias, Input/URP ni escenas.
 6. File > Build Profiles > Android > Switch Platform. Comprobá el permiso Bluetooth, la firma y el versionCode. El comando de
    compilación aplica temporalmente otro identificador de Android y nombre;
    no altera permanentemente esos valores en el proyecto.
