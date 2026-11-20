@@ -16,6 +16,7 @@ jobs:
       - run: dotnet run --project tests/DashUiRegression
       - run: dotnet run --project tests/LiftCycle
       - run: dotnet run --project tests/JumpControl
+      - run: dotnet run --project tests/GeometryCommandGate
       - run: python3 tests/JumpControl/compare_cooldowns.py
       - run: dotnet run --project tests/PhaseAudit
       - run: dotnet run --project tests/RawRegression
