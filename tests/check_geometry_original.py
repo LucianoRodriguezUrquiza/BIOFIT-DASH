@@ -38,4 +38,18 @@ for name, sha in expect.items():
     assert path.is_file(), "Missing original map " + name
     blob = subprocess.check_output(["git", "hash-object", str(path)], text=True).strip()
     assert blob == sha, "Original map changed: " + name
+# Three upstream *.png are actually WebP. Unity compatibility PNGs are
+# pixel-preserving, generated from those originals, and stored outside Assets.
+png_overlays = {
+    "Wave001.png": "2d592ec4d95ec34d0b9495324a8eabf6e9ca5dfe",
+    "Ship.png": "056889cdf164663d59c066881e59afbcabc287fb",
+    "smallTile.png": "60aa0fdaaae0b5b7b4d8765ee3f5b3b457ad5963"
+}
+for filename, expected_sha in png_overlays.items():
+    f = root / "tools/geometry_compat" / filename
+    assert f.is_file() and f.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"), filename
+    sha = subprocess.check_output(["git", "hash-object", str(f)], text=True).strip()
+    assert sha == expected_sha, "Integrity failure in compatibility PNG: " + filename
+assert (root / "tools/apply_geometry_compat.ps1").is_file()
+assert 'apply_geometry_compat.ps1' in (root / "tools/prepare_geometry_original.ps1").read_text()
 print("PASS: Original repo isolated outside Unity Assets; maps intact; BIOFIT legacy receiver/physics preserved.")

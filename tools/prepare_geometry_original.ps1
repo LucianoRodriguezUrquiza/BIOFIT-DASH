@@ -41,6 +41,9 @@ foreach ($f in $files) {
 if (Test-Path -LiteralPath (Join-Path $targetParent "ProjectSettings")) {
     throw "No debe haber ProjectSettings dentro de Assets/GeomeTryOriginal"
 }
+# Apply only checked Unity import compatibility overlays after SHA-256 source verification.
+& (Join-Path $PSScriptRoot "apply_geometry_compat.ps1")
+
 Write-Host "OK: copia exacta de $($files.Count) archivos originales en Assets/GeomeTryOriginal/Assets"
 Write-Host "OK: ProjectSettings y Packages de GeomeTry quedan FUERA de Unity, sin importarse."
 Write-Host "OK: originales intactos en ThirdParty/GeomeTryOriginal."

@@ -138,3 +138,35 @@ La señal BLE no se interpreta como un salto humano confirmado.
 - Este cambio no demuestra equivalencia bit a bit de físicas entre Unity
   6000.0.27f1 original y 6000.3.28f1 BIOFIT: se conservan código, prefabs
   y parámetros; falta la prueba en Editor/Android.
+
+
+## Compatibilidad adicional detectada en Unity 6000.3.28f1
+
+La segunda importacion de la copia corregida revelo tres archivos que el upstream
+denomina "*.png", aunque internamente tienen formato RIFF/WEBP: 
+\`Wave001.png\`, \`Ship.png\` y \`smallTile.png\`. Se decodificaron
+en PNG genuino y se comprobo igualdad exacta del contenido RGBA pixel por pixel.
+Se conservan sus nombres originales y archivos .meta/GUID: no se cambian
+aspecto, posicion, niveles, colliders ni fisica.
+
+Unity 6 tambien advierte que \`Camera\` coincide con una clase incorporada.
+La reparacion renombra la clase MonoBehaviour de camara a
+\`GeometryCamera\` SOLO en la copia importada, moviendo su \`.meta\` sin
+alterar GUID, y cambia cuatro referencias tipadas al nombre nuevo. El
+seguimiento de la camara conserva el algoritmo original.
+
+La carpeta \`ThirdParty/GeomeTryOriginal\` no se toca.
+La preparacion de un clon nuevo aplica el parche automaticamente despues de
+copiar y comprobar los 469 archivos originales. Para una carpeta ya preparada,
+**cerrar Unity** y, dentro de \`BIOFIT-GeomeTry-ORIGINAL-CORREGIDO\`, ejecutar:
+
+\`\`\`powershell
+git pull --ff-only origin feat/geometry-original-legacy-bridge
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\apply_geometry_compat.ps1"
+\`\`\`
+
+El script es idempotente, compara archivos antes de reemplazar y rechaza
+diferencias imprevistas en lugar de borrar cambios locales. No borres la
+carpeta \`Library\`, no hagas reset, clean ni descartes modificaciones.
+Volver a abrir Unity y verificar Console: las 3 imagenes deben importarse.
+Si quedan errores de compilacion o prefabs, reportar la primera linea roja.
