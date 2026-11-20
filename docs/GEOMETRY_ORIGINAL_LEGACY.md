@@ -89,19 +89,19 @@ La señal BLE no se interpreta como un salto humano confirmado.
 5. Menú **2. Abrir Main Menu original**. Play: probá pantalla táctil,
    selección, nivel, salto, muerte, nave, wave y orbes. Confirmá que no hay
    errores de referencias, Input/URP ni escenas.
-6. File > Build Profiles > Android > Switch Platform. Comprobá permiso
-   Bluetooth, Application Identifier, firma y versionCode. El build usa los
-   valores locales existentes: no los modifica.
+6. File > Build Profiles > Android > Switch Platform. Comprobá el permiso Bluetooth, la firma y el versionCode. El comando de
+   compilación aplica temporalmente otro identificador de Android y nombre;
+   no altera permanentemente esos valores en el proyecto.
 7. Menú **3. Compilar APK Android original + BLE LEGACY**. Si Unity lo completa,
    el archivo aparece en `Builds/BIOFIT_GeomeTry_ORIGINAL_LEGACY_*.apk`.
    El comando selecciona las diez escenas originales **sin sobrescribir
-   las listas locales de Build Profiles**, y restaura el ajuste gráfico
-   temporal tras compilar.
-8. No desinstales tu APK anterior por defecto: Android requiere mismo package
-   ID, firma y versionCode admisible para actualizar sin borrar los datos.
-   Para evitar cualquier riesgo, probá con un paquete diferente **solo en
-   una copia del proyecto**; eso crea otra aplicación, sin compartir archivos
-   privados ni firma de la existente.
+   las listas locales de Build Profiles** y restaura los ajustes temporales.
+8. **Esta candidata se compila como una nueva app independiente**
+   (`com.biofitgame.geometryoriginal`, nombre `BIOFIT GeomeTry`), no como
+   actualización de BIOFIT DASH. El comando modifica temporalmente el
+   identificador y el nombre solo durante el build, y después los restaura.
+   Así podés tener las dos APK instaladas. Cada aplicación mantiene su propio
+   almacenamiento privado y sus propias sesiones; no desinstales BIOFIT DASH.
 
 ## Verificaciones y limitaciones
 
