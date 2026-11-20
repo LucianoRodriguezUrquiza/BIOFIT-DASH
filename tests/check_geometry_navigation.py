@@ -94,6 +94,16 @@ assert "BilateralJumpCandidate += OnBilateralLegacyCandidate" in bridge
 assert "cube.onClick();" in bridge
 assert "monitor.PhaseFastPairs = false;" in bridge
 assert "monitor.LiftCycleMode = false;" in bridge
+assert "TryConsumeOrbPulse()" in bridge
+compat = (root / "tools/apply_geometry_compat.ps1").read_text(encoding="utf-8")
+assert "TryConsumeOrbPulse()" in compat, "BLE JumpOrb compatibility patch missing"
+assert 'Resources.LoadAll<TextAsset>("maps/BASE")' in compat, (
+    "Original menu resource-path normalization missing"
+)
+assert 'Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)' in (
+    upstream / "Scripts/JumpOrb.cs").read_text(encoding="utf-8"), (
+    "Pristine upstream JumpOrb input must remain unchanged"
+)
 
 print("PASS: original scene list/menu buttons/scene GUIDs, "
       "5 full source maps, prefab/music resources and legacy BLE cube bridge")
