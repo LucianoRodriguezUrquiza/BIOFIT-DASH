@@ -190,3 +190,51 @@ Para aplicar la corrección a `BIOFIT-GeomeTry-ORIGINAL-CORREGIDO`:
 **cerrar Unity** y ejecutar `git pull --ff-only origin feat/geometry-original-legacy-bridge`
 desde esa carpeta, sin borrar `Library` ni archivos locales; reabrir Unity y
 repetir `BIOFIT > GeomeTry ORIGINAL > 1. Verificar fuente y mapas`.
+
+
+## Navegación del menú original en Play Mode — diagnóstico y solución (20/11/2026)
+
+**Causa comprobada del botón Play que anima pero no navega:** el botón original
+está enlazado en `Main Menu.unity` a
+`UIManager.OnClickSwitchSceneButton("Level Selection")`. Ese método invoca
+`GameManager.LoadScene`, que comprueba `SceneExists` **solo en las escenas
+habilitadas en Unity Build Settings**. La rama BIOFIT v0.9.11 contenía
+únicamente `Assets/Scenes/SampleScene.unity` en esa lista, por lo que
+`GameManager` descartaba el cambio de escena sin informar del fallo.
+
+**Corrección publicada:** `ProjectSettings/EditorBuildSettings.asset` ahora
+registra las diez escenas originales de GeomeTry en el orden del proyecto
+original y con sus GUID originales. `Main Menu` ocupa el índice 0;
+`SampleScene` sigue existiendo, pero queda deshabilitada en la lista.
+El código de navegación de GeomeTry, los JSON de niveles y toda la física
+se conservan literalmente sin cambios.
+
+**Auditorías preventivas nuevas:**
+- `BIOFIT > GeomeTry ORIGINAL > 1. Verificar fuente y mapas` comprueba la
+  Scene List activa, las cinco fuentes JSON originales (los cuatro prioritarios
+  y `WaveVibe`), su parseo con el parser original, música, prefabs, sprites
+  y los hashes de cuatro mapas fijados.
+- Al entrar a Play en el menú, el puente BIOFIT advierte explícitamente
+  si falta alguna escena indispensable de navegación.
+- El CI ejecuta `tests/check_geometry_navigation.py` para garantizar que
+  las transiciones declaradas en las escenas originales coincidan con las
+  escenas registradas y que todos los tipos de objeto de los mapas tengan
+  los prefabs originales necesarios.
+- El panel de estado BLE inicia compacto en el borde superior derecho para
+  no tapar título o botones originales. `ESTADO / REGISTRO` lo expande.
+
+**Aplicar en la instalación ya creada:**
+1. Salir de Play y **cerrar Unity completamente**.
+2. En PowerShell:
+   `cd "C:\Users\Capo\Documents\BIOFIT-GeomeTry-ORIGINAL-CORREGIDO"`
+3. Ejecutar:
+   `git pull --ff-only origin feat/geometry-original-legacy-bridge`
+4. Reabrir el mismo proyecto Unity, ejecutar `1. Verificar fuente y mapas`
+   y probar `Play` > botón grande central > `Level Selection`.
+5. Si algún paso falla, copiar el **primer error real** de Console. No usar
+   `reset`, `clean`, `restore` o descarte de cambios.
+
+No hace falta volver a clonar, reimportar todos los assets ni ejecutar otra
+vez los scripts de conversión. El firmware y la selección del canal BLE
+**BILATERAL LEGACY** siguen intactos. Los checks host no garantizan todavía
+el funcionamiento del juego bajo Unity/Android real.
