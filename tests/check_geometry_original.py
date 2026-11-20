@@ -1,0 +1,25 @@
+"""Read-only source-preservation contract for original GeomeTry integration."""
+import pathlib, re, subprocess
+root = pathlib.Path(__file__).resolve().parents[1]
+def git(*args):
+    return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
+entry = git("ls-tree", "HEAD", "Assets/GeomeTryOriginal")
+assert entry.startswith("160000 commit d922caddb4d21ecb791a266143e279bdb969d42c"), entry
+modules = (root / ".gitmodules").read_text()
+assert 'url = https://github.com/Christ0u/GeomeTry.git' in modules
+assert 'path = Assets/GeomeTryOriginal' in modules
+bridge = (root / "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs").read_text()
+assert "cube.onClick();" in bridge and 'BilateralJumpCandidate += OnBilateralLegacyCandidate' in bridge
+assert "if (cube == null" in bridge
+assert "Time.timeScale = 1.5" not in bridge
+for path in ("ProjectSettings/Physics2DSettings.asset", "ProjectSettings/TimeManager.asset",
+             "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs", "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs"):
+    baseline = subprocess.check_output(["git", "show", "5616fc4571193d4a2d076550a909089344144384:" + path], cwd=root)
+    assert (root / path).read_bytes() == baseline, path + " was modified"
+cfg = (root / "ProjectSettings/ProjectSettings.asset").read_text()
+assert re.search(r'^  activeInputHandler: 2$', cfg, re.M)
+sub = root / "Assets/GeomeTryOriginal/Assets/Resources/maps/BASE"
+if sub.exists():
+    for name in ("StereoMadness", "BackOnTrack", "Polargeist", "JumpyNightmare"):
+        assert (sub / (name + ".json")).is_file(), name + " missing in submodule"
+print("PASS: Gitlink pins original GeomeTry; BIOFIT detector/physics unchanged; dual input enabled.")
