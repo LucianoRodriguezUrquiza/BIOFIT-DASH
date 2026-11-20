@@ -23,6 +23,26 @@ namespace Biofit.GeomeTryOriginal
         private int accepted, executed, ignored;
         private int receiverEpoch;
         private bool showRecording;
+        // One accepted bilateral pair may also operate a jump-orb in air.
+        // This is input only: the original JumpOrb applies its original force.
+        // The pulse is consumable only on the NEXT physics step, never held
+        // as a virtual key and never accumulated in a landing buffer.
+        private static long orbPulseId;
+        private static long consumedOrbPulseId;
+        private static float orbPulseDeadline;
+
+        public static bool TryConsumeOrbPulse()
+        {
+            if (orbPulseId == consumedOrbPulseId) return false;
+            if (Time.fixedTime > orbPulseDeadline)
+            {
+                consumedOrbPulseId = orbPulseId;
+                return false;
+            }
+            consumedOrbPulseId = orbPulseId;
+            return true;
+        }
+
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -105,6 +125,7 @@ namespace Biofit.GeomeTryOriginal
             if (monitor == null) return;
             // Old unmatched one-foot impulses cannot form a jump in another scene.
             monitor.JumpDetector.ClearPending();
+            consumedOrbPulseId = orbPulseId;
             receiverEpoch = monitor.ControlEpoch;
             monitor.ShowDiagnostics = false;
         }
@@ -145,6 +166,12 @@ namespace Biofit.GeomeTryOriginal
                 ignored++;
                 return;
             }
+
+            // BLE input for existing JumpOrbs: one-use on the next physics
+            // step only. The imported original JumpOrb code still controls
+            // collider, contact and exact vertical velocity.
+            orbPulseId++;
+            orbPulseDeadline = Time.fixedTime + Time.fixedDeltaTime * 1.5f;
 
             // One BLE pair = one momentary original Cube.onClick invocation.
             // No held virtual key, queue, landing buffer or rewritten Jump() physics.
