@@ -162,5 +162,29 @@ if (!(Test-Path -LiteralPath "$orbDest.meta" -PathType Leaf)) {
     throw "Falta el .meta/GUID original de JumpOrb."
 }
 
+# The upstream level-selection Resources path uses different capitalization
+# from its actual "Resources/maps/BASE" directory. Normalize only the string
+# in the *imported* controller, so Editor and Android resolve identically.
+$selectSource = Join-Path $original "Scripts\LevelSelectionManager.cs"
+$selectDest = Join-Path $imported "Scripts\LevelSelectionManager.cs"
+$before = 'Resources.LoadAll<TextAsset>("Maps/Base")'
+$after  = 'Resources.LoadAll<TextAsset>("maps/BASE")'
+if (!(Test-Path -LiteralPath $selectSource -PathType Leaf) -or
+    !(Test-Path -LiteralPath $selectDest -PathType Leaf)) {
+    throw "Falta script original de seleccion de niveles."
+}
+$selectCode = [IO.File]::ReadAllText($selectDest)
+if ($selectCode.Contains($after)) {
+    Write-Host "OK: ruta de mapas de seleccion ya normalizada."
+} else {
+    if (!(Same-Bytes $selectSource $selectDest) -or
+        !$selectCode.Contains($before)) {
+        throw "LevelSelectionManager.cs tiene modificaciones no previstas."
+    }
+    [IO.File]::WriteAllText($selectDest, $selectCode.Replace($before,$after),
+        (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "OK: seleccion de mapas usa Resources/maps/BASE (sin alterar mapas)."
+}
+
 Write-Host "OK: reparacion visual y de camara completada. Fuente original sin modificar."
 Write-Host "Ya podes abrir Unity 6000.3.28f1 y comprobar la consola."
