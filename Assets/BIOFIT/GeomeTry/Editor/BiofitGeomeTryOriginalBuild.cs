@@ -117,6 +117,17 @@ namespace Biofit.GeomeTryOriginal.Editor
                 }
             }
 
+            // A legacy BLE pulse must operate the original in-air orbs too,
+            // or Polargeist/JumpyNightmare cannot be played by bodily input.
+            string orbPath = Prefix + "Scripts/JumpOrb.cs";
+            if (!File.Exists(orbPath) ||
+                !File.ReadAllText(orbPath).Contains("TryConsumeOrbPulse()"))
+                throw new InvalidOperationException(
+                    "Falta compatibilidad de entrada BLE en JumpOrb. " +
+                    "Cierra Unity, actualiza Git y ejecuta " +
+                    "tools/apply_geometry_compat.ps1. " +
+                    "No modifiques los mapas ni la fisica.");
+
             foreach (string resource in new[] {
                 "Prefabs/Player/CubePrefab", "Prefabs/Player/ShipPrefab",
                 "Prefabs/Player/WavePrefab", "Prefabs/Decors/GroundPrefab",
