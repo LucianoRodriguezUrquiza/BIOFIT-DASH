@@ -36,8 +36,22 @@ expect = {
 for name, sha in expect.items():
     path = sub / (name + ".json")
     assert path.is_file(), "Missing original map " + name
-    blob = subprocess.check_output(["git", "hash-object", str(path)], text=True).strip()
-    assert blob == sha, "Original map changed: " + name
+    # Git for Windows with core.autocrlf=true may expand only LF -> CRLF.
+    # Verify the upstream Git object and that the checkout differs, at most,
+    # in line endings. Never silently accept content/map edits.
+    committed = subprocess.check_output(
+        ["git", "-C", str(module), "show",
+         "HEAD:Assets/Resources/maps/BASE/" + name + ".json"])
+    raw = path.read_bytes()
+    assert raw == committed or raw.replace(b"\\r\\n", b"\\n") == committed, (
+        "Original map differs beyond line endings: " + name)
+    import hashlib
+    git_blob = hashlib.sha1(b"blob " + str(len(committed)).encode("ascii") +
+                            b"\\0" + committed).hexdigest()
+    assert git_blob == sha, "Upstream Git blob ID differs: " + name
+    # The Editor verifier must accept a CRLF-only Windows checkout as well.
+    windows = committed.replace(b"\\n", b"\\r\\n")
+    assert windows.replace(b"\\r\\n", b"\\n") == committed
 # Three upstream *.png are actually WebP. Unity compatibility PNGs are
 # pixel-preserving, generated from those originals, and stored outside Assets.
 png_overlays = {
