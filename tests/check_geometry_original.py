@@ -18,8 +18,21 @@ for path in ("ProjectSettings/Physics2DSettings.asset", "ProjectSettings/TimeMan
     assert (root / path).read_bytes() == baseline, path + " was modified"
 cfg = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 assert re.search(r'^  activeInputHandler: 2$', cfg, re.M)
-sub = root / "Assets/GeomeTryOriginal/Assets/Resources/maps/BASE"
-if sub.exists():
-    for name in ("StereoMadness", "BackOnTrack", "Polargeist", "JumpyNightmare"):
-        assert (sub / (name + ".json")).is_file(), name + " missing in submodule"
+module = root / "Assets/GeomeTryOriginal"
+assert (module / ".git").exists(), "Original GeomeTry submodule not initialized!"
+actual_commit = subprocess.check_output(["git", "-C", str(module), "rev-parse", "HEAD"], text=True).strip()
+assert actual_commit == "d922caddb4d21ecb791a266143e279bdb969d42c", actual_commit
+assert subprocess.check_output(["git", "-C", str(module), "status", "--porcelain"], text=True).strip() == "", "Original submodule has local modifications"
+sub = module / "Assets/Resources/maps/BASE"
+expect = {
+    "StereoMadness": "0af72f78ccc80ad982fcb7aabc0c39387bb2350c",
+    "BackOnTrack": "47e10ff7f5b48a8045e3ddcfdd20e1dce2c0deda",
+    "Polargeist": "fe4af269c83b2984c643d6f3282799152ea84dc",
+    "JumpyNightmare": "7c0b86d610daf6b79654b3edeacb5e412dcc2c80"
+}
+for name, sha in expect.items():
+    path = sub / (name + ".json")
+    assert path.is_file(), "Missing original map " + name
+    blob = subprocess.check_output(["git", "hash-object", str(path)], text=True).strip()
+    assert blob == sha, "Original map changed: " + name
 print("PASS: Gitlink pins original GeomeTry; BIOFIT detector/physics unchanged; dual input enabled.")
