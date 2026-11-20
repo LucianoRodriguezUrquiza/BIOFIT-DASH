@@ -35,6 +35,38 @@ namespace Biofit.GeomeTryOriginal.Editor
 
         private static string Scene(string name) => Prefix + "Scenes/" + name + ".unity";
 
+        private static string GitBlobSha(byte[] contents)
+        {
+            byte[] header = Encoding.ASCII.GetBytes("blob " + contents.Length + "\0");
+            byte[] combined = new byte[header.Length + contents.Length];
+            Buffer.BlockCopy(header, 0, combined, 0, header.Length);
+            Buffer.BlockCopy(contents, 0, combined, header.Length, contents.Length);
+            using (var sha = SHA1.Create())
+                return BitConverter.ToString(sha.ComputeHash(combined)).Replace("-", "").ToLowerInvariant();
+        }
+
+        // Git autocrlf on Windows may convert only CRLF line endings in JSON.
+        // All other bytes are preserved and must still match the pinned Git blob.
+        private static byte[] NormalizeCrLf(byte[] contents)
+        {
+            using (var output = new MemoryStream(contents.Length))
+            {
+                for (int i = 0; i < contents.Length; i++)
+                {
+                    if (contents[i] == 13 && i + 1 < contents.Length && contents[i + 1] == 10)
+                    {
+                        output.WriteByte(10);
+                        i++;
+                    }
+                    else
+                    {
+                        output.WriteByte(contents[i]);
+                    }
+                }
+                return output.ToArray();
+            }
+        }
+
         [MenuItem("BIOFIT/GeomeTry ORIGINAL/1. Verificar fuente y mapas")]
         public static void Verify()
         {
@@ -49,15 +81,21 @@ namespace Biofit.GeomeTryOriginal.Editor
                 string path = Prefix + "Resources/maps/BASE/" + SourceMaps[i] + ".json";
                 if (!File.Exists(path)) throw new InvalidOperationException("Falta mapa: " + path);
                 byte[] raw = File.ReadAllBytes(path);
-                byte[] header = Encoding.ASCII.GetBytes("blob " + raw.Length + "\0");
-                byte[] combined = new byte[header.Length + raw.Length];
-                Buffer.BlockCopy(header, 0, combined, 0, header.Length);
-                Buffer.BlockCopy(raw, 0, combined, header.Length, raw.Length);
-                using (var sha = SHA1.Create())
+                // Git on Windows may check out JSON with CRLF instead of the LF
+                // stored in the upstream blob. Accept *only* that EOL conversion.
+                // Never rewrite the JSON or weaken the upstream hash contract.
+                string actual = GitBlobSha(raw);
+                if (actual != MapBlobs[i])
                 {
-                    string actual = BitConverter.ToString(sha.ComputeHash(combined)).Replace("-", "").ToLowerInvariant();
-                    if (actual != MapBlobs[i])
-                        throw new InvalidOperationException("Mapa original modificado: " + path);
+                    byte[] lf = NormalizeCrLf(raw);
+                    if (lf.Length == raw.Length || GitBlobSha(lf) != MapBlobs[i])
+                    {
+                        throw new InvalidOperationException(
+                            "Mapa distinto del original incluso tras normalizar CRLF: " + path +
+                            " (SHA1 Git=" + actual + ", esperado=" + MapBlobs[i] + "). " +
+                            "No cambies los JSON. Revisa el checkout de Git.");
+                    }
+                    UnityEngine.Debug.Log("BIOFIT: mapa verificado con saltos de linea de Windows (CRLF): " + path);
                 }
             }
             foreach (string name in new[] {"CubePrefab", "ShipPrefab", "WavePrefab"})
