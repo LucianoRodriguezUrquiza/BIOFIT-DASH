@@ -1,0 +1,801 @@
+{
+  "id": 2,
+  "title": "Back on Track · BIOFIT",
+  "sourceFile": "BackOnTrack.json",
+  "sourceSha256": "8b95bbf8572120d0f5cbd8a4ed367b9b96330a98b74d220445403a85dc28c0a1",
+  "finishX": 238.4,
+  "obstacles": [
+    {
+      "id": 1,
+      "kind": "spike",
+      "x": 8.0,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 2,
+      "kind": "pad",
+      "x": 6.4,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 3,
+      "kind": "spike",
+      "x": 15.8,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 4,
+      "kind": "spike",
+      "x": 23.6,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 5,
+      "kind": "spike",
+      "x": 31.4,
+      "y": 0.325,
+      "width": 1.4,
+      "height": 0.65
+    },
+    {
+      "id": 6,
+      "kind": "pad",
+      "x": 29.8,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 7,
+      "kind": "spike",
+      "x": 39.2,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 8,
+      "kind": "spike",
+      "x": 47.0,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 9,
+      "kind": "spike",
+      "x": 54.8,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 10,
+      "kind": "spike",
+      "x": 62.6,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 11,
+      "kind": "spike",
+      "x": 70.4,
+      "y": 0.325,
+      "width": 1.4,
+      "height": 0.65
+    },
+    {
+      "id": 12,
+      "kind": "pad",
+      "x": 68.8,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 13,
+      "kind": "spike",
+      "x": 78.2,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 14,
+      "kind": "pad",
+      "x": 76.6,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 15,
+      "kind": "spike",
+      "x": 86.0,
+      "y": 0.325,
+      "width": 1.4,
+      "height": 0.65
+    },
+    {
+      "id": 16,
+      "kind": "spike",
+      "x": 93.8,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 17,
+      "kind": "pad",
+      "x": 92.2,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 18,
+      "kind": "block",
+      "x": 101.6,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 19,
+      "kind": "spike",
+      "x": 109.4,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 20,
+      "kind": "spike",
+      "x": 117.2,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 21,
+      "kind": "pad",
+      "x": 115.6,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 22,
+      "kind": "block",
+      "x": 125.0,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 23,
+      "kind": "block",
+      "x": 132.8,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 24,
+      "kind": "spike",
+      "x": 140.6,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 25,
+      "kind": "spike",
+      "x": 148.4,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 26,
+      "kind": "pad",
+      "x": 146.8,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 27,
+      "kind": "block",
+      "x": 156.2,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 28,
+      "kind": "block",
+      "x": 164.0,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 29,
+      "kind": "pad",
+      "x": 162.4,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 30,
+      "kind": "spike",
+      "x": 171.8,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 31,
+      "kind": "spike",
+      "x": 179.6,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 32,
+      "kind": "spike",
+      "x": 187.4,
+      "y": 0.325,
+      "width": 1.05,
+      "height": 0.65
+    },
+    {
+      "id": 33,
+      "kind": "block",
+      "x": 195.2,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 34,
+      "kind": "spike",
+      "x": 203.0,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    },
+    {
+      "id": 35,
+      "kind": "pad",
+      "x": 201.4,
+      "y": 0.08,
+      "width": 0.4,
+      "height": 0.16
+    },
+    {
+      "id": 36,
+      "kind": "block",
+      "x": 210.8,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 37,
+      "kind": "block",
+      "x": 218.6,
+      "y": 0.425,
+      "width": 1.2,
+      "height": 0.85
+    },
+    {
+      "id": 38,
+      "kind": "spike",
+      "x": 226.4,
+      "y": 0.325,
+      "width": 0.7,
+      "height": 0.65
+    }
+  ],
+  "sections": [
+    {
+      "sourceStart": 0,
+      "sourceEnd": 11,
+      "sourceIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "jumpX": 5.75,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 12,
+      "sourceEnd": 23,
+      "sourceIndices": [
+        5,
+        6
+      ],
+      "jumpX": 13.55,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 24,
+      "sourceEnd": 35,
+      "sourceIndices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "jumpX": 21.35,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 36,
+      "sourceEnd": 47,
+      "sourceIndices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "jumpX": 29.15,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 48,
+      "sourceEnd": 59,
+      "sourceIndices": [
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "jumpX": 36.95,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 60,
+      "sourceEnd": 71,
+      "sourceIndices": [
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34
+      ],
+      "jumpX": 44.75,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 72,
+      "sourceEnd": 83,
+      "sourceIndices": [
+        35,
+        36,
+        37
+      ],
+      "jumpX": 52.55,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 84,
+      "sourceEnd": 95,
+      "sourceIndices": [
+        38,
+        39,
+        40
+      ],
+      "jumpX": 60.35,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 96,
+      "sourceEnd": 107,
+      "sourceIndices": [
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66
+      ],
+      "jumpX": 68.15,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 108,
+      "sourceEnd": 119,
+      "sourceIndices": [
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74
+      ],
+      "jumpX": 75.95,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 120,
+      "sourceEnd": 131,
+      "sourceIndices": [
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82
+      ],
+      "jumpX": 83.75,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 132,
+      "sourceEnd": 143,
+      "sourceIndices": [
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89
+      ],
+      "jumpX": 91.55,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 144,
+      "sourceEnd": 155,
+      "sourceIndices": [
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99
+      ],
+      "jumpX": 99.35,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 156,
+      "sourceEnd": 167,
+      "sourceIndices": [
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107
+      ],
+      "jumpX": 107.15,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 168,
+      "sourceEnd": 179,
+      "sourceIndices": [
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116
+      ],
+      "jumpX": 114.95,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 180,
+      "sourceEnd": 191,
+      "sourceIndices": [
+        117,
+        118,
+        119,
+        120
+      ],
+      "jumpX": 122.75,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 192,
+      "sourceEnd": 203,
+      "sourceIndices": [
+        121,
+        122,
+        123,
+        124
+      ],
+      "jumpX": 130.55,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 204,
+      "sourceEnd": 215,
+      "sourceIndices": [
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131
+      ],
+      "jumpX": 138.35,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 216,
+      "sourceEnd": 227,
+      "sourceIndices": [
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140
+      ],
+      "jumpX": 146.15,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 228,
+      "sourceEnd": 239,
+      "sourceIndices": [
+        141,
+        142,
+        143,
+        144,
+        145
+      ],
+      "jumpX": 153.95,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 240,
+      "sourceEnd": 251,
+      "sourceIndices": [
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153
+      ],
+      "jumpX": 161.75,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 252,
+      "sourceEnd": 263,
+      "sourceIndices": [
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166
+      ],
+      "jumpX": 169.55,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 264,
+      "sourceEnd": 275,
+      "sourceIndices": [
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173
+      ],
+      "jumpX": 177.35,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 276,
+      "sourceEnd": 287,
+      "sourceIndices": [
+        174,
+        175,
+        176,
+        177,
+        178
+      ],
+      "jumpX": 185.15,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 288,
+      "sourceEnd": 299,
+      "sourceIndices": [
+        179,
+        180,
+        181,
+        182,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190
+      ],
+      "jumpX": 192.95,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 300,
+      "sourceEnd": 311,
+      "sourceIndices": [
+        191,
+        192,
+        193,
+        194,
+        195,
+        196,
+        197,
+        198,
+        199,
+        200,
+        201
+      ],
+      "jumpX": 200.75,
+      "automaticPad": true,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds; automatic pad retained with impulse 13.5; dense pad chains condensed"
+    },
+    {
+      "sourceStart": 312,
+      "sourceEnd": 323,
+      "sourceIndices": [
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208
+      ],
+      "jumpX": 208.55,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 324,
+      "sourceEnd": 335,
+      "sourceIndices": [
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218
+      ],
+      "jumpX": 216.35,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    },
+    {
+      "sourceStart": 336,
+      "sourceEnd": 347,
+      "sourceIndices": [
+        219,
+        220,
+        221,
+        222,
+        223,
+        224
+      ],
+      "jumpX": 224.15,
+      "automaticPad": false,
+      "adaptation": "source interval condensed; ascending platforms -> bounded ground challenge; spacing >= 1.2 real seconds"
+    }
+  ]
+}

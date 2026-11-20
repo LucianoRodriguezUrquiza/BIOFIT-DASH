@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+<ItemGroup>
+<Compile Include="BaseShims.cs"/><Compile Include="Surface.cs"/><Compile Include="Program.cs"/>
+<Compile Include="../../Assets/BIOFIT/Geometry/Runtime/*.cs"/>
+<Compile Include="../../Assets/BIOFIT/Scripts/*.cs" Exclude="../../Assets/BIOFIT/Scripts/BiofitDashGame.cs;../../Assets/BIOFIT/Scripts/BiofitMovementLab.cs"/>
+</ItemGroup></Project>

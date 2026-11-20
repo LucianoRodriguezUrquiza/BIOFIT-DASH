@@ -21,7 +21,8 @@ class Program {
   typeof(BiofitBLEMonitor).GetMethod(status?"ReadStatus":"ReadEvent",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(m,new[]{Wrap(b,t,status)});
  }
  static void CycleIntegration() {
-  var m=new BiofitBLEMonitor();int pairs=0;m.BilateralJumpCandidate+=g=>pairs++;
+  var m=new BiofitBLEMonitor();int pairs=0,timedLegacy=0;double legacyTime=0;m.BilateralJumpCandidate+=g=>pairs++;
+  m.LegacyBilateralCandidateTimed+=(gap,at)=>{timedLegacy++;legacyTime=at;};
   var flags=BindingFlags.Instance|BindingFlags.NonPublic;
   foreach(string side in new[]{"left","right"}){
    var tracker=typeof(BiofitBLEMonitor).GetField(side,flags).GetValue(m);
@@ -43,6 +44,7 @@ class Program {
   Check(pairs==0,"new type without algorithm marker cannot operate");
   onset(1,4,101100,true);onset(2,4,101110,true);
   Check(pairs==1&&m.CyclePairCount==1,"real EVENT parser -> freshness/sequence -> cycle pair");
+  Check(timedLegacy==0,"experimental cycle never reaches Geometry legacy-only API");
   onset(1,4,101100,true);onset(2,4,101110,true);
   Check(pairs==1&&m.RejectedEvents==2,"duplicate onset notifications rejected");
   onset(1,5,100000,true);onset(2,5,100010,true);
@@ -53,6 +55,7 @@ class Program {
   Check(pairs==1,"new events ignored for legacy actions but their sequences consumed");
   Read(m,Packet(1,false,7,101100),now);Read(m,Packet(2,false,7,101110),now);
   Check(pairs==2,"legacy path still accepts original UP after new channel traffic");
+  Check(timedLegacy==1 && legacyTime==m.JumpDetector.LastPairSeconds,"legacy API emits exactly once with paired monotonic clock");
   var diag=new byte[20];diag[0]=3;diag[1]=1;diag[2]=3;diag[3]=4;
   BitConverter.GetBytes((short)-500).CopyTo(diag,8);transport.Invoke(m,new[]{Wrap(diag,now)});
   m.RecordGameAction("BLE_CICLO_EXPERIMENTAL");m.RecordGameAction("SALTO_BLE_BUFFERED");

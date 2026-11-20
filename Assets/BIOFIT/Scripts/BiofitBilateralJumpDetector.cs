@@ -36,6 +36,8 @@ public sealed class BiofitBilateralJumpDetector
     private double lastLeftAccepted = -10000d;
     private double lastRightAccepted = -10000d;
     private double lastPairSeconds = -10000d;
+    // Read-only timestamp of the later impulse in the last accepted pair.
+    public double LastPairSeconds => lastPairSeconds;
 
     // Decision for EVERY processed UP, including a matched pair suppressed by cooldown.
     // Names describe software decisions, never a biomechanical phase.

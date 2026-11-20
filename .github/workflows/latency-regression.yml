@@ -12,6 +12,10 @@ jobs:
           dotnet-version: '8.0.x'
       - run: dotnet run --project tests/LatencyRegression
       - run: dotnet run --project tests/ReceiverRegression
+      - run: dotnet run --project tests/GeometryControl
+      - run: dotnet run --project tests/GeometryRuntimeSurface
+      - run: python3 tools/adapt_geometry_maps.py --check
+      - run: python3 tests/check_geometry_assets.py
       - run: dotnet run --project tests/AndroidDownloadsRegression
       - run: dotnet run --project tests/DashUiRegression
       - run: dotnet run --project tests/LiftCycle

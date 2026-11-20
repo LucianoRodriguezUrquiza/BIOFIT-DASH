@@ -404,6 +404,14 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// Representa un PAR DE IMPULSOS, no un salto humano confirmado.
     /// </summary>
     public event Action<float> BilateralJumpCandidate;
+    // Separate legacy-only API for gameplay. The second argument uses the
+    // monotonic aligned sensor clock; gapMs is never used as a timestamp.
+    public event Action<float, double> LegacyBilateralCandidateTimed;
+    public Action DiagnosticReturnRequested;
+    public string DiagnosticReturnLabel = "VOLVER AL JUEGO";
+    public int ConnectedTrackerCount =>
+        (left.connection == "CONECTADO - NOTIFICACIONES ACTIVAS" ? 1 : 0) +
+        (right.connection == "CONECTADO - NOTIFICACIONES ACTIVAS" ? 1 : 0);
 
     /// <summary>
     /// Evento UP crudo para CONTROL DE DIAGNOSTICO UNILATERAL.
@@ -1141,6 +1149,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                       (eventType==4?liftPairs.LastGapMs:jumpDetector.LastPairGapMs).ToString("F0") + " ms");
             // ReadEvent se ejecuta desde Update(), en el hilo principal.
             BilateralJumpCandidate?.Invoke(eventType==4?(float)liftPairs.LastGapMs:jumpDetector.LastPairGapMs);
+            if (eventType == 3 && !LiftCycleMode && !PhaseFastPairs)
+                LegacyBilateralCandidateTimed?.Invoke(jumpDetector.LastPairGapMs, jumpDetector.LastPairSeconds);
         }
         // La demora es SOLO el exceso respecto del mejor anclaje STATUS;
         // no se interpreta como latencia BLE absoluta.
@@ -1214,11 +1224,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         GUI.Label(new Rect(x, y, textWidth, 64), "BIOFIT GAME | DIAGNOSTICO BLE", heading);
         y += 76;
         if (GUI.Button(new Rect(x, y, textWidth, 65),
-            "JUGAR BIOFIT DASH (PROTOTIPO)", buttonStyle))
+            DiagnosticReturnRequested == null ? "JUGAR BIOFIT DASH (PROTOTIPO)" : DiagnosticReturnLabel, buttonStyle))
         {
             // No cambiamos de escena: el mismo monitor sigue suscrito a ambas
             // placas y mantiene contadores, estado y CSV mientras jugamos.
-            if (GetComponent<BiofitDashGame>() == null)
+            if (DiagnosticReturnRequested != null)
+                DiagnosticReturnRequested();
+            else if (GetComponent<BiofitDashGame>() == null)
                 gameObject.AddComponent<BiofitDashGame>();
             showDiagnostics = false;
         }
