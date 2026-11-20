@@ -40,7 +40,7 @@ namespace Biofit.GeomeTryOriginal.Editor
         {
             if (!File.Exists(Prefix + "Scripts/GameMechanics/CharacterType/Cube.cs"))
                 throw new InvalidOperationException(
-                    "Falta el submodulo original. Cierra Unity y ejecuta: git submodule update --init --recursive");
+                    "Faltan los Assets originales. Cerra Unity y ejecuta tools/prepare_geometry_original.ps1 desde un clon NUEVO.");
             foreach (string name in SceneNames)
                 if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Scene(name)) == null)
                     throw new InvalidOperationException("Falta escena ORIGINAL: " + Scene(name));

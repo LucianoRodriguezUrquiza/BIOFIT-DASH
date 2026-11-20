@@ -9,25 +9,41 @@
 - No se altera firmware ESP32, NVS, UUID, umbrales, calibración, receptor ni los CSV históricos.
 - Reutiliza el monitor BLE automático del proyecto BIOFIT, con el selector forzado exclusivamente a LEGACY.
 
-## Por qué es un submódulo Git, no mapas regenerados
+## Arquitectura corregida para Unity 6.3: submódulo aislado y assets idénticos
 
-`Assets/GeomeTryOriginal` es un **submódulo Git de todo el repositorio original**.
-Los 513 archivos originales y sus GUID se recuperan directamente y conservan sus
-bytes y jerarquía: `Assets/GeomeTryOriginal/Assets/Scenes`,
-`Resources/maps/BASE`, `Resources/Prefabs`, imágenes, scripts, shaders, etc.
-No se usan los JSON comprimidos del PR19.
+El repositorio original COMPLETO se conserva sin cambios como submódulo Git en
+`ThirdParty/GeomeTryOriginal` (commit `d922caddb4d21ecb791a266143e279bdb969d42c`). No se inserta esa raíz dentro
+del directorio `Assets`: contiene `ProjectSettings` y `Packages` propios de
+OTRO proyecto y Unity 6 los intentaba importar como assets globales, produciendo
+errores de importación `XRSettings.asset` y `ShaderGraphSingleton`.
 
-**Importante:** GitHub Desktop y ZIP de una rama con submódulos pueden dejar
-el directorio vacío. No abras Unity antes de traer la fuente real:
+Solo los archivos de `ThirdParty/GeomeTryOriginal/Assets`, incluyendo todos los
+prefabs, mapas, animaciones, scripts, sprites y sus `.meta` GUID originales,
+se **copian byte por byte** a `Assets/GeomeTryOriginal/Assets` con el script de
+preparación. No se reducen, regeneran ni adaptan mapas ni físicas. El script
+verifica SHA-256 de cada uno de los archivos copiados. El árbol fuente queda
+íntegro fuera de Assets.
+
+### Preparación obligatoria ANTES de abrir Unity (clon NUEVO)
 
 ```powershell
-git submodule update --init --recursive
-git submodule status
+cd "C:\Users\Capo\Documents"
+git clone --recurse-submodules --branch feat/geometry-original-legacy-bridge https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY.git BIOFIT-GeomeTry-ORIGINAL-CORREGIDO
+cd ".\BIOFIT-GeomeTry-ORIGINAL-CORREGIDO"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\prepare_geometry_original.ps1"
 ```
 
-Si no se recuperan los submódulos, **no hay juego importable**. El repositorio
-original es de Unity 6000.0.27f1 y se abre dentro de BIOFIT Unity 6000.3.28f1:
-podría haber migraciones; todavía no se verificaron en Editor.
+El mensaje esperado es `OK: copia exacta...`, sin diferencias SHA-256.
+Abrí SOLO `BIOFIT-GeomeTry-ORIGINAL-CORREGIDO` como proyecto en Unity Hub.
+
+**No uses `git reset --hard`, `git clean`, `Discard Changes`, ni muevas
+manualmente el submódulo.** El clon anterior con errores se conserva intacto
+para diagnóstico; no vuelvas a abrirlo hasta decidir su destino. Un ZIP sin
+submódulos no contiene la fuente completa.
+
+`Assets/GeomeTryOriginal/Assets/` es un artefacto local de la extracción,
+intencionalmente ignorado por Git: la fuente canónica, versionada y verificable
+sigue siendo el submódulo externo.
 
 ## Exactitud de la jugabilidad
 
@@ -81,10 +97,12 @@ La señal BLE no se interpreta como un salto humano confirmado.
 1. **Copia/respaldá toda tu carpeta local** antes de cambiar de rama;
    especialmente tus escenas/configuraciones locales y datos de sesiones.
    Nunca uses discard/reset/clean para resolver conflictos.
-2. Trabajá sobre la copia usando rama `feat/geometry-original-legacy-bridge`
-   y ejecutá `git submodule update --init --recursive` (con internet).
-3. Unity Hub: abrí la **copia** con Editor **6000.3.28f1** y espera a que importe
-   el submódulo completo; se resolverá URP 17.3.0. Comprobá la Console.
+2. Creá un clon NUEVO como se detalla arriba, con el submódulo recursivo.
+   Antes de Unity, ejecutá `tools/prepare_geometry_original.ps1` para copiar
+   solo los Assets del original (incluidos scripts, prefabs y GUID).
+3. Unity Hub: abrí **BIOFIT-GeomeTry-ORIGINAL-CORREGIDO** con Editor
+   **6000.3.28f1**. Unity importará solamente Assets, no ProjectSettings
+   ni Packages anidados. Revisá Console; URP 17.3.0 debe instalarse.
 4. Menú **BIOFIT > GeomeTry ORIGINAL > 1. Verificar fuente y mapas**.
    Verifica cuatro JSON con hashes de blob Git, escenas y prefabs.
 5. Menú **2. Abrir Main Menu original**. Para ver exactamente los materiales
@@ -108,7 +126,7 @@ La señal BLE no se interpreta como un salto humano confirmado.
 
 ## Verificaciones y limitaciones
 
-- El código y el submódulo están propuestos en GitHub para evaluar.
+- El código, la extracción segura y el submódulo están propuestos en GitHub para evaluar. La estructura original anterior dentro de Assets produjo errores reales al importar en Unity 6.3, por eso se aisló el submódulo fuera de Assets.
 - No se ha ejecutado aquí Unity Editor/Play ni compilación Android:
   **no hay una APK verificada ni debe afirmarse lo contrario**.
 - El submódulo guarda la geometría original, no una aproximación.

@@ -3,22 +3,25 @@ import pathlib, re, subprocess
 root = pathlib.Path(__file__).resolve().parents[1]
 def git(*args):
     return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
-entry = git("ls-tree", "HEAD", "Assets/GeomeTryOriginal")
+entry = git("ls-tree", "HEAD", "ThirdParty/GeomeTryOriginal")
 assert entry.startswith("160000 commit d922caddb4d21ecb791a266143e279bdb969d42c"), entry
 modules = (root / ".gitmodules").read_text()
 assert 'url = https://github.com/Christ0u/GeomeTry.git' in modules
-assert 'path = Assets/GeomeTryOriginal' in modules
+assert 'path = ThirdParty/GeomeTryOriginal' in modules
 bridge = (root / "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs").read_text()
 assert "cube.onClick();" in bridge and 'BilateralJumpCandidate += OnBilateralLegacyCandidate' in bridge
 assert "if (cube == null" in bridge
 assert "Time.timeScale = 1.5" not in bridge
+assert (root / "tools/prepare_geometry_original.ps1").is_file()
+assert "Assets/GeomeTryOriginal/Assets/" in (root / ".gitignore").read_text()
+assert not (root / "Assets/GeomeTryOriginal/ProjectSettings").exists(), "Nested ProjectSettings must never be imported as Unity Assets"
 for path in ("ProjectSettings/Physics2DSettings.asset", "ProjectSettings/TimeManager.asset",
              "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs", "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs"):
     baseline = subprocess.check_output(["git", "show", "5616fc4571193d4a2d076550a909089344144384:" + path], cwd=root)
     assert (root / path).read_bytes() == baseline, path + " was modified"
 cfg = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 assert re.search(r'^  activeInputHandler: 2$', cfg, re.M)
-module = root / "Assets/GeomeTryOriginal"
+module = root / "ThirdParty/GeomeTryOriginal"
 assert (module / ".git").exists(), "Original GeomeTry submodule not initialized!"
 actual_commit = subprocess.check_output(["git", "-C", str(module), "rev-parse", "HEAD"], text=True).strip()
 assert actual_commit == "d922caddb4d21ecb791a266143e279bdb969d42c", actual_commit
@@ -35,4 +38,4 @@ for name, sha in expect.items():
     assert path.is_file(), "Missing original map " + name
     blob = subprocess.check_output(["git", "hash-object", str(path)], text=True).strip()
     assert blob == sha, "Original map changed: " + name
-print("PASS: Gitlink pins original GeomeTry; BIOFIT detector/physics unchanged; dual input enabled.")
+print("PASS: Original repo isolated outside Unity Assets; maps intact; BIOFIT legacy receiver/physics preserved.")
