@@ -405,6 +405,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// </summary>
     public event Action<float> BilateralJumpCandidate;
 
+    // Legacy UP_IMPULSE only: the second event's aligned monotonic time.
+    // New game adapters can reject stale inputs without renewing age on BLE receipt.
+    // Existing listeners keep the original Action<float> API unchanged.
+    public event Action<float, double> LegacyBilateralCandidateTimed;
+
     /// <summary>
     /// Evento UP crudo para CONTROL DE DIAGNOSTICO UNILATERAL.
     /// NO implica elevacion ni salto humano confirmado.
@@ -1141,6 +1146,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                       (eventType==4?liftPairs.LastGapMs:jumpDetector.LastPairGapMs).ToString("F0") + " ms");
             // ReadEvent se ejecuta desde Update(), en el hilo principal.
             BilateralJumpCandidate?.Invoke(eventType==4?(float)liftPairs.LastGapMs:jumpDetector.LastPairGapMs);
+            if (eventType == 3)
+                LegacyBilateralCandidateTimed?.Invoke(jumpDetector.LastPairGapMs, pairSeconds);
         }
         // La demora es SOLO el exceso respecto del mejor anclaje STATUS;
         // no se interpreta como latencia BLE absoluta.
