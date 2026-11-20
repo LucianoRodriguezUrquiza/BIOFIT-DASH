@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEditor.Build;
@@ -67,6 +68,78 @@ namespace Biofit.GeomeTryOriginal.Editor
             }
         }
 
+
+        // The upstream GameManager.SceneExists() silently returns false when
+        // the scene isn't in Build Settings, even if the menu button animates.
+        private static void VerifyNavigationAndResources()
+        {
+            string[] expected = Array.ConvertAll(SceneNames, Scene);
+            string[] registered = EditorBuildSettings.scenes
+                .Where(s => s.enabled).Select(s => s.path).ToArray();
+            if (!registered.SequenceEqual(expected))
+                throw new InvalidOperationException(
+                    "GeomeTry requiere sus 10 escenas originales en Build Profiles > " +
+                    "Scene List, con Main Menu primera. No modifiques los JSON.");
+            if (UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings < SceneNames.Length)
+                throw new InvalidOperationException(
+                    "El perfil de Unity activo no reconoce todas las escenas GeomeTry. " +
+                    "Revisa File > Build Profiles > Scene List.");
+
+            // Validate Resources.Load exactly as used by upstream gameplay,
+            // including the fifth original level WaveVibe (not just 4 JSON hashes).
+            foreach (string levelName in new[] {
+                "StereoMadness", "BackOnTrack", "Polargeist", "JumpyNightmare", "WaveVibe"
+            })
+            {
+                TextAsset source = Resources.Load<TextAsset>("maps/BASE/" + levelName);
+                if (source == null)
+                    throw new InvalidOperationException(
+                        "Resources no encuentra el mapa original " + levelName);
+                Level level;
+                try { level = new Level(source); }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        "Error al leer el nivel original " + levelName, ex);
+                }
+                if (level.Map == null || level.Map.Count == 0 || level.Music == null)
+                    throw new InvalidOperationException(
+                        "Mapa sin objetos o musica original: " + levelName);
+                foreach (MapItem item in level.Map)
+                {
+                    // Upstream uses 'ground' as a marker; it is not a prefab.
+                    if (item.Type == "ground") continue;
+                    if (!Prefab.Prefabs.TryGetValue(item.Type, out GameObject obj)
+                        || obj == null)
+                        throw new InvalidOperationException(
+                            "Prefab original faltante: " + item.Type +
+                            " en el mapa " + levelName);
+                }
+            }
+
+            foreach (string resource in new[] {
+                "Prefabs/Player/CubePrefab", "Prefabs/Player/ShipPrefab",
+                "Prefabs/Player/WavePrefab", "Prefabs/Decors/GroundPrefab",
+                "Prefabs/Decors/CeilPrefab", "Prefabs/UI/LevelButtonPrefab"
+            })
+                if (Resources.Load<GameObject>(resource) == null)
+                    throw new InvalidOperationException(
+                        "Prefab de juego no disponible via Resources: " + resource);
+
+            foreach (string resource in new[] {
+                "Sprites/Character/Ship/Ship",
+                "Sprites/Character/Wave/Wave001",
+                "Sprites/Obstacles/Tile/smallTile"
+            })
+                if (Resources.Load<Sprite>(resource) == null)
+                    throw new InvalidOperationException(
+                        "PNG de GeomeTry no importado correctamente: " + resource);
+
+            UnityEngine.Debug.Log(
+                "BIOFIT GeomeTry PREVUELO: 10 escenas, 5 mapas originales, " +
+                "prefabs, musica y sprites verificados.");
+        }
+
         [MenuItem("BIOFIT/GeomeTry ORIGINAL/1. Verificar fuente y mapas")]
         public static void Verify()
         {
@@ -101,6 +174,7 @@ namespace Biofit.GeomeTryOriginal.Editor
             foreach (string name in new[] {"CubePrefab", "ShipPrefab", "WavePrefab"})
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(Prefix + "Resources/Prefabs/Player/" + name + ".prefab") == null)
                     throw new InvalidOperationException("Falta prefab original: " + name);
+            VerifyNavigationAndResources();
             UnityEngine.Debug.Log("BIOFIT GeomeTry original: escenas, personajes y los cuatro mapas RAW verificados sin modificar.");
         }
 
