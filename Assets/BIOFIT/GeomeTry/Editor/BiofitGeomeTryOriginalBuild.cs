@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -87,6 +88,8 @@ namespace Biofit.GeomeTryOriginal.Editor
             if (urp == null) throw new InvalidOperationException("Falta URP original. Comproba el paquete Universal RP y el submodulo.");
             RenderPipelineAsset previousPipeline = GraphicsSettings.defaultRenderPipeline;
             bool previousBundle = EditorUserBuildSettings.buildAppBundle;
+            string previousIdentifier = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android);
+            string previousProductName = PlayerSettings.productName;
             string folder = Path.Combine(Directory.GetCurrentDirectory(), "Builds");
             Directory.CreateDirectory(folder);
             string path = Path.Combine(folder,
@@ -94,6 +97,10 @@ namespace Biofit.GeomeTryOriginal.Editor
             try
             {
                 // Only for this build, then restore. Original URP asset is untouched.
+                // Build as a DIFFERENT Android application, protecting the existing
+                // BIOFIT DASH installation and its private recordings.
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.biofitgame.geometryoriginal");
+                PlayerSettings.productName = "BIOFIT GeomeTry";
                 GraphicsSettings.defaultRenderPipeline = urp;
                 EditorUserBuildSettings.buildAppBundle = false;
                 string[] scenes = Array.ConvertAll(SceneNames, Scene);
@@ -110,6 +117,8 @@ namespace Biofit.GeomeTryOriginal.Editor
             {
                 EditorUserBuildSettings.buildAppBundle = previousBundle;
                 GraphicsSettings.defaultRenderPipeline = previousPipeline;
+                PlayerSettings.productName = previousProductName;
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, previousIdentifier);
             }
         }
     }
