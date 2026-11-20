@@ -180,18 +180,22 @@ namespace Biofit.GeomeTryOriginal
             GUI.depth = -1500;
             try
             {
-                const float width = 380;
-                var rect = new Rect(Mathf.Max(4, Screen.width - width - 15), 15, width, showRecording ? 258 : 155);
+                // Compact by default: no longer obscures the original
+                // GeomeTry title or the Credits button on the Main Menu.
+                const float width = 274f;
+                var rect = new Rect(Mathf.Max(4f, Screen.width - width - 8f),
+                    8f, width, showRecording ? 255f : 78f);
                 GUILayout.BeginArea(rect, GUI.skin.box);
-                GUILayout.Label("BIOFIT GAME | Bluetooth BILATERAL LEGACY");
-                GUILayout.Label("Waveshare: " + (monitor.BothTrackersConnected ? "2/2 conectados" : "Esperando ambos trackers"));
-                GUILayout.Label("Relojes: " + (monitor.ClockAlignmentReady ? "listos" : "esperando STATUS"));
-                GUILayout.Label("Pares recibidos: " + accepted + " | saltos cubo: " + executed);
-                GUILayout.Label("La conexión BLE se inicia automáticamente.");
-                if (GUILayout.Button(showRecording ? "OCULTAR REGISTRO" : "REGISTRO / ARCHIVOS"))
+                GUILayout.Label("BIOFIT | BILATERAL LEGACY");
+                GUILayout.Label("Waveshare " + (monitor.BothTrackersConnected ? "2/2" : "0/2") +
+                    " | reloj " + (monitor.ClockAlignmentReady ? "OK" : "STATUS"));
+                if (GUILayout.Button(showRecording ? "OCULTAR DETALLES" : "ESTADO / REGISTRO"))
                     showRecording = !showRecording;
                 if (showRecording)
                 {
+                    GUILayout.Label("Pares recibidos: " + accepted +
+                        " | saltos cubo: " + executed);
+                    GUILayout.Label("Conexion BLE automatica.");
                     GUILayout.BeginHorizontal();
                     if (GUILayout.Button("INICIAR") && monitor.StartGameCapture())
                         monitor.RecordControlDiagnostic("GAME=GEOMETRY_ORIGINAL INPUT=BILATERAL_LEGACY");
