@@ -130,5 +130,37 @@ foreach ($relative in $references) {
     [IO.File]::WriteAllText($dest, $changed, (New-Object System.Text.UTF8Encoding($false)))
     Write-Host "OK: referencias de camara: $relative"
 }
+# Keep ALL original jump-orb forces, triggering physics and prefabs. Only
+# expand the original press condition to accept ONE legacy BLE pulse.
+# Do not edit the pinned source submodule or the *.cs.meta GUID.
+$orbSource = Join-Path $original "Scripts\JumpOrb.cs"
+$orbDest = Join-Path $imported "Scripts\JumpOrb.cs"
+if (!(Test-Path -LiteralPath $orbSource -PathType Leaf) -or
+    !(Test-Path -LiteralPath $orbDest -PathType Leaf)) {
+    throw "Falta JumpOrb.cs original/importado, no se alteran los mapas."
+}
+$oldInput = 'Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)'
+$newInput = $oldInput + ' ||' + [Environment]::NewLine +
+    '            (other.GetComponent<Cube>() != null &&' + [Environment]::NewLine +
+    '             Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse())'
+$orbCode = [IO.File]::ReadAllText($orbDest)
+if ($orbCode.Contains('TryConsumeOrbPulse()')) {
+    Write-Host "OK: entrada BLE de JumpOrb ya integrada."
+} else {
+    if (!(Same-Bytes $orbSource $orbDest)) {
+        throw "JumpOrb.cs contiene cambios locales inesperados; no se sobrescribe."
+    }
+    if (!$orbCode.Contains($oldInput)) {
+        throw "No se encontro la entrada original de JumpOrb; revisar version."
+    }
+    $patchedOrb = $orbCode.Replace($oldInput, $newInput)
+    [IO.File]::WriteAllText($orbDest, $patchedOrb,
+        (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "OK: JumpOrb ahora admite un pulso BLE sin cambiar la fuerza fisica."
+}
+if (!(Test-Path -LiteralPath "$orbDest.meta" -PathType Leaf)) {
+    throw "Falta el .meta/GUID original de JumpOrb."
+}
+
 Write-Host "OK: reparacion visual y de camara completada. Fuente original sin modificar."
 Write-Host "Ya podes abrir Unity 6000.3.28f1 y comprobar la consola."
