@@ -319,7 +319,7 @@ public sealed class BiofitGeomeTryGame : MonoBehaviour
             for (int x = 0; x < size; x++)
                 t.SetPixel(x, y,
                     Mathf.Abs((x + 0.5f) - size * 0.5f) <=
-                    (y + 0.5f) * 0.5f ? Color.white : Color.clear);
+                    (size - (y + 0.5f)) * 0.5f ? Color.white : Color.clear);
         t.Apply();
         return Sprite.Create(t, new Rect(0f, 0f, size, size),
             new Vector2(0.5f, 0.5f), size);
