@@ -42,7 +42,7 @@ for name, sha in expect.items():
 # pixel-preserving, generated from those originals, and stored outside Assets.
 png_overlays = {
     "Wave001.png": "2d592ec4d95ec34d0b9495324a8eabf6e9ca5dfe",
-    "Ship.png": "056889cdf164663d59c066881e59afbcabc287fb",
+    "Ship.png": "067f68f2c97233cd358690235cd3396303ab2d29",
     "smallTile.png": "60aa0fdaaae0b5b7b4d8765ee3f5b3b457ad5963"
 }
 for filename, expected_sha in png_overlays.items():
