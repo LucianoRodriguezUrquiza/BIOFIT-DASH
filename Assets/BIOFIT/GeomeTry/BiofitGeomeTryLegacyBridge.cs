@@ -197,50 +197,12 @@ namespace Biofit.GeomeTryOriginal
                     " scene=Level");
         }
 
-        private void OnGUI()
-        {
-            if (monitor == null) return;
-            string scene = SceneManager.GetActiveScene().name;
-            // Do not cover or modify the original game-level view.
-            if (scene != MenuScene && scene != SelectionScene) return;
-            int oldDepth = GUI.depth;
-            GUI.depth = -1500;
-            try
-            {
-                // Compact by default: no longer obscures the original
-                // GeomeTry title or the Credits button on the Main Menu.
-                const float width = 274f;
-                var rect = new Rect(Mathf.Max(4f, Screen.width - width - 8f),
-                    8f, width, showRecording ? 255f : 78f);
-                GUILayout.BeginArea(rect, GUI.skin.box);
-                GUILayout.Label("BIOFIT | BILATERAL LEGACY");
-                GUILayout.Label("Waveshare " + (monitor.BothTrackersConnected ? "2/2" : "0/2") +
-                    " | reloj " + (monitor.ClockAlignmentReady ? "OK" : "STATUS"));
-                if (GUILayout.Button(showRecording ? "OCULTAR DETALLES" : "ESTADO / REGISTRO"))
-                    showRecording = !showRecording;
-                if (showRecording)
-                {
-                    GUILayout.Label("Pares recibidos: " + accepted +
-                        " | saltos cubo: " + executed);
-                    GUILayout.Label("Conexion BLE automatica.");
-                    GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("INICIAR") && monitor.StartGameCapture())
-                        monitor.RecordControlDiagnostic("GAME=GEOMETRY_ORIGINAL INPUT=BILATERAL_LEGACY");
-                    if (GUILayout.Button("FINALIZAR")) monitor.StopGameCapture();
-                    GUILayout.EndHorizontal();
-                    GUILayout.BeginHorizontal();
-                    if (GUILayout.Button(monitor.RawButtonLabel)) monitor.ToggleRawCapture();
-                    if (GUILayout.Button("SYNC")) monitor.MarkVideoSync();
-                    GUILayout.EndHorizontal();
-                    GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("DESCARGAS")) monitor.RequestExport(false);
-                    if (GUILayout.Button("GUARDAR SAF")) monitor.RequestExport(true);
-                    GUILayout.EndHorizontal();
-                    GUILayout.Label(monitor.CaptureBanner);
-                }
-                GUILayout.EndArea();
-            }
-            finally { GUI.depth = oldDepth; }
-        }
+        // Read-only counters for the new Configuration screen. The BLE
+        // detector, legacy thresholds, firmware and cube input path are untouched.
+        public int AcceptedPairs => accepted;
+        public int ExecutedJumps => executed;
+
+        // The old OnGUI panel (which obscured the menu and level cards) has
+        // moved to BiofitGeometryUX -> Settings. No BLE logic was changed.
     }
 }
