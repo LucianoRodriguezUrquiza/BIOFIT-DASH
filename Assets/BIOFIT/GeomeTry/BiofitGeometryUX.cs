@@ -55,8 +55,12 @@ namespace Biofit.GeomeTryOriginal
         private float averageFps = 60f;
         private int skinIndex;
         private int focusLevel;
-        private readonly Image[] selectorHotspots = new Image[5];
+        private readonly Button[] selectorHotspots = new Button[5];
+        private RectTransform selectorContentRoot;
+        private RectTransform selectorFocusCard;
+        private RawImage selectorFocusArt;
         private TMP_Text focusLabel;
+        private float focusSince;
         private bool paused;
         private bool priorPlayMode;
         private float priorTimeScale;
@@ -121,6 +125,16 @@ namespace Biofit.GeomeTryOriginal
             if (Time.unscaledDeltaTime > 0.0001f)
                 averageFps = Mathf.Lerp(averageFps,
                     1f / Time.unscaledDeltaTime, 0.075f);
+
+            if (currentScene == Select && selectorFocusCard != null)
+            {
+                // Tiny idle bounce, no yellow overlay or altered game input.
+                float t = Time.unscaledTime - focusSince;
+                float bounce = Mathf.Sin(t * 5.5f) * 2.5f;
+                selectorFocusCard.anchoredPosition = new Vector2(0f, 9f + bounce);
+                selectorFocusCard.localScale = Vector3.one *
+                    (1.045f + Mathf.Sin(t * 4f) * 0.007f);
+            }
 
             if (currentScene == Settings && statusLabel != null &&
                 Time.unscaledTime >= refreshStatusAt)
@@ -198,6 +212,12 @@ namespace Biofit.GeomeTryOriginal
             currentScene = sceneName;
             statusLabel = null;
             skinLabel = null;
+            selectorContentRoot = null;
+            selectorFocusCard = null;
+            selectorFocusArt = null;
+            focusLabel = null;
+            for (int i = 0; i < selectorHotspots.Length; i++)
+                selectorHotspots[i] = null;
             activeCube = null;
             cubeRenderer = null;
             cachedSkins.Clear();
@@ -316,10 +336,18 @@ namespace Biofit.GeomeTryOriginal
             t.text = label;
             t.font = fallbackFont;
             t.fontSize = fontSize;
+            t.fontStyle = FontStyles.Bold;
             t.alignment = alignment;
             t.color = color;
             t.enableWordWrapping = true;
             t.raycastTarget = false;
+            // Arcade lettering: opaque black glyph outline, not plain Unity text.
+            var styled = t as TextMeshProUGUI;
+            if (styled != null)
+            {
+                styled.outlineColor = new Color32(5, 9, 18, 255);
+                styled.outlineWidth = 0.25f;
+            }
             return t;
         }
 
@@ -328,21 +356,80 @@ namespace Biofit.GeomeTryOriginal
             Action click, Color background, int fontSize = 27)
         {
             RectTransform frame = Rect(name, parent, anchor, size, offset);
-            var border = frame.gameObject.AddComponent<Image>();
-            border.color = background;
+            Image outer = frame.gameObject.AddComponent<Image>();
+            outer.color = background;
             Button button = frame.gameObject.AddComponent<Button>();
-            button.targetGraphic = border;
+            button.targetGraphic = outer;
             var colors = button.colors;
             colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(0.88f, 1f, 0.87f);
-            colors.pressedColor = new Color(0.65f, 0.85f, 0.75f);
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = new Color(.94f, .94f, .94f, 1f);
             button.colors = colors;
             if (click != null) button.onClick.AddListener(() => click());
+
+            // Arcade beveled button. Transparent click zones remain invisible.
+            if (background.a > 0.05f)
+            {
+                var shadow = frame.gameObject.AddComponent<Shadow>();
+                shadow.effectColor = new Color(0f, 0f, 0f, .9f);
+                shadow.effectDistance = new Vector2(7f, -9f);
+                RectTransform whiteEdge = Fill(name + " white edge", frame, Color.white);
+                whiteEdge.offsetMin = new Vector2(4f, 4f);
+                whiteEdge.offsetMax = new Vector2(-4f, -4f);
+                RectTransform blackEdge = Fill(name + " black edge", whiteEdge,
+                    new Color(.02f, .04f, .05f, 1f));
+                blackEdge.offsetMin = new Vector2(5f, 5f);
+                blackEdge.offsetMax = new Vector2(-5f, -5f);
+                RectTransform inside = Fill(name + " lime inset", blackEdge, background);
+                inside.offsetMin = new Vector2(5f, 5f);
+                inside.offsetMax = new Vector2(-5f, -5f);
+                // Top half is brighter, like the original Geometry arcade art.
+                RectTransform shine = Fill(name + " shine", inside,
+                    new Color(1f, 1f, 1f, .17f));
+                shine.anchorMin = new Vector2(0f, .53f);
+                shine.anchorMax = Vector2.one;
+            }
             if (!string.IsNullOrEmpty(label))
                 Text(name + " label", frame, label, new Vector2(.5f, .5f),
-                    size - new Vector2(8f, 8f), Vector2.zero, fontSize,
-                    Navy);
+                    size - new Vector2(22f, 15f), Vector2.zero, fontSize,
+                    Color.white);
             return button;
+        }
+
+        // Hit region drawn over an already-painted original card or arrow.
+        // Never tint it yellow; the separate real-art focus animation handles it.
+        private Button Hotspot(string name, Transform parent, Vector2 anchor,
+            Vector2 size, Action click)
+        {
+            RectTransform rect = Rect(name, parent, anchor, size, Vector2.zero);
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.color = new Color(1f, 1f, 1f, .001f);
+            Button b = rect.gameObject.AddComponent<Button>();
+            b.targetGraphic = image;
+            b.transition = Selectable.Transition.None;
+            b.onClick.AddListener(() => click());
+            return b;
+        }
+
+        private RectTransform ArcadePanel(string name, Transform parent,
+            Vector2 anchor, Vector2 size, Vector2 offset)
+        {
+            RectTransform outer = Rect(name, parent, anchor, size, offset);
+            var main = outer.gameObject.AddComponent<Image>();
+            main.color = new Color(.012f, .025f, .08f, 1f);
+            var shadow = outer.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = Color.black;
+            shadow.effectDistance = new Vector2(12, -12);
+            RectTransform edge = Fill(name + " bright edge", outer, Color.white);
+            edge.offsetMin = new Vector2(5f, 5f);
+            edge.offsetMax = new Vector2(-5f, -5f);
+            RectTransform black = Fill(name + " dark rim", edge, Navy);
+            black.offsetMin = new Vector2(6f, 6f);
+            black.offsetMax = new Vector2(-6f, -6f);
+            RectTransform inner = Fill(name + " blue center", black, Blue);
+            inner.offsetMin = new Vector2(7f, 7f);
+            inner.offsetMax = new Vector2(-7f, -7f);
+            return inner;
         }
 
         private Button ImageButton(string name, Transform parent, Texture image,
@@ -365,8 +452,10 @@ namespace Biofit.GeomeTryOriginal
         private void BuildBackButton(string scene)
         {
             string target = scene == LevelScene ? Select : Menu;
-            ImageButton("VOLVER", canvasRoot, backIcon, "<",
-                new Vector2(.055f, .89f), new Vector2(92, 92),
+            Transform parent = (scene == Select && selectorContentRoot != null) ?
+                selectorContentRoot : canvasRoot;
+            ImageButton("VOLVER", parent, backIcon, "<",
+                new Vector2(.055f, .90f), new Vector2(98, 105),
                 Vector2.zero, () => Navigate(target));
         }
 
@@ -398,70 +487,87 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildLevelSelection()
         {
-            // The complete requested reference art is the backdrop; hit regions
-            // are real Unity Buttons bound to the five original JSON levels.
             GameObject oldContainer = GameObject.Find("Level Container");
             if (oldContainer != null) oldContainer.SetActive(false);
-            RectTransform layer = Fill("BIOFIT selector blue", canvasRoot, Blue);
+            Fill("BIOFIT blue exterior", canvasRoot, Blue);
+
+            // Preserve the original 1672x941 artwork's 16:9 aspect ratio.
+            // Never stretch a 16:9 screenshot across 18:9/20:9 phones.
+            RectTransform board = Rect("LEVEL BOARD 16:9", canvasRoot,
+                new Vector2(.5f, .5f), new Vector2(1600f, 900f), Vector2.zero);
+            var fitter = board.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = 1672f / 941f;
+            selectorContentRoot = board;
+
             if (levelBackdrop != null)
             {
-                // RawImage and Image both derive from Graphic and cannot
-                // coexist on the same GameObject. Build a clean full-stretch
-                // graphic, never attach RawImage to Fill() (which adds Image).
-                RectTransform backdrop = Rect("Original BIOFIT DASH reference",
-                    canvasRoot, new Vector2(0.5f, 0.5f),
-                    Vector2.zero, Vector2.zero);
-                backdrop.anchorMin = Vector2.zero;
-                backdrop.anchorMax = Vector2.one;
-                backdrop.offsetMin = Vector2.zero;
-                backdrop.offsetMax = Vector2.zero;
-                RawImage raw = backdrop.gameObject.AddComponent<RawImage>();
-                raw.texture = levelBackdrop;
-                raw.color = Color.white;
-                raw.raycastTarget = false;
+                RectTransform bg = Rect("BIOFIT DASH HD art", board,
+                    new Vector2(.5f, .5f), Vector2.zero, Vector2.zero);
+                bg.anchorMin = Vector2.zero; bg.anchorMax = Vector2.one;
+                bg.offsetMin = Vector2.zero; bg.offsetMax = Vector2.zero;
+                var art = bg.gameObject.AddComponent<RawImage>();
+                art.texture = levelBackdrop;
+                art.raycastTarget = false;
             }
             else
             {
-                Text("title", canvasRoot, "BIOFIT DASH", new Vector2(.5f, .90f),
-                    new Vector2(750, 95), Vector2.zero, 68, Ice);
-                Text("title2", canvasRoot, "SELECT LEVEL", new Vector2(.5f, .74f),
-                    new Vector2(300, 55), Vector2.zero, 34, Lime);
+                Fill("fallback navy", board, Navy);
+                Text("fallback title", board, "BIOFIT DASH",
+                    new Vector2(.5f, .84f), new Vector2(900, 100),
+                    Vector2.zero, 65, Lime);
             }
+
+            // Five real hit regions, aligned with cards baked into the art.
+            // Card focus uses a pixel-perfect crop of the SAME reference art.
+            float[] xs = { .165f, .329f, .493f, .658f, .822f };
             for (int i = 0; i < MapKeys.Length; i++)
             {
                 int slot = i;
-                Vector2 pos = new Vector2(.164f + .169f * i, .46f);
-                if (levelBackdrop == null)
-                    Button("LEVEL " + MapKeys[i], canvasRoot, MapTitles[i],
-                        pos, new Vector2(218, 296), Vector2.zero,
-                        () => StartLevel(slot), Lime, 28);
+                if (levelBackdrop != null)
+                    selectorHotspots[i] = Hotspot("Abrir " + MapKeys[i], board,
+                        new Vector2(xs[i], .475f), new Vector2(252f, 315f),
+                        () => StartLevel(slot));
                 else
-                {
-                    Button hotspot = Button("LEVEL hotspot " + MapKeys[i],
-                        canvasRoot, "", pos, new Vector2(225, 365),
-                        Vector2.zero, () => StartLevel(slot),
-                        new Color(1f, 1f, 1f, 0.001f));
-                    selectorHotspots[i] = hotspot.GetComponent<Image>();
-                }
+                    selectorHotspots[i] = Button("Nivel " + MapKeys[i], board,
+                        MapTitles[i], new Vector2(xs[i], .475f),
+                        new Vector2(244f, 300f), Vector2.zero,
+                        () => StartLevel(slot), Lime, 31);
+            }
+
+            if (levelBackdrop != null && levelBackdrop.width >= 1600)
+            {
+                // Cover the static heading with a matching movable name plate.
+                RectTransform plate = ArcadePanel("NIVEL ACTUAL", board,
+                    new Vector2(.5f, .223f), new Vector2(920f, 78f), Vector2.zero);
+                focusLabel = Text("nombre nivel", plate, "", new Vector2(.5f, .5f),
+                    new Vector2(880f, 65f), Vector2.zero, 37, Color.white);
+
+                // Repaint the five baked indicator dots with stateful ones.
+                RectTransform dots = Rect("marcadores", board,
+                    new Vector2(.5f, .141f), new Vector2(415f, 75f), Vector2.zero);
+                var cover = dots.gameObject.AddComponent<Image>();
+                cover.color = new Color(.011f, .15f, .59f, 1f);
+                cover.raycastTarget = false;
+
+                // Artwork crop allows small focus animations without resampling
+                // each of the five cards from a low resolution texture.
+                selectorFocusCard = Rect("CARTA SELECCIONADA", board,
+                    new Vector2(xs[0], .475f), new Vector2(262f, 306f),
+                    Vector2.zero);
+                selectorFocusCard.SetSiblingIndex(board.childCount - 1);
+                selectorFocusArt = selectorFocusCard.gameObject.AddComponent<RawImage>();
+                selectorFocusArt.texture = levelBackdrop;
+                selectorFocusArt.raycastTarget = false;
+                selectorFocusArt.color = Color.white;
             }
             if (levelBackdrop != null)
             {
-                focusLabel = Text("current level label", canvasRoot,
-                    "SELECCIONADO: " + MapTitles[focusLevel],
-                    new Vector2(.5f, .12f), new Vector2(620, 45),
-                    Vector2.zero, 25, Ice);
+                Hotspot("Anterior", board, new Vector2(.043f, .48f),
+                    new Vector2(115f, 180f), () => CycleFocus(-1));
+                Hotspot("Siguiente", board, new Vector2(.957f, .48f),
+                    new Vector2(115f, 180f), () => CycleFocus(1));
                 UpdateFocus();
-            }
-            if (levelBackdrop != null)
-            {
-                // Reference artwork also includes chevron arrows. Treat both as
-                // functional carousel focus controls instead of dead decoration.
-                Button("previous selected level", canvasRoot, "", new Vector2(.035f, .48f),
-                    new Vector2(95, 210), Vector2.zero, () => CycleFocus(-1),
-                    new Color(1f, 1f, 1f, .001f));
-                Button("next selected level", canvasRoot, "", new Vector2(.965f, .48f),
-                    new Vector2(95, 210), Vector2.zero, () => CycleFocus(1),
-                    new Color(1f, 1f, 1f, .001f));
             }
         }
 
@@ -473,13 +579,23 @@ namespace Biofit.GeomeTryOriginal
 
         private void UpdateFocus()
         {
-            for (int i = 0; i < selectorHotspots.Length; i++)
-                if (selectorHotspots[i] != null)
-                    selectorHotspots[i].color = i == focusLevel ?
-                        new Color(1f, .96f, .2f, .15f) :
-                        new Color(1f, 1f, 1f, .001f);
+            focusSince = Time.unscaledTime;
             if (focusLabel != null)
-                focusLabel.text = "SELECCIONADO: " + MapTitles[focusLevel];
+                focusLabel.text = "NIVEL ACTUAL: " + MapTitles[focusLevel];
+
+            if (selectorFocusCard == null || selectorFocusArt == null)
+                return;
+            float[] xs = { .165f, .329f, .493f, .658f, .822f };
+            int[] cardLeft = { 138, 413, 687, 962, 1235 };
+            selectorFocusCard.anchorMin = selectorFocusCard.anchorMax =
+                new Vector2(xs[focusLevel], .475f);
+            selectorFocusCard.anchoredPosition = new Vector2(0, 9);
+            selectorFocusCard.localScale = Vector3.one * 1.045f;
+            // Cropped texture coordinates are bottom-up.
+            float tw = levelBackdrop.width, th = levelBackdrop.height;
+            selectorFocusArt.uvRect = new Rect(
+                cardLeft[focusLevel] / tw, (941f - 649f) / th,
+                270f / tw, 306f / th);
         }
 
         private void BuildSkinSelection()
