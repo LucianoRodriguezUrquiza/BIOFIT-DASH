@@ -47,3 +47,13 @@ Los scripts y tests host NO constituyen una prueba de compilacion en Unity Edito
 Con Unity cerrado ejecutar desde esa carpeta `git pull --ff-only origin feat/geometry-ui-skins-60fps-v1`. Guardar el ZIP HD v2 en Descargas. Instalar mediante `powershell -NoProfile -ExecutionPolicy Bypass -File ".\\tools\\install_geometry_ui_assets.ps1"`. No ejecutar prepare_geometry_original.ps1 otra vez: la copia ya existe. Abrir Unity y usar `BIOFIT > GeomeTry UX > 2. Verificar UX y recursos`.
 
 **Estado:** las pruebas host verifican código y contratos; solo el Editor Unity en la computadora del usuario puede validar gráficos, navegación y build; se requiere el teléfono para FPS y BLE reales.
+
+
+## Corrección de problemas observados en Unity (selección de skins / settings / reingreso)
+
+- El atlas de 70 skins suministrado por el usuario mide 1280x887, y no utiliza un grid matemático exactamente uniforme. La pantalla Customisation renderiza **el archivo completo sin 70 recortes** y coloca 70 zonas táctiles invisibles; se muestra un contorno blanco solamente alrededor del elegido y se guarda en PlayerPrefs.
+- Para mostrar la skin del cubo en el juego, Sprite.Create usa límites medidos en los espacios transparentes del collage. No cambia Rigidbody2D, ni Character, ni Cube, ni velocidad, ni BLE. La calidad de algunos sprites podría mejorar con archivos independientes originales, pero el selector ya no los corta.
+- Se corrigieron la superposición del título de Configuración con el cuadro BLE, y el espacio entre título y atlas; botones verde lima usan texto azul marino oscuro, no blanco.
+- Las esquinas usan el recurso original UI/Misc/Corner, con los cuatro RectTransform completamente dentro del Canvas y UV espejadas (sin rotaciones de contenedores fuera de pantalla).
+- Tras salir del primer nivel y regresar al Main Menu, los listeners UnityEvent serializados podían referirse a un UIManager de una instancia de GameManager que fue destruida (el original vive con DontDestroyOnLoad). Se enlazan **los tres botones principales** a la nueva capa de navegación y se reemplaza el UnityEvent persistente. El método GameManager.LoadLevel original sigue intacto.
+- Sigue pendiente la comprobación de reingreso y skins en Unity Editor, y Android/60fps/2 IMUs con hardware.
