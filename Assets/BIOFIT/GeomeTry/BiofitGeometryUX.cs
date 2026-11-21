@@ -203,6 +203,7 @@ namespace Biofit.GeomeTryOriginal
             canvas = null;
             if (!IsGeomeTryScene(sceneName)) return;
             if (sceneName == Menu) { ConfigureOriginalMenu(); return; }
+            EnsureUiEventSystem();
 
             GameObject host = new GameObject("BIOFIT overlay canvas",
                 typeof(RectTransform), typeof(Canvas),
@@ -225,6 +226,19 @@ namespace Biofit.GeomeTryOriginal
             else if (sceneName == LevelScene) BuildLevelHud();
             else BuildOtherScene(sceneName);
             if (sceneName != Menu) BuildBackButton(sceneName);
+        }
+
+
+        // Some original game scenes do not contain an EventSystem. Creating
+        // one only when absent keeps pause/back/settings clickable on Android.
+        // It is scene-local (not DontDestroyOnLoad) to avoid duplicates.
+        private static void EnsureUiEventSystem()
+        {
+            if (EventSystem.current != null) return;
+            var go = new GameObject("BIOFIT UI EventSystem",
+                typeof(EventSystem), typeof(StandaloneInputModule));
+            Debug.Log("BIOFIT UI: EventSystem creado para " +
+                SceneManager.GetActiveScene().name);
         }
 
         private void ConfigureOriginalMenu()
