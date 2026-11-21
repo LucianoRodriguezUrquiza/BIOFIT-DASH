@@ -254,7 +254,9 @@ namespace Biofit.GeomeTryOriginal
                 GameObject item = GameObject.Find(name);
                 if (item != null) item.SetActive(false);
             }
-            BindOriginalMenuButton("Settings Button", Settings);
+            // Crossed-tools central icon = Editor Button. The lower gear
+            // Settings Button is part of the deliberately hidden footer.
+            BindOriginalMenuButton("Editor Button", Settings);
             BindOriginalMenuButton("Custom Button", Custom);
             // Do not replace the original Play button or navigation.
         }
