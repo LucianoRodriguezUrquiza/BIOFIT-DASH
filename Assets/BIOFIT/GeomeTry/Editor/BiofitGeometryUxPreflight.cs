@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.Rendering;
 
 namespace Biofit.GeomeTryOriginal.Editor
 {
@@ -41,6 +42,7 @@ namespace Biofit.GeomeTryOriginal.Editor
             {
                 RepairEventSystemInput(false);
                 PrepareVisualImporters();
+                EnsureOriginalUrpPreview();
             }
             catch (Exception ex)
             {
@@ -48,6 +50,32 @@ namespace Biofit.GeomeTryOriginal.Editor
                     "de trabajo: " + ex);
             }
         }
+
+        // GeomeTry is authored for URP 2D; the BIOFIT base repo is Built-in.
+        // The Android builder already activates URP temporarily, but Editor Play
+        // never did. Set the original renderer for this isolated game copy.
+        private static void EnsureOriginalUrpPreview()
+        {
+            const string urpPath =
+                "Assets/GeomeTryOriginal/Assets/Settings/UniversalRP.asset";
+            RenderPipelineAsset urp =
+                AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>(urpPath);
+            if (urp == null)
+            {
+                Debug.LogWarning("BIOFIT UX: falta UniversalRP.asset; " +
+                    "la vista de niveles no puede usar URP 2D.");
+                return;
+            }
+            if (GraphicsSettings.defaultRenderPipeline == urp &&
+                QualitySettings.renderPipeline == null) return;
+            QualitySettings.renderPipeline = null;
+            GraphicsSettings.defaultRenderPipeline = urp;
+            Debug.Log("BIOFIT UX: URP 2D original ACTIVADO para Play. " +
+                "Render de escenarios restaurado sin tocar los mapas ni fisica.");
+        }
+
+        [MenuItem("BIOFIT/GeomeTry UX/3. Activar URP 2D original para Play")]
+        public static void SetupUrp() { EnsureOriginalUrpPreview(); }
 
         private static void PrepareVisualImporters()
         {
@@ -60,6 +88,26 @@ namespace Biofit.GeomeTryOriginal.Editor
                 if (importer == null) continue;
                 bool changed = importer.mipmapEnabled;
                 if (importer.mipmapEnabled) importer.mipmapEnabled = false;
+                // The previous 527px selector was visibly blurred on Android.
+                // Keep the user-provided 1672px art uncompressed and bilinear.
+                if (art == "LevelSelect" || art == "Pause" || art == "Back")
+                {
+                    if (importer.textureCompression != TextureImporterCompression.Uncompressed)
+                    {
+                        importer.textureCompression = TextureImporterCompression.Uncompressed;
+                        changed = true;
+                    }
+                    if (importer.maxTextureSize < 2048)
+                    {
+                        importer.maxTextureSize = 2048;
+                        changed = true;
+                    }
+                    if (importer.filterMode != FilterMode.Bilinear)
+                    {
+                        importer.filterMode = FilterMode.Bilinear;
+                        changed = true;
+                    }
+                }
                 if (art == "Skins" && !importer.isReadable)
                 {
                     importer.isReadable = true;
@@ -79,6 +127,7 @@ namespace Biofit.GeomeTryOriginal.Editor
         {
             RepairEventSystemInput(true);
             PrepareVisualImporters();
+            EnsureOriginalUrpPreview();
         }
 
         private static void RepairEventSystemInput(bool report)
@@ -133,6 +182,11 @@ namespace Biofit.GeomeTryOriginal.Editor
                     throw new InvalidOperationException(
                         "Falta imagen del pack: " + art +
                         ". Ejecuta tools/install_geometry_ui_assets.ps1 con Unity cerrado.");
+            Texture2D selector = AssetDatabase.LoadAssetAtPath<Texture2D>(ImagePath + "LevelSelect.png");
+            if (selector.width < 1600 || selector.height < 900)
+                throw new InvalidOperationException(
+                    "Selector de baja resolucion. Instala BIOFIT_GeomeTry_UI_Assets_HD_v2.zip.");
+            EnsureOriginalUrpPreview();
             Texture2D skin = AssetDatabase.LoadAssetAtPath<Texture2D>(ImagePath + "Skins.png");
             if (skin.width != 1280 || skin.height != 887)
                 throw new InvalidOperationException(
