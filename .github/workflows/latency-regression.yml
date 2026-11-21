@@ -13,6 +13,8 @@ jobs:
           dotnet-version: '8.0.x'
       - run: python3 tests/check_geometry_original.py
       - run: python3 tests/check_geometry_navigation.py
+      - run: python3 tests/check_geometry_ux.py
+      - run: dotnet run --project tests/GeometryUxSyntax
       - run: dotnet run --project tests/LatencyRegression
       - run: dotnet run --project tests/ReceiverRegression
       - run: dotnet run --project tests/AndroidDownloadsRegression
