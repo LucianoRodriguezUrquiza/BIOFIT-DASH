@@ -721,7 +721,7 @@ namespace Biofit.GeomeTryOriginal
         {
             if (levelBackdrop == null || levelBackdrop.width < 1600) return;
             RectTransform holder = Rect("BIOFIT DASH titulo HD", parent,
-                new Vector2(.5f, .92f), new Vector2(905f, 128f), Vector2.zero);
+                new Vector2(.5f, .922f), new Vector2(905f, 110f), Vector2.zero);
             RawImage image = holder.gameObject.AddComponent<RawImage>();
             image.texture = levelBackdrop;
             image.uvRect = new Rect(325f / levelBackdrop.width,
