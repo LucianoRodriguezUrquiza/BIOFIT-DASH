@@ -61,6 +61,9 @@ namespace Biofit.GeomeTryOriginal
         private RawImage selectorFocusArt;
         private TMP_Text focusLabel;
         private float focusSince;
+        private readonly Image[] selectorDotFills = new Image[5];
+        private Sprite dotSprite;
+        private Texture2D dotTexture;
         private bool paused;
         private bool priorPlayMode;
         private float priorTimeScale;
@@ -110,6 +113,8 @@ namespace Biofit.GeomeTryOriginal
         private void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (dotSprite != null) Destroy(dotSprite);
+            if (dotTexture != null) Destroy(dotTexture);
             if (instance == this) instance = null;
         }
 
@@ -217,7 +222,10 @@ namespace Biofit.GeomeTryOriginal
             selectorFocusArt = null;
             focusLabel = null;
             for (int i = 0; i < selectorHotspots.Length; i++)
+            {
                 selectorHotspots[i] = null;
+                selectorDotFills[i] = null;
+            }
             activeCube = null;
             cubeRenderer = null;
             cachedSkins.Clear();
@@ -485,6 +493,75 @@ namespace Biofit.GeomeTryOriginal
             GameManager.Instance.LoadLevel(map);
         }
 
+        private Sprite GetDotSprite()
+        {
+            if (dotSprite != null) return dotSprite;
+            dotTexture = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+            dotTexture.name = "BIOFIT round indicator mask";
+            dotTexture.wrapMode = TextureWrapMode.Clamp;
+            dotTexture.filterMode = FilterMode.Bilinear;
+            Color32[] pixels = new Color32[64 * 64];
+            for (int y = 0; y < 64; y++)
+                for (int x = 0; x < 64; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y),
+                        new Vector2(31.5f, 31.5f));
+                    byte a = (byte)Mathf.RoundToInt(
+                        Mathf.Clamp01(31.5f - d) * 255f);
+                    pixels[y * 64 + x] = new Color32(255, 255, 255, a);
+                }
+            dotTexture.SetPixels32(pixels);
+            dotTexture.Apply(false, true);
+            dotSprite = Sprite.Create(dotTexture, new Rect(0, 0, 64, 64),
+                new Vector2(.5f, .5f), 64f);
+            return dotSprite;
+        }
+
+        private void BuildArcadeDots(Transform board)
+        {
+            Sprite sprite = GetDotSprite();
+            RectTransform dots = Rect("Marcadores interactivos", board,
+                new Vector2(.5f, .143f), new Vector2(425f, 65f), Vector2.zero);
+            for (int i = 0; i < selectorDotFills.Length; i++)
+            {
+                float x = (i - 2) * 75f;
+                RectTransform rim = Rect("Borde punto " + i, dots,
+                    new Vector2(.5f, .5f), new Vector2(57f, 57f),
+                    new Vector2(x, 0f));
+                Image black = rim.gameObject.AddComponent<Image>();
+                black.sprite = sprite;
+                black.color = Color.black;
+                black.raycastTarget = false;
+
+                RectTransform inner = Rect("Punto " + i, rim,
+                    new Vector2(.5f, .5f), new Vector2(47f, 47f), Vector2.zero);
+                Image color = inner.gameObject.AddComponent<Image>();
+                color.sprite = sprite;
+                color.raycastTarget = false;
+                selectorDotFills[i] = color;
+            }
+        }
+
+        private void ArcadeCorners(Transform parent)
+        {
+            Texture2D corner = Resources.Load<Texture2D>("UI/Misc/Corner");
+            if (corner == null) return;
+            float[] angles = { 0f, -90f, 90f, 180f };
+            Vector2[] anchors = {
+                new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, 0f), new Vector2(1f, 0f)
+            };
+            for (int i = 0; i < 4; i++)
+            {
+                RectTransform box = Rect("BIOFIT borde arcade " + i, parent,
+                    anchors[i], new Vector2(178f, 178f), Vector2.zero);
+                RawImage raw = box.gameObject.AddComponent<RawImage>();
+                raw.texture = corner;
+                raw.raycastTarget = false;
+                box.localEulerAngles = new Vector3(0f, 0f, angles[i]);
+            }
+        }
+
         private void BuildLevelSelection()
         {
             GameObject oldContainer = GameObject.Find("Level Container");
@@ -543,12 +620,8 @@ namespace Biofit.GeomeTryOriginal
                 focusLabel = Text("nombre nivel", plate, "", new Vector2(.5f, .5f),
                     new Vector2(880f, 65f), Vector2.zero, 37, Color.white);
 
-                // Repaint the five baked indicator dots with stateful ones.
-                RectTransform dots = Rect("marcadores", board,
-                    new Vector2(.5f, .141f), new Vector2(415f, 75f), Vector2.zero);
-                var cover = dots.gameObject.AddComponent<Image>();
-                cover.color = new Color(.011f, .15f, .59f, 1f);
-                cover.raycastTarget = false;
+                // Interactive dots overpaint the static dots with no flat bar.
+                BuildArcadeDots(board);
 
                 // Artwork crop allows small focus animations without resampling
                 // each of the five cards from a low resolution texture.
@@ -582,6 +655,11 @@ namespace Biofit.GeomeTryOriginal
             focusSince = Time.unscaledTime;
             if (focusLabel != null)
                 focusLabel.text = "NIVEL ACTUAL: " + MapTitles[focusLevel];
+            for (int i = 0; i < selectorDotFills.Length; i++)
+                if (selectorDotFills[i] != null)
+                    selectorDotFills[i].color = i == focusLevel ?
+                        new Color(1f, .82f, .02f, 1f) :
+                        new Color(.16f, .18f, .22f, 1f);
 
             if (selectorFocusCard == null || selectorFocusArt == null)
                 return;
@@ -600,7 +678,8 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildSkinSelection()
         {
-            Fill("skins background", canvasRoot, Navy);
+            Fill("skins background", canvasRoot, Blue);
+            ArcadeCorners(canvasRoot);
             Text("skins title", canvasRoot, "PERSONALIZAR CUBO",
                 new Vector2(.5f, .94f), new Vector2(740, 65),
                 Vector2.zero, 47, Lime);
@@ -654,34 +733,42 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildSettings()
         {
-            Fill("settings background", canvasRoot, Navy);
-            Text("settings title", canvasRoot, "CONFIGURACION · BIOFIT",
-                new Vector2(.5f, .92f), new Vector2(1000, 78),
-                Vector2.zero, 52, Lime);
-            Text("ble subtitle", canvasRoot, "SENSORES IMU · BLUETOOTH BILATERAL LEGACY",
-                new Vector2(.5f, .79f), new Vector2(1200, 55),
-                Vector2.zero, 30, Ice);
-            statusLabel = Text("ble state", canvasRoot, "Cargando estado...",
-                new Vector2(.5f, .62f), new Vector2(1220, 210),
-                Vector2.zero, 27, Ice);
+            Fill("BIOFIT settings blue", canvasRoot, Blue);
+            ArcadeCorners(canvasRoot);
+            Text("settings title", canvasRoot, "BIOFIT DASH",
+                new Vector2(.5f, .925f), new Vector2(1000, 92),
+                Vector2.zero, 65, Color.white);
+            Text("ble subtitle", canvasRoot,
+                "CONFIGURACIÓN  ·  BLUETOOTH BILATERAL LEGACY",
+                new Vector2(.5f, .795f), new Vector2(1250, 69),
+                Vector2.zero, 35, Lime);
+
+            RectTransform info = ArcadePanel("Estado de trackers",
+                canvasRoot, new Vector2(.5f, .59f),
+                new Vector2(1130f, 310f), Vector2.zero);
+            statusLabel = Text("Datos BLE", info,
+                "ESTADO DE LOS SENSORES WAVESHARE",
+                new Vector2(.5f, .5f), new Vector2(1030f, 265f),
+                Vector2.zero, 27, Color.white);
+
             Button("Start capture", canvasRoot, "INICIAR REGISTRO",
-                new Vector2(.27f, .38f), new Vector2(350, 66),
-                Vector2.zero, StartCapture, Lime, 24);
+                new Vector2(.31f, .351f), new Vector2(405f, 75f),
+                Vector2.zero, StartCapture, Lime, 27);
             Button("Stop capture", canvasRoot, "FINALIZAR",
-                new Vector2(.73f, .38f), new Vector2(350, 66),
-                Vector2.zero, () => GetMonitor()?.StopGameCapture(), Lime, 24);
+                new Vector2(.69f, .351f), new Vector2(405f, 75f),
+                Vector2.zero, () => GetMonitor()?.StopGameCapture(), Lime, 27);
             Button("RAW", canvasRoot, "RAW",
-                new Vector2(.2f, .24f), new Vector2(240, 65),
-                Vector2.zero, () => GetMonitor()?.ToggleRawCapture(), Ice, 25);
+                new Vector2(.21f, .225f), new Vector2(290f, 75f),
+                Vector2.zero, () => GetMonitor()?.ToggleRawCapture(), Lime, 29);
             Button("SYNC", canvasRoot, "MARCAR SYNC",
-                new Vector2(.5f, .24f), new Vector2(240, 65),
-                Vector2.zero, () => GetMonitor()?.MarkVideoSync(), Ice, 25);
+                new Vector2(.5f, .225f), new Vector2(290f, 75f),
+                Vector2.zero, () => GetMonitor()?.MarkVideoSync(), Lime, 27);
             Button("Downloads", canvasRoot, "DESCARGAS",
-                new Vector2(.8f, .24f), new Vector2(240, 65),
-                Vector2.zero, () => GetMonitor()?.RequestExport(false), Ice, 25);
+                new Vector2(.79f, .225f), new Vector2(290f, 75f),
+                Vector2.zero, () => GetMonitor()?.RequestExport(false), Lime, 27);
             Button("Export SAF", canvasRoot, "GUARDAR ARCHIVOS (SAF)",
-                new Vector2(.5f, .12f), new Vector2(560, 64),
-                Vector2.zero, () => GetMonitor()?.RequestExport(true), Lime, 24);
+                new Vector2(.5f, .104f), new Vector2(620f, 75f),
+                Vector2.zero, () => GetMonitor()?.RequestExport(true), Lime, 27);
             RefreshBleStatus();
         }
 
@@ -721,7 +808,8 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildOtherScene(string scene)
         {
-            Fill(scene + " background", canvasRoot, Navy);
+            Fill(scene + " background", canvasRoot, Blue);
+            ArcadeCorners(canvasRoot);
             Text(scene + " title", canvasRoot, scene.ToUpperInvariant(),
                 new Vector2(.5f, .7f), new Vector2(990, 110), Vector2.zero, 54, Lime);
             Text(scene + " body", canvasRoot,
@@ -732,7 +820,7 @@ namespace Biofit.GeomeTryOriginal
         private void BuildLevelHud()
         {
             ImageButton("Pause game", canvasRoot, pauseIcon, "Ⅱ",
-                new Vector2(.95f, .89f), new Vector2(97, 97),
+                new Vector2(.948f, .884f), new Vector2(119, 123),
                 Vector2.zero, TogglePause);
         }
 
