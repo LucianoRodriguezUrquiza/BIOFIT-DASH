@@ -676,17 +676,34 @@ namespace Biofit.GeomeTryOriginal
                 270f / tw, 306f / th);
         }
 
+        private void ArcadeLogo(Transform parent)
+        {
+            if (levelBackdrop == null || levelBackdrop.width < 1600) return;
+            RectTransform holder = Rect("BIOFIT DASH titulo HD", parent,
+                new Vector2(.5f, .92f), new Vector2(905f, 128f), Vector2.zero);
+            RawImage image = holder.gameObject.AddComponent<RawImage>();
+            image.texture = levelBackdrop;
+            image.uvRect = new Rect(325f / levelBackdrop.width,
+                (941f - 188f) / levelBackdrop.height,
+                1020f / levelBackdrop.width,
+                172f / levelBackdrop.height);
+            image.raycastTarget = false;
+        }
+
         private void BuildSkinSelection()
         {
             Fill("skins background", canvasRoot, Blue);
             ArcadeCorners(canvasRoot);
-            Text("skins title", canvasRoot, "PERSONALIZAR CUBO",
-                new Vector2(.5f, .94f), new Vector2(740, 65),
-                Vector2.zero, 47, Lime);
+            ArcadeLogo(canvasRoot);
+            RectTransform skinTitle = ArcadePanel("Titulo skins", canvasRoot,
+                new Vector2(.5f, .785f), new Vector2(660f, 74f), Vector2.zero);
+            Text("skins title", skinTitle, "PERSONALIZAR CUBO",
+                new Vector2(.5f, .5f), new Vector2(620f, 66f),
+                Vector2.zero, 38, Color.white);
             skinLabel = Text("current skin", canvasRoot,
                 "PERSONAJE " + (skinIndex + 1) + " / 70",
-                new Vector2(.5f, .84f), new Vector2(780, 48),
-                Vector2.zero, 26, Ice);
+                new Vector2(.5f, .71f), new Vector2(780, 48),
+                Vector2.zero, 31, Ice);
             if (atlas == null)
             {
                 Text("missing atlas", canvasRoot,
@@ -698,10 +715,10 @@ namespace Biofit.GeomeTryOriginal
                 return;
             }
             RectTransform grid = Rect("70 skins grid", canvasRoot,
-                new Vector2(.5f, .43f), new Vector2(1075, 570), Vector2.zero);
+                new Vector2(.5f, .359f), new Vector2(1040, 603), Vector2.zero);
             GridLayoutGroup layout = grid.gameObject.AddComponent<GridLayoutGroup>();
-            layout.cellSize = new Vector2(93f, 75f);
-            layout.spacing = new Vector2(11f, 4f);
+            layout.cellSize = new Vector2(88f, 79f);
+            layout.spacing = new Vector2(14f, 6f);
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = 10;
@@ -735,13 +752,13 @@ namespace Biofit.GeomeTryOriginal
         {
             Fill("BIOFIT settings blue", canvasRoot, Blue);
             ArcadeCorners(canvasRoot);
-            Text("settings title", canvasRoot, "BIOFIT DASH",
-                new Vector2(.5f, .925f), new Vector2(1000, 92),
-                Vector2.zero, 65, Color.white);
-            Text("ble subtitle", canvasRoot,
-                "CONFIGURACIÓN  ·  BLUETOOTH BILATERAL LEGACY",
-                new Vector2(.5f, .795f), new Vector2(1250, 69),
-                Vector2.zero, 35, Lime);
+            ArcadeLogo(canvasRoot);
+            RectTransform heading = ArcadePanel("Titular BLE", canvasRoot,
+                new Vector2(.5f, .788f), new Vector2(1090f, 75f), Vector2.zero);
+            Text("ble subtitle", heading,
+                "CONFIGURACIÓN  ·  BILATERAL LEGACY",
+                new Vector2(.5f, .5f), new Vector2(1050f, 67f),
+                Vector2.zero, 38, Color.white);
 
             RectTransform info = ArcadePanel("Estado de trackers",
                 canvasRoot, new Vector2(.5f, .59f),
