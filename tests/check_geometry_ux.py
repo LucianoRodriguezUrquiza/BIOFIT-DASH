@@ -46,6 +46,17 @@ assert 'Hotspot("Elegir skin " + (i + 1)' in source
 assert '"Borde de skin seleccionada"' in source
 assert 'UpdateSkinSelectionOutline();' in source
 assert "new Vector2(710f, 70f)" in source
+# Regressions observed in Unity 6000.3.28f1: ensure visual bands
+# stay separated in the 1600x900 reference layout.
+settings_title_bottom = .806 * 900 - 67 / 2
+ble_panel_top = .576 * 900 + 248 / 2
+assert settings_title_bottom - ble_panel_top > 30, "BLE panel overlaps title"
+skins_title_bottom = .818 * 900 - 70 / 2
+skins_label_top = .743 * 900 + 40 / 2
+assert skins_title_bottom > skins_label_top + 7, "Skin label overlaps header"
+skins_label_bottom = .743 * 900 - 40 / 2
+atlas_top = .360 * 900 + (915 * 887 / 1280) / 2
+assert skins_label_bottom > atlas_top + 5, "Skin label overlaps atlas"
 assert 'xCuts = { 0, 134, 259, 384, 510, 635, 762, 888' in source
 assert 'yCutsTopDown = { 0, 139, 262, 385, 509, 636, 755, 887 }' in source
 assert 'GridLayoutGroup layout' not in source, "Do not crop collage into 70 stretched UI sprites"
