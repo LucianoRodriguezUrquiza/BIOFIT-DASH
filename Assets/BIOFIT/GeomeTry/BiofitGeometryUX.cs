@@ -764,7 +764,7 @@ namespace Biofit.GeomeTryOriginal
             float width = 915f;
             float height = width * atlas.height / atlas.width;
             RectTransform sheet = Rect("70 SKINS SIN RECORTE",
-                canvasRoot, new Vector2(.5f, .370f),
+                canvasRoot, new Vector2(.5f, .360f),
                 new Vector2(width, height), Vector2.zero);
             RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();
             wholeAtlas.texture = atlas;
