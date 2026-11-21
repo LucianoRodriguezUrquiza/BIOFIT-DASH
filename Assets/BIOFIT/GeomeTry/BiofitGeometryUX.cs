@@ -284,9 +284,14 @@ namespace Biofit.GeomeTryOriginal
             }
             // Crossed-tools central icon = Editor Button. The lower gear
             // Settings Button is part of the deliberately hidden footer.
+            // The original scene's serialized button listener targets a
+            // UIManager component on a duplicate GameManager prefab. After
+            // returning to Main Menu the duplicate is destroyed because the
+            // actual GameManager survives via DontDestroyOnLoad. Replace those
+            // stale listeners with scene-independent routes.
+            BindOriginalMenuButton("Play Button", Select);
             BindOriginalMenuButton("Editor Button", Settings);
             BindOriginalMenuButton("Custom Button", Custom);
-            // Do not replace the original Play button or navigation.
         }
 
         private void BindOriginalMenuButton(string objectName, string targetScene)
@@ -296,6 +301,10 @@ namespace Biofit.GeomeTryOriginal
             foreach (Button b in all)
             {
                 if (b.name != objectName) continue;
+                // Remove persistent serialized UnityEvent listeners as well
+                // as runtime listeners. RemoveAllListeners alone preserves
+                // persistent listeners pointing at destroyed scene objects.
+                b.onClick = new Button.ButtonClickedEvent();
                 b.onClick.AddListener(() => Navigate(targetScene));
                 b.interactable = true;
                 return;
@@ -490,6 +499,10 @@ namespace Biofit.GeomeTryOriginal
                 Debug.LogError("BIOFIT UI: mapa/GameManager faltante: " + MapKeys[i]);
                 return;
             }
+            if (paused) RestorePause();
+            // Keep the original LoadLevel coroutine and physics unchanged.
+            // Clear stale play-state only at the UI boundary on re-entry.
+            GameManager.Instance.PlayMode = false;
             GameManager.Instance.LoadLevel(map);
         }
 
