@@ -55,6 +55,8 @@ namespace Biofit.GeomeTryOriginal
         private float averageFps = 60f;
         private int skinIndex;
         private int focusLevel;
+        private readonly Image[] selectorHotspots = new Image[5];
+        private TMP_Text focusLabel;
         private bool paused;
         private bool priorPlayMode;
         private float priorTimeScale;
@@ -424,10 +426,21 @@ namespace Biofit.GeomeTryOriginal
                         pos, new Vector2(218, 296), Vector2.zero,
                         () => StartLevel(slot), Lime, 28);
                 else
-                    Button("LEVEL hotspot " + MapKeys[i], canvasRoot, "",
-                        pos, new Vector2(225, 365), Vector2.zero,
-                        () => StartLevel(slot),
+                {
+                    Button hotspot = Button("LEVEL hotspot " + MapKeys[i],
+                        canvasRoot, "", pos, new Vector2(225, 365),
+                        Vector2.zero, () => StartLevel(slot),
                         new Color(1f, 1f, 1f, 0.001f));
+                    selectorHotspots[i] = hotspot.GetComponent<Image>();
+                }
+            }
+            if (levelBackdrop != null)
+            {
+                focusLabel = Text("current level label", canvasRoot,
+                    "SELECCIONADO: " + MapTitles[focusLevel],
+                    new Vector2(.5f, .12f), new Vector2(620, 45),
+                    Vector2.zero, 25, Ice);
+                UpdateFocus();
             }
             if (levelBackdrop != null)
             {
@@ -445,8 +458,18 @@ namespace Biofit.GeomeTryOriginal
         private void CycleFocus(int offset)
         {
             focusLevel = (focusLevel + offset + MapKeys.Length) % MapKeys.Length;
-            Debug.Log("BIOFIT: selector de nivel " + MapTitles[focusLevel] +
-                " (toca su tarjeta para entrar).");
+            UpdateFocus();
+        }
+
+        private void UpdateFocus()
+        {
+            for (int i = 0; i < selectorHotspots.Length; i++)
+                if (selectorHotspots[i] != null)
+                    selectorHotspots[i].color = i == focusLevel ?
+                        new Color(1f, .96f, .2f, .15f) :
+                        new Color(1f, 1f, 1f, .001f);
+            if (focusLabel != null)
+                focusLabel.text = "SELECCIONADO: " + MapTitles[focusLevel];
         }
 
         private void BuildSkinSelection()
@@ -634,6 +657,8 @@ namespace Biofit.GeomeTryOriginal
             Text("pause title", veil, "PAUSA",
                 new Vector2(.5f, .80f), new Vector2(560, 85),
                 Vector2.zero, 60, Lime);
+            // Back remains visible and functional even over the pause dimmer.
+            BuildBackButton(LevelScene);
         }
 
         private void RestartLevel()
