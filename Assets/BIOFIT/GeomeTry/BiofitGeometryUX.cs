@@ -183,10 +183,27 @@ namespace Biofit.GeomeTryOriginal
             if (atlas == null || index < 0 || index >= 70) return null;
             if (cachedSkins.TryGetValue(index, out Sprite cached)) return cached;
             int col = index % 10, row = index / 10;
-            int x0 = Mathf.RoundToInt(col * atlas.width / 10f);
-            int x1 = Mathf.RoundToInt((col + 1) * atlas.width / 10f);
-            int y0 = Mathf.RoundToInt((6 - row) * atlas.height / 7f);
-            int y1 = Mathf.RoundToInt((7 - row) * atlas.height / 7f);
+            // The collage is not an exact 128x126 grid. These cuts follow the
+            // actual transparent gutters of the user's 1280x887 source art,
+            // so a playable skin never includes half of its neighbor.
+            int[] xCuts = { 0, 134, 259, 384, 510, 635, 762, 888,
+                1012, 1137, 1280 };
+            int[] yCutsTopDown = { 0, 139, 262, 385, 509, 636, 755, 887 };
+            int x0, x1, y0, y1;
+            if (atlas.width == 1280 && atlas.height == 887)
+            {
+                x0 = xCuts[col];
+                x1 = xCuts[col + 1];
+                y0 = 887 - yCutsTopDown[row + 1];
+                y1 = 887 - yCutsTopDown[row];
+            }
+            else
+            {
+                x0 = Mathf.RoundToInt(col * atlas.width / 10f);
+                x1 = Mathf.RoundToInt((col + 1) * atlas.width / 10f);
+                y0 = Mathf.RoundToInt((6 - row) * atlas.height / 7f);
+                y1 = Mathf.RoundToInt((7 - row) * atlas.height / 7f);
+            }
             if (y1 <= y0 || x1 <= x0) return null;
             // Match the footprint of the ORIGINAL cuboid sprite in world units.
             float originalWidth = baseCubeSprite == null ? 1f :
