@@ -40,6 +40,24 @@ assert 'Fill("Original BIOFIT DASH reference"' not in source, (
     "Image and RawImage cannot coexist on a GameObject"
 )
 assert "SetSkin(index)" in source and "BuildSkinSelection()" in source
+assert 'RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();' in source
+assert '"70 SKINS SIN RECORTE"' in source
+assert 'Hotspot("Elegir skin " + (i + 1)' in source
+assert '"Borde de skin seleccionada"' in source
+assert 'UpdateSkinSelectionOutline();' in source
+assert "new Vector2(710f, 70f)" in source
+assert 'xCuts = { 0, 134, 259, 384, 510, 635, 762, 888' in source
+assert 'yCutsTopDown = { 0, 139, 262, 385, 509, 636, 755, 887 }' in source
+assert 'GridLayoutGroup layout' not in source, "Do not crop collage into 70 stretched UI sprites"
+assert 'BindOriginalMenuButton("Play Button", Select);' in source
+assert 'b.onClick = new Button.ButtonClickedEvent();' in source
+assert 'GameManager.Instance.LoadLevel(map);' in source
+assert 'new Vector2(.5f, .576f)' in source
+assert 'new Vector2(1130f, 248f)' in source
+assert 'new Vector2(1030f, 212f)' in source
+assert 'new Vector2(right ? -92f : 92f, bottom ? 92f : -92f)' in source
+assert 'raw.uvRect = new Rect(right ? 1f : 0f' in source
+assert 'new Vector2(22f, 15f), Vector2.zero, fontSize,\n                    Navy);' in source, "Lime controls require dark readable text"
 
 # Navigation and buttons are actual Unity UI Button.onClick listeners.
 for token in [
