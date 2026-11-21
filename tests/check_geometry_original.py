@@ -23,7 +23,7 @@ cfg = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 # GeomeTry needs the old Input Manager for Cube/Ship/Wave on Android.
 # The prior branch used Both (unsupported on Android); this dedicated UI
 # release switches to 0 and repairs the scene EventSystem through the Editor.
-assert re.search(r'^  activeInputHandler: 0
+assert '  activeInputHandler: 0' in cfg, 'Android must use legacy Input Manager'
 module = root / "ThirdParty/GeomeTryOriginal"
 assert (module / ".git").exists(), "Original GeomeTry submodule not initialized!"
 actual_commit = subprocess.check_output(["git", "-C", str(module), "rev-parse", "HEAD"], text=True).strip()
