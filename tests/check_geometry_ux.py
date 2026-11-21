@@ -23,7 +23,7 @@ assert "Sprite.Create(atlas" in source
 assert "cubeRenderer.sprite = selected;" in source
 assert "CharacterSpriteField.GetValue(cube)" in source
 assert "Texture2D" in source and "RawImage" in source
-assert "RawImage art = bg.gameObject.AddComponent<RawImage>();" in source, (
+assert "var art = bg.gameObject.AddComponent<RawImage>();" in source, (
     "Selector must use clean RectTransform, never mix Image and RawImage"
 )
 assert "AspectRatioFitter.AspectMode.FitInParent" in source
