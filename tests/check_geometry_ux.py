@@ -27,7 +27,7 @@ assert "SetSkin(index)" in source and "BuildSkinSelection()" in source
 
 # Navigation and buttons are actual Unity UI Button.onClick listeners.
 for token in [
-    'BindOriginalMenuButton("Settings Button", Settings);',
+    'BindOriginalMenuButton("Editor Button", Settings);',
     'BindOriginalMenuButton("Custom Button", Custom);',
     "BuildBackButton(sceneName);",
     "BuildLevelSelection();",
