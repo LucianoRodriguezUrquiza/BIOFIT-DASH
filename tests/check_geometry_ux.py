@@ -23,6 +23,12 @@ assert "Sprite.Create(atlas" in source
 assert "cubeRenderer.sprite = selected;" in source
 assert "CharacterSpriteField.GetValue(cube)" in source
 assert "Texture2D" in source and "RawImage" in source
+assert "RawImage raw = backdrop.gameObject.AddComponent<RawImage>();" in source, (
+    "Selector reference must use a clean RectTransform, not Fill()+RawImage"
+)
+assert 'Fill("Original BIOFIT DASH reference"' not in source, (
+    "Image and RawImage cannot coexist on a GameObject"
+)
 assert "SetSkin(index)" in source and "BuildSkinSelection()" in source
 
 # Navigation and buttons are actual Unity UI Button.onClick listeners.
