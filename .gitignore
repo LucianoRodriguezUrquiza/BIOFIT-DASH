@@ -85,3 +85,6 @@ __pycache__/
 # Source remains in ThirdParty/GeomeTryOriginal; Unity should see Assets ONLY.
 /Assets/GeomeTryOriginal/Assets/
 /Assets/GeomeTryOriginal/Assets.meta
+
+# User-supplied graphics from the chat asset ZIP
+/Assets/BIOFIT/Resources/BiofitUi/
