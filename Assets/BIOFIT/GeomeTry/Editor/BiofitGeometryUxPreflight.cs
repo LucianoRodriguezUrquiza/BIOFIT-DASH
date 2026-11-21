@@ -37,11 +37,40 @@ namespace Biofit.GeomeTryOriginal.Editor
                 return;
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null)
                 return;
-            try { RepairEventSystemInput(false); }
+            try
+            {
+                RepairEventSystemInput(false);
+                PrepareVisualImporters();
+            }
             catch (Exception ex)
             {
-                Debug.LogError("BIOFIT UX: no se pudo adaptar el modulo UI " +
-                    "en la copia de trabajo: " + ex);
+                Debug.LogError("BIOFIT UX: fallo de preconfiguracion del proyecto " +
+                    "de trabajo: " + ex);
+            }
+        }
+
+        private static void PrepareVisualImporters()
+        {
+            // Sprite.Create may need CPU-readable source pixels on Android.
+            // Set it once, never at runtime; disable unused UI mipmaps.
+            foreach (string art in new[] { "Skins", "LevelSelect", "Back", "Pause" })
+            {
+                string asset = ImagePath + art + ".png";
+                var importer = AssetImporter.GetAtPath(asset) as TextureImporter;
+                if (importer == null) continue;
+                bool changed = importer.mipmapEnabled;
+                if (importer.mipmapEnabled) importer.mipmapEnabled = false;
+                if (art == "Skins" && !importer.isReadable)
+                {
+                    importer.isReadable = true;
+                    changed = true;
+                }
+                if (art == "Skins" && importer.filterMode != FilterMode.Point)
+                {
+                    importer.filterMode = FilterMode.Point;
+                    changed = true;
+                }
+                if (changed) importer.SaveAndReimport();
             }
         }
 
@@ -49,6 +78,7 @@ namespace Biofit.GeomeTryOriginal.Editor
         public static void SetupInput()
         {
             RepairEventSystemInput(true);
+            PrepareVisualImporters();
         }
 
         private static void RepairEventSystemInput(bool report)
@@ -107,6 +137,10 @@ namespace Biofit.GeomeTryOriginal.Editor
             if (skin.width != 1280 || skin.height != 887)
                 throw new InvalidOperationException(
                     "El atlas de 70 cubos no coincide con la referencia del usuario.");
+            if (!skin.isReadable)
+                throw new InvalidOperationException(
+                    "Atlas sin lectura CPU. Ejecuta Configurar modulo tactil Android " +
+                    "para preparar tambien el importador de skins.");
             GameObject system = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             if (system == null || system.GetComponent<StandaloneInputModule>() == null)
                 throw new InvalidOperationException(
