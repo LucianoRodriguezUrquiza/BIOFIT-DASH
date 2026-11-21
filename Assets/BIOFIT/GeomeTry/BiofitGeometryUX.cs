@@ -41,6 +41,7 @@ namespace Biofit.GeomeTryOriginal
         private RectTransform canvasRoot;
         private TMP_Text statusLabel;
         private TMP_Text skinLabel;
+        private RectTransform skinSelectionOutline;
         private TMP_FontAsset fallbackFont;
         private Texture2D atlas;
         private Texture2D levelBackdrop;
@@ -209,7 +210,8 @@ namespace Biofit.GeomeTryOriginal
             foreach (Sprite s in cachedSkins.Values) if (s != null) Destroy(s);
             cachedSkins.Clear();
             if (skinLabel != null)
-                skinLabel.text = "PERSONAJE " + (skinIndex + 1) + " / 70  -  GUARDADO";
+                skinLabel.text = "PERSONAJE " + (skinIndex + 1) + " DE 70  ·  GUARDADO";
+            UpdateSkinSelectionOutline();
         }
 
         private void BuildScreen(string sceneName)
@@ -217,6 +219,7 @@ namespace Biofit.GeomeTryOriginal
             currentScene = sceneName;
             statusLabel = null;
             skinLabel = null;
+            skinSelectionOutline = null;
             selectorContentRoot = null;
             selectorFocusCard = null;
             selectorFocusArt = null;
@@ -409,7 +412,7 @@ namespace Biofit.GeomeTryOriginal
             if (!string.IsNullOrEmpty(label))
                 Text(name + " label", frame, label, new Vector2(.5f, .5f),
                     size - new Vector2(22f, 15f), Vector2.zero, fontSize,
-                    Color.white);
+                    Navy);
             return button;
         }
 
@@ -557,21 +560,29 @@ namespace Biofit.GeomeTryOriginal
 
         private void ArcadeCorners(Transform parent)
         {
+            // Reuse GeomeTry's original transparent corner art.
+            // Anchor positions must stay INSIDE the canvas; rotating a
+            // half-outside RectTransform caused the clipped fragments shown
+            // in the user's screenshot. Mirror UVs, not the RectTransform.
             Texture2D corner = Resources.Load<Texture2D>("UI/Misc/Corner");
             if (corner == null) return;
-            float[] angles = { 0f, -90f, 90f, 180f };
             Vector2[] anchors = {
                 new Vector2(0f, 1f), new Vector2(1f, 1f),
                 new Vector2(0f, 0f), new Vector2(1f, 0f)
             };
             for (int i = 0; i < 4; i++)
             {
-                RectTransform box = Rect("BIOFIT borde arcade " + i, parent,
-                    anchors[i], new Vector2(178f, 178f), Vector2.zero);
+                bool right = i % 2 == 1;
+                bool bottom = i >= 2;
+                RectTransform box = Rect("BIOFIT esquina completa " + i,
+                    parent, anchors[i], new Vector2(184f, 184f),
+                    new Vector2(right ? -92f : 92f, bottom ? 92f : -92f));
                 RawImage raw = box.gameObject.AddComponent<RawImage>();
                 raw.texture = corner;
+                raw.uvRect = new Rect(right ? 1f : 0f,
+                    bottom ? 1f : 0f, right ? -1f : 1f,
+                    bottom ? -1f : 1f);
                 raw.raycastTarget = false;
-                box.localEulerAngles = new Vector3(0f, 0f, angles[i]);
             }
         }
 
@@ -705,60 +716,93 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildSkinSelection()
         {
-            Fill("skins background", canvasRoot, Blue);
+            Fill("BIOFIT personalizacion azul", canvasRoot, Blue);
             ArcadeCorners(canvasRoot);
             ArcadeLogo(canvasRoot);
-            RectTransform skinTitle = ArcadePanel("Titulo skins", canvasRoot,
-                new Vector2(.5f, .785f), new Vector2(660f, 74f), Vector2.zero);
-            Text("skins title", skinTitle, "PERSONALIZAR CUBO",
-                new Vector2(.5f, .5f), new Vector2(620f, 66f),
-                Vector2.zero, 38, Color.white);
-            skinLabel = Text("current skin", canvasRoot,
-                "PERSONAJE " + (skinIndex + 1) + " / 70",
-                new Vector2(.5f, .71f), new Vector2(780, 48),
-                Vector2.zero, 31, Ice);
+
+            RectTransform title = ArcadePanel("Titulo personalizacion",
+                canvasRoot, new Vector2(.5f, .818f),
+                new Vector2(710f, 70f), Vector2.zero);
+            Text("titulo skin", title, "PERSONALIZAR CUBO",
+                new Vector2(.5f, .5f), new Vector2(665f, 58f),
+                Vector2.zero, 37, Color.white);
+
+            skinLabel = Text("skin actual", canvasRoot,
+                "PERSONAJE " + (skinIndex + 1) + " DE 70",
+                new Vector2(.5f, .743f), new Vector2(760f, 40f),
+                Vector2.zero, 30, Ice);
             if (atlas == null)
             {
                 Text("missing atlas", canvasRoot,
-                    "FALTA EL PACK DE IMAGENES BIOFIT.\n" +
-                    "Copia Assets/BIOFIT/Resources/BiofitUi/Skins.png\n" +
-                    "desde BIOFIT_GeomeTry_UI_Assets.zip.",
-                    new Vector2(.5f, .52f), new Vector2(950, 230),
-                    Vector2.zero, 28, Ice);
+                    "NO SE ENCONTRO SKINS.PNG",
+                    new Vector2(.5f, .39f), new Vector2(950f, 160f),
+                    Vector2.zero, 32, Ice);
                 return;
             }
-            RectTransform grid = Rect("70 skins grid", canvasRoot,
-                new Vector2(.5f, .359f), new Vector2(1040, 603), Vector2.zero);
-            GridLayoutGroup layout = grid.gameObject.AddComponent<GridLayoutGroup>();
-            layout.cellSize = new Vector2(88f, 79f);
-            layout.spacing = new Vector2(14f, 6f);
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = 10;
+
+            // Display the COMPLETE original 1280x887 collage instead of
+            // cropping 70 independent RawImages. The source image is not a
+            // uniform grid: several outlines spill across calculated cell
+            // borders. Displaying one RawImage prevents visible cutoffs.
+            float width = 915f;
+            float height = width * atlas.height / atlas.width;
+            RectTransform sheet = Rect("70 SKINS SIN RECORTE",
+                canvasRoot, new Vector2(.5f, .370f),
+                new Vector2(width, height), Vector2.zero);
+            RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();
+            wholeAtlas.texture = atlas;
+            wholeAtlas.raycastTarget = false;
+            wholeAtlas.color = Color.white;
+
+            // Each picture is a functional touch zone over the intact atlas.
             for (int i = 0; i < 70; i++)
             {
                 int index = i;
-                var obj = new GameObject("Skin " + i,
-                    typeof(RectTransform), typeof(Image), typeof(Button));
-                obj.transform.SetParent(grid, false);
-                Image frame = obj.GetComponent<Image>();
-                frame.color = i == skinIndex ? Lime : Blue;
-                var b = obj.GetComponent<Button>();
-                b.targetGraphic = frame;
-                b.onClick.AddListener(() => { SetSkin(index); BuildScreen(Custom); });
-                var img = new GameObject("original atlas tile", typeof(RectTransform),
-                    typeof(RawImage));
-                img.transform.SetParent(obj.transform, false);
-                RectTransform rect = img.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = new Vector2(4f, 3f);
-                rect.offsetMax = new Vector2(-4f, -3f);
-                RawImage raw = img.GetComponent<RawImage>();
-                raw.texture = atlas;
-                raw.uvRect = new Rect((i % 10) / 10f,
-                    (6 - i / 10) / 7f, .1f, 1f / 7f);
-                raw.raycastTarget = false;
+                int col = i % 10;
+                int row = i / 10;
+                Hotspot("Elegir skin " + (i + 1), sheet,
+                    new Vector2((col + .5f) / 10f,
+                                1f - (row + .5f) / 7f),
+                    new Vector2(width / 10f, height / 7f),
+                    () => SetSkin(index));
             }
+
+            skinSelectionOutline = Rect("Borde de skin seleccionada",
+                sheet, new Vector2(.5f, .5f),
+                new Vector2(width / 10f, height / 7f), Vector2.zero);
+            float cellW = width / 10f, cellH = height / 7f;
+            AddSelectionStroke(skinSelectionOutline, "Superior",
+                new Vector2(.5f, 1f), new Vector2(cellW - 6f, 5f),
+                new Vector2(0f, -3f));
+            AddSelectionStroke(skinSelectionOutline, "Inferior",
+                new Vector2(.5f, 0f), new Vector2(cellW - 6f, 5f),
+                new Vector2(0f, 3f));
+            AddSelectionStroke(skinSelectionOutline, "Izquierdo",
+                new Vector2(0f, .5f), new Vector2(5f, cellH - 6f),
+                new Vector2(3f, 0f));
+            AddSelectionStroke(skinSelectionOutline, "Derecho",
+                new Vector2(1f, .5f), new Vector2(5f, cellH - 6f),
+                new Vector2(-3f, 0f));
+            UpdateSkinSelectionOutline();
+        }
+
+        private void AddSelectionStroke(Transform root, string name,
+            Vector2 anchor, Vector2 size, Vector2 offset)
+        {
+            RectTransform stroke = Rect(name, root, anchor, size, offset);
+            Image image = stroke.gameObject.AddComponent<Image>();
+            image.color = Color.white;
+            image.raycastTarget = false;
+        }
+
+        private void UpdateSkinSelectionOutline()
+        {
+            if (skinSelectionOutline == null) return;
+            int col = skinIndex % 10;
+            int row = skinIndex / 10;
+            skinSelectionOutline.anchorMin = skinSelectionOutline.anchorMax =
+                new Vector2((col + .5f) / 10f, 1f - (row + .5f) / 7f);
+            skinSelectionOutline.anchoredPosition = Vector2.zero;
         }
 
         private void BuildSettings()
@@ -767,19 +811,19 @@ namespace Biofit.GeomeTryOriginal
             ArcadeCorners(canvasRoot);
             ArcadeLogo(canvasRoot);
             RectTransform heading = ArcadePanel("Titular BLE", canvasRoot,
-                new Vector2(.5f, .788f), new Vector2(1090f, 75f), Vector2.zero);
+                new Vector2(.5f, .806f), new Vector2(1090f, 67f), Vector2.zero);
             Text("ble subtitle", heading,
                 "CONFIGURACIÓN  ·  BILATERAL LEGACY",
-                new Vector2(.5f, .5f), new Vector2(1050f, 67f),
-                Vector2.zero, 38, Color.white);
+                new Vector2(.5f, .5f), new Vector2(1040f, 55f),
+                Vector2.zero, 34, Color.white);
 
             RectTransform info = ArcadePanel("Estado de trackers",
-                canvasRoot, new Vector2(.5f, .59f),
-                new Vector2(1130f, 310f), Vector2.zero);
+                canvasRoot, new Vector2(.5f, .576f),
+                new Vector2(1130f, 248f), Vector2.zero);
             statusLabel = Text("Datos BLE", info,
                 "ESTADO DE LOS SENSORES WAVESHARE",
-                new Vector2(.5f, .5f), new Vector2(1030f, 265f),
-                Vector2.zero, 27, Color.white);
+                new Vector2(.5f, .5f), new Vector2(1030f, 212f),
+                Vector2.zero, 25, Color.white);
 
             Button("Start capture", canvasRoot, "INICIAR REGISTRO",
                 new Vector2(.31f, .351f), new Vector2(405f, 75f),
