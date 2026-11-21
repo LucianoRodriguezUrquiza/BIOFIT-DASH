@@ -405,11 +405,19 @@ namespace Biofit.GeomeTryOriginal
             RectTransform layer = Fill("BIOFIT selector blue", canvasRoot, Blue);
             if (levelBackdrop != null)
             {
-                var raw = Fill("Original BIOFIT DASH reference", canvasRoot, Color.white)
-                    .gameObject.AddComponent<RawImage>();
-                Image im = raw.GetComponent<Image>();
-                if (im != null) im.enabled = false;
+                // RawImage and Image both derive from Graphic and cannot
+                // coexist on the same GameObject. Build a clean full-stretch
+                // graphic, never attach RawImage to Fill() (which adds Image).
+                RectTransform backdrop = Rect("Original BIOFIT DASH reference",
+                    canvasRoot, new Vector2(0.5f, 0.5f),
+                    Vector2.zero, Vector2.zero);
+                backdrop.anchorMin = Vector2.zero;
+                backdrop.anchorMax = Vector2.one;
+                backdrop.offsetMin = Vector2.zero;
+                backdrop.offsetMax = Vector2.zero;
+                RawImage raw = backdrop.gameObject.AddComponent<RawImage>();
                 raw.texture = levelBackdrop;
+                raw.color = Color.white;
                 raw.raycastTarget = false;
             }
             else
