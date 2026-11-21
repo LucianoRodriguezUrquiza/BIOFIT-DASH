@@ -23,9 +23,19 @@ assert "Sprite.Create(atlas" in source
 assert "cubeRenderer.sprite = selected;" in source
 assert "CharacterSpriteField.GetValue(cube)" in source
 assert "Texture2D" in source and "RawImage" in source
-assert "RawImage raw = backdrop.gameObject.AddComponent<RawImage>();" in source, (
-    "Selector reference must use a clean RectTransform, not Fill()+RawImage"
+assert "RawImage art = bg.gameObject.AddComponent<RawImage>();" in source, (
+    "Selector must use clean RectTransform, never mix Image and RawImage"
 )
+assert "AspectRatioFitter.AspectMode.FitInParent" in source
+assert "selectorFocusCard.localScale = Vector3.one" in source
+assert "BuildArcadeDots(board);" in source
+assert "ArcadeLogo(canvasRoot);" in source
+assert "new Color(1f, .96f, .2f, .15f)" not in source
+assert "GraphicsSettings.defaultRenderPipeline = urp;" in preflight
+assert "QualitySettings.renderPipeline = null;" in preflight
+assert "TextureImporterCompression.Uncompressed" in preflight
+assert '"BIOFIT DASH HD art"' in source
+assert "selector.width < 1600" in preflight
 assert 'Fill("Original BIOFIT DASH reference"' not in source, (
     "Image and RawImage cannot coexist on a GameObject"
 )
@@ -100,9 +110,11 @@ assert "PrefabUtility.SaveAsPrefabAsset" in preflight
 assert "Prefabs/EventSystem.prefab" in preflight
 assert "4 imagenes" in preflight
 assert "Input Manager (Old)" in preflight
-assert "BIOFIT_GeomeTry_UI_Assets.zip" in ps
+assert "BIOFIT_GeomeTry_UI_Assets_HD_v2.zip" in ps
 assert "Get-FileHash" in ps
 assert "SHA256" in ps
+assert "7186b226fad1ca49247d31aa65394a1d882effbe772c64ff02ab89f6040a4c8c" in ps
+assert "f7e4295c30329990bc9511aef0b08adbd72b0b981efebca787e2b338641ac3b7" in ps
 assert "Skins.png" in ps and "LevelSelect.png" in ps
 assert "Back.png" in ps and "Pause.png" in ps
 assert (root / ".gitignore").read_text().count("/Assets/BIOFIT/Resources/BiofitUi/") == 1

@@ -511,7 +511,7 @@ namespace Biofit.GeomeTryOriginal
                     pixels[y * 64 + x] = new Color32(255, 255, 255, a);
                 }
             dotTexture.SetPixels32(pixels);
-            dotTexture.Apply(false, true);
+            dotTexture.Apply(false, false);
             dotSprite = Sprite.Create(dotTexture, new Rect(0, 0, 64, 64),
                 new Vector2(.5f, .5f), 64f);
             return dotSprite;

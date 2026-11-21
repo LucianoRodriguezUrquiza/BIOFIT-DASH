@@ -10,7 +10,7 @@ Android solicita Application.targetFrameRate=60 y desactiva vSync. No cambia Tim
 
 ## Archivos graficos proporcionados por el usuario
 
-El pack entregado en el chat BIOFIT_GeomeTry_UI_Assets.zip contiene LevelSelect.png (reproduccion visual del selector indicado), Back.png (icono sin azul), Pause.png y Skins.png (70 imagenes exactamente del collage). El pack es necesario para reproducir las imagenes solicitadas, pero hay botones de reserva si no esta instalado. No se suben al repositorio remoto por tratarse de archivos graficos aportados por el usuario y para conservar el repositorio reutilizable.
+El pack entregado en el chat BIOFIT_GeomeTry_UI_Assets_HD_v2.zip contiene LevelSelect.png (reproduccion visual del selector indicado), Back.png (icono sin azul), Pause.png y Skins.png (70 imagenes exactamente del collage). El pack es necesario para reproducir las imagenes solicitadas, pero hay botones de reserva si no esta instalado. No se suben al repositorio remoto por tratarse de archivos graficos aportados por el usuario y para conservar el repositorio reutilizable.
 
 ## Instalacion sin tocar tu proyecto actual
 
@@ -31,3 +31,19 @@ El pack entregado en el chat BIOFIT_GeomeTry_UI_Assets.zip contiene LevelSelect.
 ## Limitaciones
 
 Los scripts y tests host NO constituyen una prueba de compilacion en Unity Editor, ejecucion APK Android, autonomia ni 60 FPS reales. Las escenas originales Settings, Profile, Stats, Success y Customisation casi no contienen UI: el controlador aporta las pantallas solicitadas y un retorno seguro, no crea estadisticas o editor de niveles nuevos.
+
+
+## Correcciones de la v2 (21 noviembre 2026)
+
+- El Editor arranca con render Built-in en el proyecto base, pero GeomeTry requiere URP 2D. `BiofitGeometryUxPreflight.cs` configura el asset URP 2D original en esta carpeta dedicada para que los niveles se dibujen correctamente al usar Play. El build Android lo sigue estableciendo de modo temporal como antes.
+- Antes se amplificaba el fondo 527x234; ahora se usa sin reescalado destructivo el archivo HD original 1672x941 del usuario. La escena respeta la proporción 16:9 incluso en Android 20:9.
+- El selector tiene tarjeta enfocada que sube y late suavemente, flechas y puntos interactivos y texto de nivel actualizado, sin color amarillo superpuesto a la tarjeta.
+- Configuracion, skins y pausa usan botones de estilo arcade con marcos blanco/negro, verdes intensos, letras blancas gruesas delineadas y logotipo HD. El boton volver mantiene su imagen original.
+- Instalador del pack v2 protegido por SHA256: permite sustituir **solo** el selector viejo de SHA conocido, conservando las otras tres imagenes y cualquier cambio personalizado de usuario.
+- Se reviso GD-Community-Hub/Assets solo como referencia. No se incorpora material grafico de Geometry Dash desde ese repositorio; el LICENSE de un repositorio espejo no garantiza derechos del contenido original.
+
+### Actualizacion de la copia BIOFIT-GeomeTry-UI-V1 ya preparada
+
+Con Unity cerrado ejecutar desde esa carpeta `git pull --ff-only origin feat/geometry-ui-skins-60fps-v1`. Guardar el ZIP HD v2 en Descargas. Instalar mediante `powershell -NoProfile -ExecutionPolicy Bypass -File ".\\tools\\install_geometry_ui_assets.ps1"`. No ejecutar prepare_geometry_original.ps1 otra vez: la copia ya existe. Abrir Unity y usar `BIOFIT > GeomeTry UX > 2. Verificar UX y recursos`.
+
+**Estado:** las pruebas host verifican código y contratos; solo el Editor Unity en la computadora del usuario puede validar gráficos, navegación y build; se requiere el teléfono para FPS y BLE reales.
