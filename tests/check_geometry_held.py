@@ -5,6 +5,7 @@ gate = (root / "Assets/BIOFIT/GeomeTry/BiofitGeometryHeldMotion.cs").read_text()
 bridge = (root / "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs").read_text()
 monitor = (root / "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs").read_text()
 ui = (root / "Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs").read_text()
+builder = (root / "Assets/BIOFIT/GeomeTry/Editor/BiofitGeomeTryOriginalBuild.cs").read_text()
 
 assert "Biofit.GeomeTryOriginal" not in monitor
 for token in [
@@ -57,4 +58,11 @@ for forbidden in ["Time.fixedDeltaTime =", "Time.timeScale =", "body.linearVeloc
 assert "bridge.MovementHeld" in ui
 assert "PARES LEGACY: " in ui and "   |   SALTOS: " in ui
 assert "Application.targetFrameRate = 60;" in ui
-print("PASS: motion state only, no experimental mode selector, no changed physics.")
+
+assert '"com.biofitgame.geometryheldexp"' in builder
+assert '"BIOFIT MOV HOLD EXP"' in builder
+assert '"BIOFIT_GeomeTry_MOV_HOLD_EXP_"' in builder
+assert '"3. Compilar APK MOV HOLD EXP + BLE LEGACY"' in builder
+assert 'PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, previousIdentifier);' in builder
+assert 'PlayerSettings.productName = previousProductName;' in builder
+print("PASS: motion held, no mode selector, original physics and independent EXP APK preserved.")
