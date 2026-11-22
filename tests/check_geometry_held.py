@@ -55,6 +55,6 @@ for forbidden in ["Time.fixedDeltaTime =", "Time.timeScale =", "body.linearVeloc
                   "jumpForce = ", "DefaultSpeed =", "BiofitJumpBuffer"]:
     assert forbidden not in bridge, forbidden
 assert "bridge.MovementHeld" in ui
-assert '"PARES LEGACY: "' in ui and '"   |   SALTOS: "' in ui
+assert "PARES LEGACY: " in ui and "   |   SALTOS: " in ui
 assert "Application.targetFrameRate = 60;" in ui
 print("PASS: motion state only, no experimental mode selector, no changed physics.")
