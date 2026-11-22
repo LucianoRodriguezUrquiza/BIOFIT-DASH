@@ -655,29 +655,44 @@ namespace Biofit.GeomeTryOriginal
 
         private void ArcadeCorners(Transform parent)
         {
-            // Reuse GeomeTry's original transparent corner art.
-            // Anchor positions must stay INSIDE the canvas; rotating a
-            // half-outside RectTransform caused the clipped fragments shown
-            // in the user's screenshot. Mirror UVs, not the RectTransform.
-            Texture2D corner = Resources.Load<Texture2D>("UI/Misc/Corner");
-            if (corner == null) return;
+            EnsureArtwork();
+            if (artwork == null) return;
+            // Four individually cropped, blue-keyed sections from the user's
+            // ORIGINAL UI. No mirroring of broken geometry or offscreen halves.
             Vector2[] anchors = {
                 new Vector2(0f, 1f), new Vector2(1f, 1f),
                 new Vector2(0f, 0f), new Vector2(1f, 0f)
             };
             for (int i = 0; i < 4; i++)
             {
-                bool right = i % 2 == 1;
+                bool right = (i & 1) != 0;
                 bool bottom = i >= 2;
-                RectTransform box = Rect("BIOFIT esquina completa " + i,
-                    parent, anchors[i], new Vector2(184f, 184f),
-                    new Vector2(right ? -92f : 92f, bottom ? 92f : -92f));
-                RawImage raw = box.gameObject.AddComponent<RawImage>();
-                raw.texture = corner;
-                raw.uvRect = new Rect(right ? 1f : 0f,
-                    bottom ? 1f : 0f, right ? -1f : 1f,
-                    bottom ? -1f : 1f);
+                RectTransform corner = Rect("Esquina BIOFIT completa " + i,
+                    parent, anchors[i], new Vector2(266f, 264f), Vector2.zero);
+                corner.pivot = new Vector2(right ? 1f : 0f, bottom ? 0f : 1f);
+                RawImage raw = corner.gameObject.AddComponent<RawImage>();
+                raw.texture = artwork.corners[i];
                 raw.raycastTarget = false;
+            }
+        }
+
+        private bool artworkFailed;
+        private void EnsureArtwork()
+        {
+            if (artwork != null || artworkFailed) return;
+            if (!BiofitUiArtwork.Supports(levelBackdrop))
+            {
+                artworkFailed = true;
+                Debug.LogWarning("BIOFIT UX: imagen HD no legible, " +
+                    "se usara el fondo original sin animacion individual.");
+                return;
+            }
+            try { artwork = new BiofitUiArtwork(levelBackdrop); }
+            catch (Exception exception)
+            {
+                artworkFailed = true;
+                Debug.LogError("BIOFIT UX: fallo al preparar arte independiente: " +
+                    exception.Message);
             }
         }
 
@@ -690,15 +705,7 @@ namespace Biofit.GeomeTryOriginal
                 new Vector2(.5f, .5f), new Vector2(1600f, 900f), Vector2.zero);
             selectorContentRoot = board;
 
-            if (BiofitUiArtwork.Supports(levelBackdrop) && artwork == null)
-            {
-                try { artwork = new BiofitUiArtwork(levelBackdrop); }
-                catch (Exception exception)
-                {
-                    Debug.LogError("BIOFIT selector: no se pudieron separar las " +
-                        "tarjetas originales: " + exception.Message);
-                }
-            }
+            EnsureArtwork();
 
             Texture2D backdrop = artwork != null ?
                 artwork.background : levelBackdrop;
@@ -814,15 +821,14 @@ namespace Biofit.GeomeTryOriginal
 
         private void ArcadeLogo(Transform parent)
         {
-            if (levelBackdrop == null || levelBackdrop.width < 1600) return;
-            RectTransform holder = Rect("BIOFIT DASH titulo HD", parent,
-                new Vector2(.5f, .922f), new Vector2(905f, 110f), Vector2.zero);
+            EnsureArtwork();
+            if (artwork == null) return;
+            // Real alpha texture: the blue source background was keyed out,
+            // rather than displayed as a different rectangular blue strip.
+            RectTransform holder = Rect("BIOFIT DASH logo transparente", parent,
+                new Vector2(.5f, .915f), new Vector2(805f, 137f), Vector2.zero);
             RawImage image = holder.gameObject.AddComponent<RawImage>();
-            image.texture = levelBackdrop;
-            image.uvRect = new Rect(325f / levelBackdrop.width,
-                (941f - 188f) / levelBackdrop.height,
-                1020f / levelBackdrop.width,
-                172f / levelBackdrop.height);
+            image.texture = artwork.logo;
             image.raycastTarget = false;
         }
 
@@ -833,16 +839,16 @@ namespace Biofit.GeomeTryOriginal
             ArcadeLogo(canvasRoot);
 
             RectTransform title = ArcadePanel("Titulo personalizacion",
-                canvasRoot, new Vector2(.5f, .818f),
-                new Vector2(710f, 70f), Vector2.zero);
+                canvasRoot, new Vector2(.5f, .794f),
+                new Vector2(710f, 63f), Vector2.zero);
             Text("titulo skin", title, "PERSONALIZAR CUBO",
-                new Vector2(.5f, .5f), new Vector2(665f, 58f),
-                Vector2.zero, 37, Color.white);
+                new Vector2(.5f, .5f), new Vector2(665f, 53f),
+                Vector2.zero, 36, Color.white);
 
             skinLabel = Text("skin actual", canvasRoot,
                 "PERSONAJE " + (skinIndex + 1) + " DE 70",
-                new Vector2(.5f, .743f), new Vector2(760f, 40f),
-                Vector2.zero, 30, Ice);
+                new Vector2(.5f, .707f), new Vector2(760f, 40f),
+                Vector2.zero, 28, Ice);
             if (atlas == null)
             {
                 Text("missing atlas", canvasRoot,
@@ -856,10 +862,12 @@ namespace Biofit.GeomeTryOriginal
             // cropping 70 independent RawImages. The source image is not a
             // uniform grid: several outlines spill across calculated cell
             // borders. Displaying one RawImage prevents visible cutoffs.
-            float width = 915f;
+            // Keep visible margins under the label AND above the bottom edge.
+            // Width 790 creates >50px bottom clearance at 1600x900.
+            float width = 790f;
             float height = width * atlas.height / atlas.width;
             RectTransform sheet = Rect("70 SKINS SIN RECORTE",
-                canvasRoot, new Vector2(.5f, .360f),
+                canvasRoot, new Vector2(.5f, .364f),
                 new Vector2(width, height), Vector2.zero);
             RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();
             wholeAtlas.texture = atlas;
@@ -923,11 +931,11 @@ namespace Biofit.GeomeTryOriginal
             ArcadeCorners(canvasRoot);
             ArcadeLogo(canvasRoot);
             RectTransform heading = ArcadePanel("Titular BLE", canvasRoot,
-                new Vector2(.5f, .806f), new Vector2(1090f, 67f), Vector2.zero);
+                new Vector2(.5f, .793f), new Vector2(1080f, 66f), Vector2.zero);
             Text("ble subtitle", heading,
                 "CONFIGURACIÓN  ·  BILATERAL LEGACY",
-                new Vector2(.5f, .5f), new Vector2(1040f, 55f),
-                Vector2.zero, 34, Color.white);
+                new Vector2(.5f, .5f), new Vector2(1030f, 56f),
+                Vector2.zero, 33, Color.white);
 
             RectTransform info = ArcadePanel("Estado de trackers",
                 canvasRoot, new Vector2(.5f, .576f),
