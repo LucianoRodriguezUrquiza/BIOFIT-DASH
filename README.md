@@ -1,8 +1,8 @@
-# NUEVA RAMA EXPERIMENTAL: MOVIMIENTO CORPORAL = SALTO MANTENIDO
+# MOV HOLD V2 — CONTROL CONTINUO Y RECUPERACIÓN
 
-Esta rama **feat/geometry-legacy-held-motion-v1** implementa el comando sostenido de salto mediante el estado MOV de ambos tobillos (MOV_ON/MOV_OFF + STATUS), sin agregar un selector de modo. Se apoya en el BILATERAL LEGACY que ya usa GeomeTry, pero deja de utilizar el cooldown de pares UP_IMPULSE como limitador de los saltos del cubo. La versión estable de **main** no fue modificada.
+Esta rama **feat/geometry-continuous-motion-jump-v2**, [PR #23 en borrador](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/23), corrige defectos reproducidos de MOV HOLD v1: heartbeat STATUS descartado, inicio que exige solapamiento MOV, pérdida de disponibilidad y listeners acumulados. Integra el botón virtual en `Character.Update`, recupera enlaces BLE y registra la cadena completa a través de muertes/respawns. No agrega un selector ni modifica la física, firmware o ramas anteriores. Los pares UP legacy quedan como diagnóstico; la intención sostenida controla el juego.
 
-**Documentación técnica y plan de pruebas:** [Movimiento sostenido experimental](docs/GEOMETRY_LEGACY_MOV_HOLD_EXP.md). La APK experimental se instala por separado como **BIOFIT MOV HOLD EXP** (com.biofitgame.geometryheldexp), sin reemplazar la instalación estable. **Esta rama no está validada todavía en Android físico**; el usuario debe medir reposo, continuidad, reconexión y FPS en el teléfono con ambos sensores.
+**Guía vigente:** [auditoría V2, resultados y preparación de una sola APK](docs/GEOMETRY_CONTINUOUS_MOTION_V2.md). App **BIOFIT MOV HOLD V2**, paquete `com.biofitgame.geometrymotionv2`, instalación independiente. Menú de build: **BIOFIT > GeomeTry ORIGINAL > 3. Compilar APK MOV HOLD V2 EXP + BLE LEGACY**. Los tests host pasan; **Unity nativo, APK y Android físico siguen pendientes**. V1 falló en la prueba del usuario; sus documentos se conservan solo como historial. Ver la guía V2 antes de usar las instrucciones generales de versiones anteriores que siguen debajo.
 
 ---
 

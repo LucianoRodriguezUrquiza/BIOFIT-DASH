@@ -163,8 +163,11 @@ Invocaciones locales iniciales corregidas: `--nologo` pasó como argumento al pr
 se repitió sin ese argumento. `compare_cooldowns.py` necesitó `--dotnet <ruta-sdk>` porque dotnet no estaba en PATH.
 No son resultados fallidos del detector ni se ocultaron fallos de compilación Unity.
 
-CI añade los tests a las verificaciones existentes y prueba en **Windows PowerShell** la preparación y su repetición.
-También compila los exportadores Java contra Android SDK35. Los enlaces y estados reales de Actions están en el PR.
+CI del commit de código `126c6a6d5277069ec52ad0f1d6b396dbdb6e5d97`:
+[Actions 45024755464](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45024755464), **5/5 jobs SUCCESS** verificados:
+`regression`, `geometry-csharp-syntax`, `geometry-windows-compat`, `android-export-source`, `phase-firmware-replay`.
+La preparación y su repetición pasaron en **Windows PowerShell**; los exportadores Java compilaron contra Android SDK35.
+[PR #23 BORRADOR](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/23), sin merge.
 **Pendiente:** Editor/PlayMode nativo, build Unity/APK, radio Android, latencia gesto-pantalla, FPS del teléfono y sesión humana.
 No se hizo un flasheo ni se instaló Unity en este entorno.
 
@@ -176,10 +179,14 @@ No se hizo un flasheo ni se instaló Unity en este entorno.
    **Repository > Open in PowerShell**, ejecutar `git submodule update --init --recursive` y luego
    `powershell -ExecutionPolicy Bypass -File .\tools\prepare_geometry_original.ps1`.
    Si informa cambios locales inesperados o destino existente, detenerse y conservarlo; no borrar carpetas para forzar el script.
+   Para conservar la apariencia exacta, instalar también el pack privado ya entregado, antes de abrir Unity:
+   `powershell -ExecutionPolicy Bypass -File .\tools\install_geometry_ui_assets.ps1 -ZipPath "C:\ruta\BIOFIT_GeomeTry_UI_Assets_HD_v2.zip"`.
+   Las cuatro imágenes HD no están en GitHub; no reemplazar ese pack por assets arbitrarios ni copiar escenas/configuraciones sobre la carpeta estable.
 3. Unity Hub > **Add > Add project from disk**: elegir la raíz del clon, no `ThirdParty`.
    Abrir con Unity **6000.3.28f1** y Android Build Support ya disponible. Esperar importación y comprobar Console sin errores.
 4. Menú **BIOFIT > GeomeTry ORIGINAL > 1. Verificar fuente y mapas**;
    **4. Activar URP original para probar en Play**; **2. Abrir Main Menu original**.
+   Ejecutar también **BIOFIT > GeomeTry UX > 1. Configurar modulo tactil Android** y **2. Verificar UX y recursos**.
 5. Una sola comprobación de motor antes de compilar: Play y menú **6. Validar MOV HOLD V2 (en Play)**.
    No tocar mouse/espacio durante ~2 minutos. Debe informar saltos consecutivos y checkpoints 10/20/50/100 con `MOV V2 NATIVE PASS` final.
    Esta herramienta usa GameObjects/Rigidbody2D/Die/Invoke/Destroy reales y entrada simulada; está preparada, no ejecutada aquí.
