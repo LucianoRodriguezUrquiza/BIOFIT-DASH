@@ -16,9 +16,51 @@ assert (root / "tools/prepare_geometry_original.ps1").is_file()
 assert "Assets/GeomeTryOriginal/Assets/" in (root / ".gitignore").read_text()
 assert not (root / "Assets/GeomeTryOriginal/ProjectSettings").exists(), "Nested ProjectSettings must never be imported as Unity Assets"
 for path in ("ProjectSettings/Physics2DSettings.asset", "ProjectSettings/TimeManager.asset",
-             "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs", "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs"):
+             "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs"):
     baseline = subprocess.check_output(["git", "show", "5616fc4571193d4a2d076550a909089344144384:" + path], cwd=root)
     assert (root / path).read_bytes() == baseline, path + " was modified"
+
+# The MOV/STATUS taps in BiofitBLEMonitor are the only permitted additive
+# changes to the BLE receiver. Strip these exact additions and require a
+# byte-for-byte match with v0.9.11: UUIDs, thresholds, event sequencing,
+# 900ms bilateral detector and BLE data collection MUST remain untouched.
+monitor_path = "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs"
+baseline = subprocess.check_output(["git", "show",
+    "5616fc4571193d4a2d076550a909089344144384:" + monitor_path], cwd=root)
+actual = (root / monitor_path).read_text()
+allowed = [
+    ("""    // GeomeTry experimental held-input uses firmware MOV/STATUS flags.
+    // Legacy pair detector and other BIOFIT game modes remain unchanged.
+    private readonly Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion geometryHeldMotion =
+        new Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion();
+    public Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion GeometryHeldMotion =>
+        geometryHeldMotion;
+""", ""),
+    ("""    private void InvalidateControl() {
+        liftPairs.Clear(); jumpDetector.ClearPending();
+        geometryHeldMotion.Reset(); ControlEpoch++;
+    }""",
+     "    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();ControlEpoch++;}"),
+    ("        geometryHeldMotion.Reset();\n", ""),
+    ("""        // STATUS supplies both continuous MOV flag and heartbeat at ~10Hz.
+        // No RAW stream or firmware CONFIG write is required.
+        geometryHeldMotion.ObserveStatus(packet.expectedId, b[2],
+            sensor, callbackSeconds);
+""", ""),
+    ("""        // EVENT MOV_ON/OFF is a low-latency edge; strictly use only
+        // freshness-validated events. Older sensor timestamps cannot
+        // overwrite a more recent STATUS movement state.
+        if (fresh && (eventType == 1 || eventType == 2))
+            geometryHeldMotion.ObserveEvent(state.id, eventType == 1,
+                millis, callbackSeconds);
+        if (fresh && eventType <= 3)""",
+     "        else if(eventType<=3)")
+]
+for added, original in allowed:
+    assert added in actual, "Missing expected narrow monitor hook"
+    actual = actual.replace(added, original)
+assert actual.encode() == baseline, "Unexpected receiver BLE/protocol change"
+
 cfg = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 # GeomeTry needs the old Input Manager for Cube/Ship/Wave on Android.
 # The prior branch used Both (unsupported on Android); this dedicated UI
