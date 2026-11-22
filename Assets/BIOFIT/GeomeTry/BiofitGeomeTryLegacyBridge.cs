@@ -20,29 +20,20 @@ namespace Biofit.GeomeTryOriginal
         private const string LevelScene = "Level";
         private const string MenuScene = "Main Menu";
         private const string SelectionScene = "Level Selection";
-        private int accepted, executed, ignored;
+        private int accepted, executed, ignored, holdPresses, holdReleases;
         private int receiverEpoch;
-        private bool showRecording;
-        // One accepted bilateral pair may also operate a jump-orb in air.
-        // This is input only: the original JumpOrb applies its original force.
-        // The pulse is consumable only on the NEXT physics step, never held
-        // as a virtual key and never accumulated in a landing buffer.
-        private static long orbPulseId;
-        private static long consumedOrbPulseId;
-        private static float orbPulseDeadline;
+        private bool heldInput;
+        private static BiofitGeomeTryLegacyBridge activeBridge;
 
+        // The imported JumpOrb compatibility patch already calls this method.
+        // A held input must operate JumpOrbs just like holding the mouse.
+        // It is evaluated each physics trigger step; no expiring orb pulse or
+        // repeated synthetic tap is necessary.
         public static bool TryConsumeOrbPulse()
         {
-            if (orbPulseId == consumedOrbPulseId) return false;
-            if (Time.fixedTime > orbPulseDeadline)
-            {
-                consumedOrbPulseId = orbPulseId;
-                return false;
-            }
-            consumedOrbPulseId = orbPulseId;
-            return true;
+            BiofitGeomeTryLegacyBridge b = activeBridge;
+            return b != null && b.heldInput && b.ReadyForGameplay();
         }
-
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -104,8 +95,12 @@ namespace Biofit.GeomeTryOriginal
         {
             monitor = GetComponent<BiofitBLEMonitor>();
             if (monitor == null) { enabled = false; return; }
+            activeBridge = this;
             VerifyMenuNavigationInEditor();
             monitor.ShowDiagnostics = false;
+            // The BLE receiver stays in traditional legacy mode. The 900 ms
+            // legacy pair detector is retained for DIAGNOSTICS ONLY: movement
+            // hold comes from firmware MOV_ON/OFF and STATUS MOV, not from pairs.
             monitor.PhaseFastPairs = false;
             monitor.LiftCycleMode = false;
             receiverEpoch = monitor.ControlEpoch;
@@ -116,18 +111,43 @@ namespace Biofit.GeomeTryOriginal
         private void OnDisable()
         {
             if (monitor != null)
+            {
                 monitor.BilateralJumpCandidate -= OnBilateralLegacyCandidate;
+                monitor.GeometryHeldMotion.Reset();
+            }
+            heldInput = false;
+            if (activeBridge == this) activeBridge = null;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnApplicationPause(bool pause)
+        {
+            if (!pause) return;
+            heldInput = false;
+            monitor?.GeometryHeldMotion.Reset();
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             if (monitor == null) return;
-            // Old unmatched one-foot impulses cannot form a jump in another scene.
+            // Never carry an active hold from another scene/level or a
+            // previous player life into the next scene. Fresh STATUS will
+            // reestablish the movement state automatically.
             monitor.JumpDetector.ClearPending();
-            consumedOrbPulseId = orbPulseId;
+            monitor.GeometryHeldMotion.Reset();
+            heldInput = false;
             receiverEpoch = monitor.ControlEpoch;
             monitor.ShowDiagnostics = false;
+        }
+
+        private bool ReadyForGameplay()
+        {
+            return monitor != null && monitor.BothTrackersConnected &&
+                monitor.ClockAlignmentReady &&
+                SceneManager.GetActiveScene().name == LevelScene &&
+                GameManager.Instance != null && GameManager.Instance.PlayMode &&
+                KeyPressed != null && !monitor.PhaseFastPairs &&
+                !monitor.LiftCycleMode;
         }
 
         private void Update()
@@ -137,72 +157,81 @@ namespace Biofit.GeomeTryOriginal
             {
                 receiverEpoch = monitor.ControlEpoch;
                 monitor.JumpDetector.ClearPending();
+                monitor.GeometryHeldMotion.Reset();
+                heldInput = false;
             }
             if (monitor.PhaseFastPairs) monitor.PhaseFastPairs = false;
             if (monitor.LiftCycleMode) monitor.LiftCycleMode = false;
+
+            bool old = heldInput;
+            // Stopwatch is the same monotonic timeline used by native BLE
+            // callbacks. Game timeScale, frame rate, jump physics and pause
+            // cannot alter the motion heartbeat watchdog.
+            double now = System.Diagnostics.Stopwatch.GetTimestamp() /
+                (double)System.Diagnostics.Stopwatch.Frequency;
+            bool ready = ReadyForGameplay();
+            heldInput = monitor.GeometryHeldMotion.Tick(now,
+                monitor.BothTrackersConnected, monitor.ClockAlignmentReady,
+                ready);
+            if (old == heldInput) return;
+            if (heldInput) holdPresses++; else holdReleases++;
+            if (monitor.GameCaptureActive)
+                monitor.RecordControlDiagnostic(
+                    "GEOMETRY_HOLD_" + (heldInput ? "ON" : "OFF") +
+                    " feet=" + (monitor.GeometryHeldMotion.LeftMoving ? "1" : "0") +
+                    (monitor.GeometryHeldMotion.RightMoving ? "1" : "0") +
+                    " clockReady=" + monitor.ClockAlignmentReady +
+                    " connected=" + monitor.BothTrackersConnected);
         }
 
-        private void OnBilateralLegacyCandidate(float pairGapMs)
+        private void LateUpdate()
         {
-            accepted++;
-            // The receiver already enforced freshness, clock alignment, UP_IMPULSE,
-            // thresholds, 180 ms pairing and the 900 ms legacy cooldown.
-            // Do NOT reinterpret this event as a second physiological detector.
-            if (monitor == null || monitor.PhaseFastPairs || monitor.LiftCycleMode ||
-                !monitor.BothTrackersConnected || !monitor.ClockAlignmentReady ||
-                SceneManager.GetActiveScene().name != LevelScene ||
-                GameManager.Instance == null || !GameManager.Instance.PlayMode ||
-                KeyPressed == null)
-            {
-                ignored++;
-                return;
-            }
-
+            if (!heldInput || !ReadyForGameplay()) return;
             GameObject avatar = GameObject.FindGameObjectWithTag("Player");
             Cube cube = avatar == null ? null : avatar.GetComponent<Cube>();
-            if (cube == null || !cube.isAlive)
-            {
-                // Ship/Wave continue to work as in original GeomeTry with held touch.
-                ignored++;
-                return;
-            }
-
-            // BLE input for existing JumpOrbs: one-use on the next physics
-            // step only. The imported original JumpOrb code still controls
-            // collider, contact and exact vertical velocity.
-            orbPulseId++;
-            orbPulseDeadline = Time.fixedTime + Time.fixedDeltaTime * 1.5f;
-
-            // One BLE pair = one momentary original Cube.onClick invocation.
-            // No held virtual key, queue, landing buffer or rewritten Jump() physics.
+            if (cube == null || !cube.isAlive) return;
             Rigidbody2D body = cube.GetComponent<Rigidbody2D>();
-            float beforeY = body == null ? 0 : body.linearVelocity.y;
-            bool old = (bool)KeyPressed.GetValue(cube);
+            float beforeY = body == null ? 0f : body.linearVelocity.y;
+
+            // EXACT same original action used by Space or mouse hold:
+            // Cube.onClick() each frame while held. Original Cube.Jump()
+            // checks CheckGrounded() and only jumps on contact with ground.
+            // Reflection is temporary and does not overwrite manual input.
+            bool previous = (bool)KeyPressed.GetValue(cube);
             try
             {
                 KeyPressed.SetValue(cube, true);
                 cube.onClick();
             }
-            finally
+            finally { KeyPressed.SetValue(cube, previous); }
+
+            if (body != null && body.linearVelocity.y > beforeY + .05f)
             {
-                KeyPressed.SetValue(cube, old);
+                executed++;
+                if (monitor.GameCaptureActive)
+                    monitor.RecordControlDiagnostic(
+                        "GEOMETRY_HELD_JUMP_APPLIED count=" + executed);
             }
-            bool jumped = body != null && body.linearVelocity.y > beforeY + .05f;
-            if (jumped) executed++; else ignored++;
-            if (monitor.GameCaptureActive)
-                monitor.RecordControlDiagnostic(
-                    "GEOMETRY_ORIGINAL BLE_LEGACY_CUBE gapMs=" +
-                    pairGapMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
-                    " outcome=" + (jumped ? "JUMP_APPLIED" : "NO_JUMP") +
-                    " scene=Level");
         }
 
-        // Read-only counters for the new Configuration screen. The BLE
-        // detector, legacy thresholds, firmware and cube input path are untouched.
+        private void OnBilateralLegacyCandidate(float pairGapMs)
+        {
+            // Preserve the old bilateral acceptance count only for diagnostics.
+            // Do NOT command a second jump here: a MOVE-held button ignores
+            // the original 900ms pair cooldown on purpose.
+            accepted++;
+            if (monitor != null && monitor.GameCaptureActive)
+                monitor.RecordControlDiagnostic(
+                    "GEOMETRY_LEGACY_PAIR_DIAG_ONLY gapMs=" +
+                    pairGapMs.ToString("F2",
+                        System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        // Read-only metrics for Settings; no new BLE mode selector.
         public int AcceptedPairs => accepted;
         public int ExecutedJumps => executed;
-
-        // The old OnGUI panel (which obscured the menu and level cards) has
-        // moved to BiofitGeometryUX -> Settings. No BLE logic was changed.
+        public bool MovementHeld => heldInput;
+        public int MovementPresses => holdPresses;
+        public int MovementReleases => holdReleases;
     }
 }
