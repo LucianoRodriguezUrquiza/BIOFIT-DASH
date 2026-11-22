@@ -188,7 +188,11 @@ namespace Biofit.GeomeTryOriginal
             }
             if (monitor.PhaseFastPairs) monitor.PhaseFastPairs = false;
             if (monitor.LiftCycleMode) monitor.LiftCycleMode = false;
+        }
 
+        private void RefreshHeldState()
+        {
+            if (monitor == null) return;
             bool old = heldInput;
             // Stopwatch is the same monotonic timeline used by native BLE
             // callbacks. Game timeScale, frame rate, jump physics and pause
@@ -212,6 +216,10 @@ namespace Biofit.GeomeTryOriginal
 
         private void LateUpdate()
         {
+            // Unity calls all Update() methods before any LateUpdate().
+            // Thus BLEMonitor can dispatch its status/events this frame
+            // before the hold is translated into the Cube action.
+            RefreshHeldState();
             if (!heldInput || !ReadyForGameplay()) return;
             GameObject avatar = GameObject.FindGameObjectWithTag("Player");
             Cube cube = avatar == null ? null : avatar.GetComponent<Cube>();
