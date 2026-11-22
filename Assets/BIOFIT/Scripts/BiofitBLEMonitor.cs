@@ -39,12 +39,6 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     // Opt-in. Old fw2.2.7 or unqualified UP pairs keep the 900ms cooldown.
     public bool PhaseFastPairs { get; set; } // retained for offline v0910 replay, not selected by UI
     private readonly BiofitLiftPairDetector liftPairs = new BiofitLiftPairDetector();
-    // GeomeTry experimental held-input uses firmware MOV/STATUS flags.
-    // Legacy pair detector and other BIOFIT game modes remain unchanged.
-    private readonly Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion geometryHeldMotion =
-        new Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion();
-    public Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion GeometryHeldMotion =>
-        geometryHeldMotion;
     private bool liftCycleMode;
     public int ControlEpoch { get; private set; }
     public bool LiftCycleMode {
@@ -56,8 +50,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private int cyclePairsAtCaptureStart;
     public int CyclePairCount => liftPairs.Pairs-cyclePairsAtCaptureStart;
     private void InvalidateControl() {
-        liftPairs.Clear(); jumpDetector.ClearPending();
-        geometryHeldMotion.Reset(); ControlEpoch++;
+        liftPairs.Clear(); jumpDetector.ClearPending(); ControlEpoch++;
+        MotionEpochReset?.Invoke();
     }
 
     public bool LastPairedWasFastPhase { get; private set; }
@@ -196,13 +190,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private void OnApplicationPause(bool paused)
     {
         if(!paused)return;
-        geometryHeldMotion.Reset();
+        MotionEpochReset?.Invoke();
         if(gameCaptureActive) { eventCapture.MarkSync("APP_PAUSA_FIN",Time.realtimeSinceStartup); StopGameCapture(); }
         else RawOperation=SetRawCaptureAsync(false);
     }
     private void OnDestroy()
     {
-        geometryHeldMotion.Reset();
+        MotionEpochReset?.Invoke();
         if(gameCaptureActive)StopGameCapture(); else RawOperation=SetRawCaptureAsync(false);
     }
 
@@ -415,6 +409,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// Representa un PAR DE IMPULSOS, no un salto humano confirmado.
     /// </summary>
     public event Action<float> BilateralJumpCandidate;
+
+    // Motion telemetry is only published here. Individual game modes decide
+    // how to interpret it; the BLE receiver has NO dependency on GeomeTry.
+    // Callbacks run on Unity's main thread from ReadStatus/ReadEvent.
+    public event Action<byte, byte, uint, double> MotionStatusReceived;
+    public event Action<byte, bool, uint, double> MotionTransitionReceived;
+    public event Action MotionEpochReset;
 
     /// <summary>
     /// Evento UP crudo para CONTROL DE DIAGNOSTICO UNILATERAL.
@@ -958,8 +959,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         {
             tracker.gate.Reset(); tracker.statusGate.Reset(); tracker.hasLastTimestamp = false;
             jumpDetector.ClearPending();
-            // A rebooted sensor millis epoch invalidates both held inputs.
-            geometryHeldMotion.Reset();
+            MotionEpochReset?.Invoke();
         }
         tracker.statusGate.ObserveSequence(U16(b,4));
         if (tracker.lastStatusCallback > 0)
@@ -980,9 +980,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 "STATUS_FLAGS=" + b[2] + " sensorMs=" + sensor + " " + tracker.readiness.Detail(callbackSeconds));
         timeAligner.ObserveStatus(packet.expectedId, sensor,
             callbackSeconds);
-        // STATUS supplies both continuous MOV flag and heartbeat at ~10Hz.
-        // No RAW stream or firmware CONFIG write is required.
-        geometryHeldMotion.ObserveStatus(packet.expectedId, b[2],
+        // STATUS bit0 is the firmware's existing MOV classifier (10 Hz);
+        // no always-on RAW stream or CONFIG changes are required.
+        MotionStatusReceived?.Invoke(packet.expectedId, b[2],
             sensor, callbackSeconds);
         if(gameCaptureActive && rawCapture!=null)
             eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,
@@ -1111,11 +1111,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             eventCapture.RecordDiagnostic(receivedSeconds, state.id,
                 "RECHAZO_" + rejection + " seq=" + sequence + " fwQueueMs=" + firmwareQueueMs);
         }
-        // EVENT MOV_ON/OFF is a low-latency edge; strictly use only
-        // freshness-validated events. Older sensor timestamps cannot
-        // overwrite a more recent STATUS movement state.
+        // Only fresh MOV_ON/MOV_OFF events are supplied to consumers.
+        // The clock and per-tracker sequence checks above are unchanged.
         if (fresh && (eventType == 1 || eventType == 2))
-            geometryHeldMotion.ObserveEvent(state.id, eventType == 1,
+            MotionTransitionReceived?.Invoke(state.id, eventType == 1,
                 millis, callbackSeconds);
         if (fresh && eventType <= 3) inputEngine.ProcessEvent(state.id, eventType,
             eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
