@@ -1046,8 +1046,10 @@ namespace Biofit.GeomeTryOriginal
                 // The movement state, not the 900ms legacy UP pair timer,
                 // now drives Cube.onClick() continuously while held.
                 eventLabel.text =
-                    "CONTROL: " + (bridge != null && bridge.MovementHeld ?
-                        "MOVIMIENTO ACTIVO" : "REPOSO") +
+                    // Settings runs outside Level; report the game's
+                    // button state, not a false physiological rest claim.
+                    "BOTÓN EN NIVEL: " + (bridge != null && bridge.MovementHeld ?
+                        "MANTENIDO" : "LIBERADO") +
                     "\nPARES LEGACY: " + (bridge == null ?
                         "0" : bridge.AcceptedPairs.ToString()) +
                     "   |   SALTOS: " + (bridge == null ?
