@@ -50,8 +50,12 @@ Nota técnica: el estado MOV detecta actividad inercial, **no** verifica contact
 
 ## Pruebas en Android
 
-Crear una copia separada del proyecto local estable antes de cambiar ramas. No utilizar reset/clean/discard. Cerrar Unity para la descarga de la rama, reutilizar las cuatro PNG del pack HD previamente instalado y verificar Android > Build Profiles, escenas y la compilación mediante el menú BIOFIT > GeomeTry ORIGINAL > 3. Compilar APK Android original + BLE LEGACY.
+Crear una copia separada del proyecto local estable antes de cambiar ramas. No utilizar reset/clean/discard. Cerrar Unity para la descarga de la rama, reutilizar las cuatro PNG del pack HD previamente instalado y verificar Android > Build Profiles, escenas y la compilación mediante el menú BIOFIT > GeomeTry ORIGINAL > 3. Compilar APK MOV HOLD EXP + BLE LEGACY.
 
 Protocolo inicial: conectar dos tobillos y esperar 2/2 + reloj; 10 s en quietud, 5 s con un solo tobillo, 10 s de movimiento bilateral sostenido en tramo libre, 3 aterrizajes seguidos, parada, pausa, vuelta al menú, muerte/respawn y reconexión. Revisar Configuración: BOTÓN EN NIVEL: MANTENIDO/LIBERADO (en Configuración está liberado), PARES LEGACY y SALTOS. Si hay errores, conservar vídeo y CSV con GEOMETRY_HOLD_ON/OFF y GEOMETRY_HELD_JUMP_APPLIED.
 
 **No se modifica main ni se sugiere reflashear trackers en esta primera prueba.**
+
+## Instalación aislada en Android
+
+El constructor experimental usa el package ID **com.biofitgame.geometryheldexp**, el nombre visible **BIOFIT MOV HOLD EXP** y la salida **Builds/BIOFIT_GeomeTry_MOV_HOLD_EXP_YYYYMMDD_HHMMSS.apk**. Es diferente de com.biofitgame.geometryoriginal de la versión estable, así que permite tener **ambas instalaciones simultáneas**. Las grabaciones y preferencias permanecen separadas; no desinstales la aplicación estable. Al terminar cada build, el constructor restaura los PlayerSettings originales del proyecto.
