@@ -2,7 +2,7 @@
 
 Esta rama **feat/geometry-legacy-held-motion-v1** implementa el comando sostenido de salto mediante el estado MOV de ambos tobillos (MOV_ON/MOV_OFF + STATUS), sin agregar un selector de modo. Se apoya en el BILATERAL LEGACY que ya usa GeomeTry, pero deja de utilizar el cooldown de pares UP_IMPULSE como limitador de los saltos del cubo. La versión estable de **main** no fue modificada.
 
-**Documentación técnica y plan de pruebas:** [Movimiento sostenido experimental](docs/GEOMETRY_LEGACY_MOV_HOLD_EXP.md). **Esta rama no está validada todavía en Android físico**; el usuario debe medir reposo, continuidad, reconexión y FPS en el teléfono con ambos sensores.
+**Documentación técnica y plan de pruebas:** [Movimiento sostenido experimental](docs/GEOMETRY_LEGACY_MOV_HOLD_EXP.md). La APK experimental se instala por separado como **BIOFIT MOV HOLD EXP** (com.biofitgame.geometryheldexp), sin reemplazar la instalación estable. **Esta rama no está validada todavía en Android físico**; el usuario debe medir reposo, continuidad, reconexión y FPS en el teléfono con ambos sensores.
 
 ---
 
