@@ -560,10 +560,17 @@ namespace Biofit.GeomeTryOriginal
         private void BuildBackButton(string scene)
         {
             string target = scene == LevelScene ? Select : Menu;
-            Transform parent = (scene == Select && selectorContentRoot != null) ?
-                selectorContentRoot : canvasRoot;
-            ImageButton("VOLVER", parent, backIcon, "<",
-                new Vector2(.055f, .90f), new Vector2(98, 105),
+            // Level selector already includes its OWN back-arrow artwork.
+            // Add only a touch hit region, never a second image over the first.
+            if (scene == Select && levelBackdrop != null)
+            {
+                Hotspot("VOLVER sobre flecha original", canvasRoot,
+                    new Vector2(.051f, .913f), new Vector2(144f, 135f),
+                    () => Navigate(target));
+                return;
+            }
+            ImageButton("VOLVER", canvasRoot, backIcon, "<",
+                new Vector2(.080f, .902f), new Vector2(88f, 94f),
                 Vector2.zero, () => Navigate(target));
         }
 
@@ -678,82 +685,106 @@ namespace Biofit.GeomeTryOriginal
         {
             GameObject oldContainer = GameObject.Find("Level Container");
             if (oldContainer != null) oldContainer.SetActive(false);
-            Fill("BIOFIT blue exterior", canvasRoot, Blue);
-
-            // Preserve the original 1672x941 artwork's 16:9 aspect ratio.
-            // Never stretch a 16:9 screenshot across 18:9/20:9 phones.
-            RectTransform board = Rect("LEVEL BOARD 16:9", canvasRoot,
+            Fill("BIOFIT exterior azul", canvasRoot, Blue);
+            RectTransform board = Rect("Selector arte 1672x941", canvasRoot,
                 new Vector2(.5f, .5f), new Vector2(1600f, 900f), Vector2.zero);
-            var fitter = board.gameObject.AddComponent<AspectRatioFitter>();
-            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fitter.aspectRatio = 1672f / 941f;
             selectorContentRoot = board;
 
-            if (levelBackdrop != null)
+            if (BiofitUiArtwork.Supports(levelBackdrop) && artwork == null)
             {
-                RectTransform bg = Rect("BIOFIT DASH HD art", board,
+                try { artwork = new BiofitUiArtwork(levelBackdrop); }
+                catch (Exception exception)
+                {
+                    Debug.LogError("BIOFIT selector: no se pudieron separar las " +
+                        "tarjetas originales: " + exception.Message);
+                }
+            }
+
+            Texture2D backdrop = artwork != null ?
+                artwork.background : levelBackdrop;
+            if (backdrop != null)
+            {
+                RectTransform bg = Rect("BIOFIT fondo limpio sin duplicados", board,
                     new Vector2(.5f, .5f), Vector2.zero, Vector2.zero);
-                bg.anchorMin = Vector2.zero; bg.anchorMax = Vector2.one;
-                bg.offsetMin = Vector2.zero; bg.offsetMax = Vector2.zero;
-                var art = bg.gameObject.AddComponent<RawImage>();
-                art.texture = levelBackdrop;
+                bg.anchorMin = Vector2.zero;
+                bg.anchorMax = Vector2.one;
+                bg.offsetMin = bg.offsetMax = Vector2.zero;
+                RawImage art = bg.gameObject.AddComponent<RawImage>();
+                art.texture = backdrop;
                 art.raycastTarget = false;
             }
             else
             {
-                Fill("fallback navy", board, Navy);
-                Text("fallback title", board, "BIOFIT DASH",
-                    new Vector2(.5f, .84f), new Vector2(900, 100),
-                    Vector2.zero, 65, Lime);
+                Fill("fondo emergencia", board, Navy);
+                Text("titulo", board, "BIOFIT DASH",
+                    new Vector2(.5f, .84f), new Vector2(940, 85),
+                    Vector2.zero, 64, Lime);
             }
 
-            // Five real hit regions, aligned with cards baked into the art.
-            // Card focus uses a pixel-perfect crop of the SAME reference art.
-            float[] xs = { .165f, .329f, .493f, .658f, .822f };
+            // A movable card is not a cropped DUPLICATE above a baked card:
+            // all five original cards were removed from the backdrop first.
+            // Every card has its own transparent graphic and independent touch
+            // target. Vertical-only focus lift stays inside the 4px gutters.
             for (int i = 0; i < MapKeys.Length; i++)
             {
-                int slot = i;
-                if (levelBackdrop != null)
-                    selectorHotspots[i] = Hotspot("Abrir " + MapKeys[i], board,
-                        new Vector2(xs[i], .475f), new Vector2(252f, 315f),
-                        () => StartLevel(slot));
-                else
+                int index = i;
+                float cx = (BiofitUiArtwork.CardLeft[i] +
+                    BiofitUiArtwork.CardWidth * .5f) /
+                    BiofitUiArtwork.ReferenceWidth;
+                float cy = 1f - (BiofitUiArtwork.CardTop +
+                    (BiofitUiArtwork.CardBottom - BiofitUiArtwork.CardTop) * .5f) /
+                    BiofitUiArtwork.ReferenceHeight;
+                Vector2 center = new Vector2(cx, cy);
+                float width = BiofitUiArtwork.CardWidth * 1600f /
+                    BiofitUiArtwork.ReferenceWidth;
+                float height = (BiofitUiArtwork.CardBottom - BiofitUiArtwork.CardTop) *
+                    900f / BiofitUiArtwork.ReferenceHeight;
+                if (artwork != null)
+                {
+                    RectTransform card = Rect("Tarjeta independiente " + MapKeys[i],
+                        board, center, new Vector2(width, height), Vector2.zero);
+                    RawImage image = card.gameObject.AddComponent<RawImage>();
+                    image.texture = artwork.cards[i];
+                    image.raycastTarget = false;
+                    separateCards[i] = card;
+                    selectorHotspots[i] = Hotspot("Abrir nivel " + MapKeys[i],
+                        card, new Vector2(.5f, .5f),
+                        new Vector2(width, height), () => StartLevel(index));
+                }
+                else if (levelBackdrop == null)
                     selectorHotspots[i] = Button("Nivel " + MapKeys[i], board,
-                        MapTitles[i], new Vector2(xs[i], .475f),
-                        new Vector2(244f, 300f), Vector2.zero,
-                        () => StartLevel(slot), Lime, 31);
+                        MapTitles[i], center, new Vector2(width, height),
+                        Vector2.zero, () => StartLevel(index), Lime, 29);
+                else
+                    selectorHotspots[i] = Hotspot("Abrir nivel " + MapKeys[i],
+                        board, center, new Vector2(width, height),
+                        () => StartLevel(index));
             }
 
-            if (levelBackdrop != null && levelBackdrop.width >= 1600)
+            // These are the ONLY live progress indicators. The old dots were
+            // removed from the clean background, not covered by duplicated dots.
+            if (artwork != null)
             {
-                // Cover the static heading with a matching movable name plate.
-                RectTransform plate = ArcadePanel("NIVEL ACTUAL", board,
-                    new Vector2(.5f, .223f), new Vector2(920f, 78f), Vector2.zero);
-                focusLabel = Text("nombre nivel", plate, "", new Vector2(.5f, .5f),
-                    new Vector2(880f, 65f), Vector2.zero, 37, Color.white);
-
-                // Interactive dots overpaint the static dots with no flat bar.
+                focusLabel = Text("NIVEL ACTUAL", board, "",
+                    new Vector2(.5f, .226f), new Vector2(1110, 73),
+                    Vector2.zero, 43, Color.white);
                 BuildArcadeDots(board);
-
-                // Artwork crop allows small focus animations without resampling
-                // each of the five cards from a low resolution texture.
-                selectorFocusCard = Rect("CARTA SELECCIONADA", board,
-                    new Vector2(xs[0], .475f), new Vector2(262f, 306f),
-                    Vector2.zero);
-                selectorFocusCard.SetSiblingIndex(board.childCount - 1);
-                selectorFocusArt = selectorFocusCard.gameObject.AddComponent<RawImage>();
-                selectorFocusArt.texture = levelBackdrop;
-                selectorFocusArt.raycastTarget = false;
-                selectorFocusArt.color = Color.white;
             }
+            else if (levelBackdrop != null)
+                focusLabel = Text("Nivel activo", board, "",
+                    new Vector2(.5f, .218f), new Vector2(1020, 67),
+                    Vector2.zero, 37, Color.white);
+
+            // Arrow art belongs to the user's original reference screenshot.
+            // Do not paint another arrow or copy of the artwork on top of it.
             if (levelBackdrop != null)
             {
-                Hotspot("Anterior", board, new Vector2(.043f, .48f),
-                    new Vector2(115f, 180f), () => CycleFocus(-1));
-                Hotspot("Siguiente", board, new Vector2(.957f, .48f),
-                    new Vector2(115f, 180f), () => CycleFocus(1));
-                UpdateFocus();
+                Hotspot("Nivel anterior", board, new Vector2(.041f, .476f),
+                    new Vector2(123f, 200f), () => CycleFocus(-1));
+                Hotspot("Nivel siguiente", board, new Vector2(.959f, .476f),
+                    new Vector2(123f, 200f), () => CycleFocus(1));
             }
+            UpdateFocus();
         }
 
         private void CycleFocus(int offset)
@@ -768,24 +799,17 @@ namespace Biofit.GeomeTryOriginal
             if (focusLabel != null)
                 focusLabel.text = "NIVEL ACTUAL: " + MapTitles[focusLevel];
             for (int i = 0; i < selectorDotFills.Length; i++)
+            {
                 if (selectorDotFills[i] != null)
                     selectorDotFills[i].color = i == focusLevel ?
                         new Color(1f, .82f, .02f, 1f) :
                         new Color(.16f, .18f, .22f, 1f);
-
-            if (selectorFocusCard == null || selectorFocusArt == null)
-                return;
-            float[] xs = { .165f, .329f, .493f, .658f, .822f };
-            int[] cardLeft = { 138, 413, 687, 962, 1235 };
-            selectorFocusCard.anchorMin = selectorFocusCard.anchorMax =
-                new Vector2(xs[focusLevel], .475f);
-            selectorFocusCard.anchoredPosition = new Vector2(0, 9);
-            selectorFocusCard.localScale = Vector3.one * 1.045f;
-            // Cropped texture coordinates are bottom-up.
-            float tw = levelBackdrop.width, th = levelBackdrop.height;
-            selectorFocusArt.uvRect = new Rect(
-                cardLeft[focusLevel] / tw, (941f - 649f) / th,
-                270f / tw, 306f / th);
+                if (separateCards[i] != null)
+                    separateCards[i].anchoredPosition = Vector2.zero;
+            }
+            selectorFocusCard = separateCards[focusLevel];
+            selectorFocusArt = selectorFocusCard == null ? null :
+                selectorFocusCard.GetComponent<RawImage>();
         }
 
         private void ArcadeLogo(Transform parent)
