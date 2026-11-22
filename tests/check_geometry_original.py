@@ -41,6 +41,7 @@ allowed = [
         geometryHeldMotion.Reset(); ControlEpoch++;
     }""",
      "    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();ControlEpoch++;}"),
+    ("            geometryHeldMotion.Reset();\n", ""),
     ("        geometryHeldMotion.Reset();\n", ""),
     ("""        // STATUS supplies both continuous MOV flag and heartbeat at ~10Hz.
         // No RAW stream or firmware CONFIG write is required.
