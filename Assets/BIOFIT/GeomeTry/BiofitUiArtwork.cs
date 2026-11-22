@@ -59,8 +59,11 @@ namespace Biofit.GeomeTryOriginal
             // of baked blue background. Key blue pixels in this crop only.
             logo = Own(Extract(pixels, 332, 21, 1008, 172,
                 false, true, "BIOFIT logo sin fondo azul"));
-            corners[0] = Own(Extract(pixels, 0, 0, 278, 276,
-                false, true, "BIOFIT esquina superior izquierda"));
+            // Top-left in the reference also contains a BACK arrow.
+            // Use a mirror of the clean top-right decoration instead,
+            // so secondary menus never show TWO superposed back arrows.
+            corners[0] = Own(Extract(pixels, 1394, 0, 278, 276,
+                false, true, "BIOFIT esquina superior izquierda sin flecha"));
             corners[1] = Own(Extract(pixels, 1394, 0, 278, 276,
                 false, true, "BIOFIT esquina superior derecha"));
             corners[2] = Own(Extract(pixels, 0, 665, 278, 276,
