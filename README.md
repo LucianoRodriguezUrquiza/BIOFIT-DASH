@@ -1,3 +1,11 @@
+# NUEVA RAMA EXPERIMENTAL: MOVIMIENTO CORPORAL = SALTO MANTENIDO
+
+Esta rama **feat/geometry-legacy-held-motion-v1** implementa el comando sostenido de salto mediante el estado MOV de ambos tobillos (MOV_ON/MOV_OFF + STATUS), sin agregar un selector de modo. Se apoya en el BILATERAL LEGACY que ya usa GeomeTry, pero deja de utilizar el cooldown de pares UP_IMPULSE como limitador de los saltos del cubo. La versión estable de **main** no fue modificada.
+
+**Documentación técnica y plan de pruebas:** [Movimiento sostenido experimental](docs/GEOMETRY_LEGACY_MOV_HOLD_EXP.md). **Esta rama no está validada todavía en Android físico**; el usuario debe medir reposo, continuidad, reconexión y FPS en el teléfono con ambos sensores.
+
+---
+
 # BIOFIT DASH — versiones principales
 
 BIOFIT GAME es una plataforma de exergaming para Unity y Android con sensores inerciales Waveshare ESP32-S3 (QMI8658), BLE y control del personaje mediante movimientos corporales.
