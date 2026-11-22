@@ -958,6 +958,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         {
             tracker.gate.Reset(); tracker.statusGate.Reset(); tracker.hasLastTimestamp = false;
             jumpDetector.ClearPending();
+            // A rebooted sensor millis epoch invalidates both held inputs.
+            geometryHeldMotion.Reset();
         }
         tracker.statusGate.ObserveSequence(U16(b,4));
         if (tracker.lastStatusCallback > 0)
