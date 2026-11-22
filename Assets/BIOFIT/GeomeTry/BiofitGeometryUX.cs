@@ -742,13 +742,13 @@ namespace Biofit.GeomeTryOriginal
             {
                 int index = i;
                 float cx = (BiofitUiArtwork.CardLeft[i] +
-                    BiofitUiArtwork.CardWidth * .5f) /
+                    BiofitUiArtwork.CardWidths[i] * .5f) /
                     BiofitUiArtwork.ReferenceWidth;
                 float cy = 1f - (BiofitUiArtwork.CardTop +
                     (BiofitUiArtwork.CardBottom - BiofitUiArtwork.CardTop) * .5f) /
                     BiofitUiArtwork.ReferenceHeight;
                 Vector2 center = new Vector2(cx, cy);
-                float width = BiofitUiArtwork.CardWidth * 1600f /
+                float width = BiofitUiArtwork.CardWidths[i] * 1600f /
                     BiofitUiArtwork.ReferenceWidth;
                 float height = (BiofitUiArtwork.CardBottom - BiofitUiArtwork.CardTop) *
                     900f / BiofitUiArtwork.ReferenceHeight;
