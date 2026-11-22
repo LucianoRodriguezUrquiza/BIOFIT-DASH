@@ -57,3 +57,27 @@ Con Unity cerrado ejecutar desde esa carpeta `git pull --ff-only origin feat/geo
 - Las esquinas usan el recurso original UI/Misc/Corner, con los cuatro RectTransform completamente dentro del Canvas y UV espejadas (sin rotaciones de contenedores fuera de pantalla).
 - Tras salir del primer nivel y regresar al Main Menu, los listeners UnityEvent serializados podían referirse a un UIManager de una instancia de GameManager que fue destruida (el original vive con DontDestroyOnLoad). Se enlazan **los tres botones principales** a la nueva capa de navegación y se reemplaza el UnityEvent persistente. El método GameManager.LoadLevel original sigue intacto.
 - Sigue pendiente la comprobación de reingreso y skins en Unity Editor, y Android/60fps/2 IMUs con hardware.
+
+
+## Revisión de los ocho defectos observados en el video (22/11/2026)
+
+Implementada en la misma rama de desarrollo, sin tocar las Waveshare, física ni scripts originales de GeomeTry.
+
+1. Selector: BiofitUiArtwork.cs limpia una vez el fondo HD 1672x941, extrae las cinco tarjetas en texturas transparentes separadas y las dibuja independientemente. El enfoque sube de forma vertical, nunca crece hasta invadir tarjetas vecinas. Los cinco recortes conservan sus dimensiones reales y sombras originales.
+2. Indicadores: al generar el fondo se eliminan la hilera de círculos incorporada a la imagen y el antiguo texto fijo de nivel. Unity dibuja solamente una serie de cinco puntos, con el índice seleccionado, y un rótulo dinámico.
+3. Personalización: se muestra íntegro el atlas 1280x887, ancho 790 (antes 915) y margen inferior superior a 50 unidades UI en el diseño 1600x900. Los 70 hotspots, PlayerPrefs y recorte de sprite SOLO para el cubo durante el juego se mantienen. No se altera Rigidbody2D.
+4. Logo: se compone desde el diseño HD del usuario en una nueva textura con alfa transparente, eliminando el azul del fondo; no hay una franja rectangular superpuesta.
+5. Esquinas y volver: cuatro decoraciones extraídas de la referencia del usuario, sin fondo azul, pivotadas dentro del lienzo. La esquina superior izquierda usa la decoración derecha reflejada para evitar duplicar la flecha Atrás. El selector aprovecha la flecha original con una única zona táctil.
+6. Pantallas responsivas: canvas interno fijo 1600x900, escalado uniformemente con Screen.safeArea. Conserva proporciones en 16:9, 20:9 o 4:3; los laterales externos reciben fondo azul fuera del nivel, sin cubrir la escena del videojuego.
+7. Configuración BLE: cuatro tarjetas independientes para conexión WAVESHARE, eventos/pares, captura/archivos y rendimiento. Los botones conservan sus acciones y el texto azul oscuro sobre verde lima.
+8. FPS: muestreo observado de cuadros en ventanas reales de 0,75 s usando Time.unscaledDeltaTime. La pantalla indica explícitamente Editor (NO representa Android) o Android (objetivo solicitado 60 FPS, no garantizados). Nunca se equipara la tasa del archivo de video a la del juego.
+
+### Instalación y verificaciones
+
+No descargar otro ZIP ni ejecutar otra vez la preparación original. Se reutiliza el paquete BIOFIT_GeomeTry_UI_Assets_HD_v2.zip ya instalado. Al actualizar desde Git se importa el nuevo archivo BiofitUiArtwork.cs. El preflight permite lectura CPU de LevelSelect.png para hacer el recorte y canal alfa en memoria; no se reemplaza la imagen fuente del usuario.
+
+Cerrar Unity, ejecutar git status --short y luego, si Git lo permite sin conflictos, git pull --ff-only origin feat/geometry-ui-skins-60fps-v1 en la carpeta BIOFIT-GeomeTry-UI-V1. No usar reset, clean ni descartar datos locales. Abrir Unity 6000.3.28f1 y ejecutar BIOFIT > GeomeTry UX > 1. Configurar modulo tactil Android, seguido de 2. Verificar UX y recursos.
+
+Pruebas en Unity: Game View 1280x720 y al menos una relación de aspecto más amplia, flechas de selección, cinco tarjetas sin superposición ni puntos duplicados, skin de última fila, logo y esquinas, paneles BLE, FPS claramente marcado como Editor, pausa, volver y reingreso a un nivel. Luego comprobar APK Android, FPS reales, dos Waveshare y BILATERAL LEGACY.
+
+Las pruebas automatizadas son de sintaxis/contratos; sin Unity Editor o teléfono físico no se certifican renderizado, compilación APK, 60 FPS ni BLE. Mantener PR #21 en borrador sin fusionarlo.
