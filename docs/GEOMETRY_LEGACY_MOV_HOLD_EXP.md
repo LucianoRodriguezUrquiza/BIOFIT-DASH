@@ -52,6 +52,6 @@ Nota técnica: el estado MOV detecta actividad inercial, **no** verifica contact
 
 Crear una copia separada del proyecto local estable antes de cambiar ramas. No utilizar reset/clean/discard. Cerrar Unity para la descarga de la rama, reutilizar las cuatro PNG del pack HD previamente instalado y verificar Android > Build Profiles, escenas y la compilación mediante el menú BIOFIT > GeomeTry ORIGINAL > 3. Compilar APK Android original + BLE LEGACY.
 
-Protocolo inicial: conectar dos tobillos y esperar 2/2 + reloj; 10 s en quietud, 5 s con un solo tobillo, 10 s de movimiento bilateral sostenido en tramo libre, 3 aterrizajes seguidos, parada, pausa, vuelta al menú, muerte/respawn y reconexión. Revisar Configuración: CONTROL: MOVIMIENTO ACTIVO/REPOSO, PARES LEGACY y SALTOS. Si hay errores, conservar vídeo y CSV con GEOMETRY_HOLD_ON/OFF y GEOMETRY_HELD_JUMP_APPLIED.
+Protocolo inicial: conectar dos tobillos y esperar 2/2 + reloj; 10 s en quietud, 5 s con un solo tobillo, 10 s de movimiento bilateral sostenido en tramo libre, 3 aterrizajes seguidos, parada, pausa, vuelta al menú, muerte/respawn y reconexión. Revisar Configuración: BOTÓN EN NIVEL: MANTENIDO/LIBERADO (en Configuración está liberado), PARES LEGACY y SALTOS. Si hay errores, conservar vídeo y CSV con GEOMETRY_HOLD_ON/OFF y GEOMETRY_HELD_JUMP_APPLIED.
 
 **No se modifica main ni se sugiere reflashear trackers en esta primera prueba.**
