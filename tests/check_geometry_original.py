@@ -29,30 +29,30 @@ baseline = subprocess.check_output(["git", "show",
     "5616fc4571193d4a2d076550a909089344144384:" + monitor_path], cwd=root)
 actual = (root / monitor_path).read_text()
 allowed = [
-    ("""    // GeomeTry experimental held-input uses firmware MOV/STATUS flags.
-    // Legacy pair detector and other BIOFIT game modes remain unchanged.
-    private readonly Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion geometryHeldMotion =
-        new Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion();
-    public Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion GeometryHeldMotion =>
-        geometryHeldMotion;
+    ("""
+    // Motion telemetry is only published here. Individual game modes decide
+    // how to interpret it; the BLE receiver has NO dependency on GeomeTry.
+    // Callbacks run on Unity's main thread from ReadStatus/ReadEvent.
+    public event Action<byte, byte, uint, double> MotionStatusReceived;
+    public event Action<byte, bool, uint, double> MotionTransitionReceived;
+    public event Action MotionEpochReset;
 """, ""),
     ("""    private void InvalidateControl() {
-        liftPairs.Clear(); jumpDetector.ClearPending();
-        geometryHeldMotion.Reset(); ControlEpoch++;
+        liftPairs.Clear(); jumpDetector.ClearPending(); ControlEpoch++;
+        MotionEpochReset?.Invoke();
     }""",
      "    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();ControlEpoch++;}"),
-    ("            geometryHeldMotion.Reset();\n", ""),
-    ("        geometryHeldMotion.Reset();\n", ""),
-    ("""        // STATUS supplies both continuous MOV flag and heartbeat at ~10Hz.
-        // No RAW stream or firmware CONFIG write is required.
-        geometryHeldMotion.ObserveStatus(packet.expectedId, b[2],
+    ("            MotionEpochReset?.Invoke();\n", ""),
+    ("        MotionEpochReset?.Invoke();\n", ""),
+    ("""        // STATUS bit0 is the firmware's existing MOV classifier (10 Hz);
+        // no always-on RAW stream or CONFIG changes are required.
+        MotionStatusReceived?.Invoke(packet.expectedId, b[2],
             sensor, callbackSeconds);
 """, ""),
-    ("""        // EVENT MOV_ON/OFF is a low-latency edge; strictly use only
-        // freshness-validated events. Older sensor timestamps cannot
-        // overwrite a more recent STATUS movement state.
+    ("""        // Only fresh MOV_ON/MOV_OFF events are supplied to consumers.
+        // The clock and per-tracker sequence checks above are unchanged.
         if (fresh && (eventType == 1 || eventType == 2))
-            geometryHeldMotion.ObserveEvent(state.id, eventType == 1,
+            MotionTransitionReceived?.Invoke(state.id, eventType == 1,
                 millis, callbackSeconds);
         if (fresh && eventType <= 3)""",
      "        else if(eventType<=3)")
