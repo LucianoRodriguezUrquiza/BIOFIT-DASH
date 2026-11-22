@@ -927,41 +927,79 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildSettings()
         {
-            Fill("BIOFIT settings blue", canvasRoot, Blue);
+            Fill("BIOFIT configuracion fondo", canvasRoot, Blue);
             ArcadeCorners(canvasRoot);
             ArcadeLogo(canvasRoot);
-            RectTransform heading = ArcadePanel("Titular BLE", canvasRoot,
-                new Vector2(.5f, .793f), new Vector2(1080f, 66f), Vector2.zero);
-            Text("ble subtitle", heading,
-                "CONFIGURACIÓN  ·  BILATERAL LEGACY",
-                new Vector2(.5f, .5f), new Vector2(1030f, 56f),
+
+            RectTransform heading = ArcadePanel("Titulo ajustes",
+                canvasRoot, new Vector2(.5f, .793f),
+                new Vector2(1080f, 66f), Vector2.zero);
+            Text("Titulo de ajustes", heading, "CONFIGURACIÓN  ·  BILATERAL LEGACY",
+                new Vector2(.5f, .5f), new Vector2(1030f, 55f),
                 Vector2.zero, 33, Color.white);
 
-            RectTransform info = ArcadePanel("Estado de trackers",
-                canvasRoot, new Vector2(.5f, .576f),
-                new Vector2(1130f, 248f), Vector2.zero);
-            statusLabel = Text("Datos BLE", info,
-                "ESTADO DE LOS SENSORES WAVESHARE",
-                new Vector2(.5f, .5f), new Vector2(1030f, 212f),
+            // Four independent, non-overlapping regions, rather than a
+            // seven-line dense status dump over one tiny panel.
+            RectTransform trackers = ArcadePanel("Conexion BLE",
+                canvasRoot, new Vector2(.310f, .614f),
+                new Vector2(596f, 164f), Vector2.zero);
+            Text("Seccion trackers", trackers, "CONEXIÓN WAVESHARE",
+                new Vector2(.5f, .80f), new Vector2(528f, 44f),
+                Vector2.zero, 29, Lime);
+            connectionLabel = Text("Estado trackers", trackers, "",
+                new Vector2(.5f, .38f), new Vector2(536f, 100f),
                 Vector2.zero, 25, Color.white);
 
+            RectTransform movements = ArcadePanel("Eventos BLE",
+                canvasRoot, new Vector2(.690f, .614f),
+                new Vector2(596f, 164f), Vector2.zero);
+            Text("Seccion movimientos", movements, "DETECCIÓN DE MOVIMIENTOS",
+                new Vector2(.5f, .80f), new Vector2(528f, 44f),
+                Vector2.zero, 26, Lime);
+            eventLabel = Text("Pares y saltos", movements, "",
+                new Vector2(.5f, .38f), new Vector2(526f, 100f),
+                Vector2.zero, 26, Color.white);
+
+            RectTransform captures = ArcadePanel("Captura y archivos",
+                canvasRoot, new Vector2(.310f, .411f),
+                new Vector2(596f, 139f), Vector2.zero);
+            Text("Seccion captura", captures, "REGISTRO Y EXPORTACIÓN",
+                new Vector2(.5f, .83f), new Vector2(530f, 39f),
+                Vector2.zero, 27, Lime);
+            captureLabel = Text("Estado capturas", captures, "",
+                new Vector2(.5f, .54f), new Vector2(530f, 44f),
+                Vector2.zero, 22, Color.white);
+            statusLabel = Text("Aviso captura", captures, "",
+                new Vector2(.5f, .22f), new Vector2(530f, 48f),
+                Vector2.zero, 18, Ice);
+
+            RectTransform performance = ArcadePanel("FPS medicion",
+                canvasRoot, new Vector2(.690f, .411f),
+                new Vector2(596f, 139f), Vector2.zero);
+            Text("Seccion rendimiento", performance, "RENDIMIENTO",
+                new Vector2(.5f, .83f), new Vector2(530f, 39f),
+                Vector2.zero, 27, Lime);
+            performanceLabel = Text("FPS y entorno", performance, "",
+                new Vector2(.5f, .42f), new Vector2(538f, 86f),
+                Vector2.zero, 21, Color.white);
+
             Button("Start capture", canvasRoot, "INICIAR REGISTRO",
-                new Vector2(.31f, .351f), new Vector2(405f, 75f),
+                new Vector2(.310f, .269f), new Vector2(430f, 66f),
                 Vector2.zero, StartCapture, Lime, 27);
             Button("Stop capture", canvasRoot, "FINALIZAR",
-                new Vector2(.69f, .351f), new Vector2(405f, 75f),
+                new Vector2(.690f, .269f), new Vector2(430f, 66f),
                 Vector2.zero, () => GetMonitor()?.StopGameCapture(), Lime, 27);
             Button("RAW", canvasRoot, "RAW",
-                new Vector2(.21f, .225f), new Vector2(290f, 75f),
-                Vector2.zero, () => GetMonitor()?.ToggleRawCapture(), Lime, 29);
+                new Vector2(.205f, .167f), new Vector2(305f, 64f),
+                Vector2.zero, () => GetMonitor()?.ToggleRawCapture(), Lime, 28);
             Button("SYNC", canvasRoot, "MARCAR SYNC",
-                new Vector2(.5f, .225f), new Vector2(290f, 75f),
+                new Vector2(.500f, .167f), new Vector2(305f, 64f),
                 Vector2.zero, () => GetMonitor()?.MarkVideoSync(), Lime, 27);
             Button("Downloads", canvasRoot, "DESCARGAS",
-                new Vector2(.79f, .225f), new Vector2(290f, 75f),
+                new Vector2(.795f, .167f), new Vector2(305f, 64f),
                 Vector2.zero, () => GetMonitor()?.RequestExport(false), Lime, 27);
             Button("Export SAF", canvasRoot, "GUARDAR ARCHIVOS (SAF)",
-                new Vector2(.5f, .104f), new Vector2(620f, 75f),
+                new Vector2(.500f, .078f), new Vector2(620f, 62f),
                 Vector2.zero, () => GetMonitor()?.RequestExport(true), Lime, 27);
             RefreshBleStatus();
         }
@@ -980,24 +1018,48 @@ namespace Biofit.GeomeTryOriginal
 
         private void RefreshBleStatus()
         {
-            if (statusLabel == null) return;
+            if (connectionLabel == null || eventLabel == null ||
+                captureLabel == null || performanceLabel == null ||
+                statusLabel == null) return;
             var m = GetMonitor();
             var bridge = FindFirstObjectByType<BiofitGeomeTryLegacyBridge>();
             if (m == null)
             {
-                statusLabel.text = "Receptor BLE no iniciado.\n" +
-                    "Volvé a Main Menu para iniciar la conexion automatica.";
-                return;
+                connectionLabel.text = "RECEPTOR BLE SIN INICIAR";
+                eventLabel.text = "PARES: 0\nSALTOS CUBO: 0";
+                captureLabel.text = "CAPTURA: INACTIVA  |  RAW: OFF";
+                statusLabel.text = "Reabrí Main Menu para iniciar la conexión.";
             }
-            statusLabel.text =
-                "WAVESHARE: " + (m.BothTrackersConnected ? "2/2 CONECTADAS" : "ESPERANDO AMBOS TRACKERS") +
-                "\nRELOJES: " + (m.ClockAlignmentReady ? "SINCRONIZADOS" : "ESPERANDO STATUS") +
-                "\nPARES: " + (bridge == null ? "0" : bridge.AcceptedPairs.ToString()) +
-                "  |  SALTOS CUBO: " + (bridge == null ? "0" : bridge.ExecutedJumps.ToString()) +
-                "\nCAPTURA: " + (m.GameCaptureActive ? "ACTIVA" : "INACTIVA") +
-                "  |  " + m.RawButtonLabel +
-                "\nFPS ACTUALES (ESTIMACION): " + Mathf.RoundToInt(averageFps) +
-                "\n" + m.CaptureBanner;
+            else
+            {
+                connectionLabel.text =
+                    "TRACKERS: " + (m.BothTrackersConnected ?
+                        "2 / 2 CONECTADOS" : "ESPERANDO 2 TRACKERS") +
+                    "\nRELOJES: " + (m.ClockAlignmentReady ?
+                        "SINCRONIZADOS" : "ESPERANDO STATUS");
+                eventLabel.text =
+                    "PARES RECIBIDOS: " + (bridge == null ?
+                        "0" : bridge.AcceptedPairs.ToString()) +
+                    "\nSALTOS CUBO: " + (bridge == null ?
+                        "0" : bridge.ExecutedJumps.ToString());
+                captureLabel.text =
+                    "CAPTURA: " + (m.GameCaptureActive ? "ACTIVA" : "INACTIVA") +
+                    "    |    " + m.RawButtonLabel;
+                statusLabel.text = m.CaptureBanner;
+            }
+#if UNITY_EDITOR
+            // An uncapped Editor can report 300-500+ FPS even if the actual
+            // Android phone cannot sustain 60. This value is not a device test.
+            performanceLabel.text = "EDITOR · FPS observados: " +
+                (fpsSamples == 0 ? "calculando..." :
+                 Mathf.RoundToInt(sampledFps).ToString()) +
+                "\nNO equivale a FPS de la APK";
+#else
+            performanceLabel.text = "ANDROID · FPS observados: " +
+                (fpsSamples == 0 ? "calculando..." :
+                 Mathf.RoundToInt(sampledFps).ToString()) +
+                "\nObjetivo solicitado: 60 FPS (no garantizados)";
+#endif
         }
 
         private void BuildOtherScene(string scene)
