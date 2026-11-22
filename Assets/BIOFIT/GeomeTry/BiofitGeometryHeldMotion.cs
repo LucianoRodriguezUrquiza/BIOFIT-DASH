@@ -122,8 +122,15 @@ namespace Biofit.GeomeTryOriginal
                 return false;
             }
             previousTick = now;
-            if (!bothConnected || !clocksReady || !playing ||
-                !FreshAndHealthy(0, now) || !FreshAndHealthy(1, now))
+            if (!bothConnected || !clocksReady || !playing)
+            {
+                // A reconnect, pause, scene transition or clock reset must
+                // require fresh evidence from both trackers, never reactivate
+                // a saved motion flag from before the interruption.
+                Reset();
+                return false;
+            }
+            if (!FreshAndHealthy(0, now) || !FreshAndHealthy(1, now))
             {
                 Release();
                 return false;
