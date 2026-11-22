@@ -39,6 +39,16 @@ namespace Biofit.GeomeTryOriginal
         private readonly Dictionary<int, Sprite> cachedSkins = new Dictionary<int, Sprite>();
         private Canvas canvas;
         private RectTransform canvasRoot;
+        private RectTransform safeRoot;
+        private RectTransform designStage;
+        private Rect lastSafeRect;
+        private int lastScreenWidth = -1;
+        private int lastScreenHeight = -1;
+        private BiofitUiArtwork artwork;
+        private TMP_Text connectionLabel;
+        private TMP_Text eventLabel;
+        private TMP_Text captureLabel;
+        private TMP_Text performanceLabel;
         private TMP_Text statusLabel;
         private TMP_Text skinLabel;
         private RectTransform skinSelectionOutline;
@@ -53,12 +63,16 @@ namespace Biofit.GeomeTryOriginal
         private Color baseCubeTint;
         private float findCubeAt;
         private float refreshStatusAt;
-        private float averageFps = 60f;
+        private float sampledFps;
+        private float fpsElapsed;
+        private int fpsFrames;
+        private int fpsSamples;
         private int skinIndex;
         private int focusLevel;
         private readonly Button[] selectorHotspots = new Button[5];
         private RectTransform selectorContentRoot;
         private RectTransform selectorFocusCard;
+        private RectTransform[] separateCards = new RectTransform[5];
         private RawImage selectorFocusArt;
         private TMP_Text focusLabel;
         private float focusSince;
@@ -114,6 +128,7 @@ namespace Biofit.GeomeTryOriginal
         private void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (artwork != null) { artwork.Dispose(); artwork = null; }
             if (dotSprite != null) Destroy(dotSprite);
             if (dotTexture != null) Destroy(dotTexture);
             if (instance == this) instance = null;
@@ -128,18 +143,33 @@ namespace Biofit.GeomeTryOriginal
         private void Update()
         {
             if (!IsGeomeTryScene(currentScene)) return;
-            if (Time.unscaledDeltaTime > 0.0001f)
-                averageFps = Mathf.Lerp(averageFps,
-                    1f / Time.unscaledDeltaTime, 0.075f);
+            float frameDuration = Time.unscaledDeltaTime;
+            if (frameDuration > 0f && frameDuration < 1f)
+            {
+                fpsElapsed += frameDuration;
+                fpsFrames++;
+                if (fpsElapsed >= .75f)
+                {
+                    sampledFps = fpsFrames / fpsElapsed;
+                    fpsSamples++;
+                    fpsElapsed = 0f;
+                    fpsFrames = 0;
+                }
+            }
+            // Game View, device rotation and Android cutouts can change the
+            // available safe area without invoking another sceneLoaded event.
+            UpdateViewport();
 
             if (currentScene == Select && selectorFocusCard != null)
             {
                 // Tiny idle bounce, no yellow overlay or altered game input.
                 float t = Time.unscaledTime - focusSince;
                 float bounce = Mathf.Sin(t * 5.5f) * 2.5f;
-                selectorFocusCard.anchoredPosition = new Vector2(0f, 9f + bounce);
-                selectorFocusCard.localScale = Vector3.one *
-                    (1.045f + Mathf.Sin(t * 4f) * 0.007f);
+                // Vertical lift ONLY: there is no scaling across neighboring
+                // original cards, and the old baked card has been removed.
+                selectorFocusCard.anchoredPosition =
+                    new Vector2(0f, 7f + bounce);
+                selectorFocusCard.localScale = Vector3.one;
             }
 
             if (currentScene == Settings && statusLabel != null &&
@@ -235,6 +265,10 @@ namespace Biofit.GeomeTryOriginal
         {
             currentScene = sceneName;
             statusLabel = null;
+            connectionLabel = null;
+            eventLabel = null;
+            captureLabel = null;
+            performanceLabel = null;
             skinLabel = null;
             skinSelectionOutline = null;
             selectorContentRoot = null;
@@ -245,12 +279,17 @@ namespace Biofit.GeomeTryOriginal
             {
                 selectorHotspots[i] = null;
                 selectorDotFills[i] = null;
+                separateCards[i] = null;
             }
             activeCube = null;
             cubeRenderer = null;
             cachedSkins.Clear();
             if (canvas != null) Destroy(canvas.gameObject);
             canvas = null;
+            canvasRoot = null;
+            designStage = null;
+            safeRoot = null;
+            lastScreenWidth = -1;
             if (!IsGeomeTryScene(sceneName)) return;
             if (sceneName == Menu) { ConfigureOriginalMenu(); return; }
             EnsureUiEventSystem();
@@ -267,8 +306,17 @@ namespace Biofit.GeomeTryOriginal
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1600f, 900f);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f;
-            canvasRoot = host.GetComponent<RectTransform>();
+            // Scale from HEIGHT, then fit a canonical 1600x900 stage inside the
+            // safe area. Fixed UI coordinates are never allowed to overflow.
+            scaler.matchWidthOrHeight = 1f;
+            RectTransform hostRect = host.GetComponent<RectTransform>();
+            safeRoot = Rect("BIOFIT Android safe area", hostRect,
+                new Vector2(.5f, .5f), Vector2.zero, Vector2.zero);
+            designStage = Rect("BIOFIT 16:9 responsive design", safeRoot,
+                new Vector2(.5f, .5f), new Vector2(1600f, 900f),
+                Vector2.zero);
+            canvasRoot = designStage;
+            UpdateViewport(true);
 
             if (sceneName == Select) BuildLevelSelection();
             else if (sceneName == Custom) BuildSkinSelection();
@@ -278,6 +326,29 @@ namespace Biofit.GeomeTryOriginal
             if (sceneName != Menu) BuildBackButton(sceneName);
         }
 
+
+        private void UpdateViewport(bool force = false)
+        {
+            if (safeRoot == null || designStage == null) return;
+            int width = Mathf.Max(1, Screen.width);
+            int height = Mathf.Max(1, Screen.height);
+            Rect area = Screen.safeArea;
+            if (!force && lastScreenWidth == width &&
+                lastScreenHeight == height && area == lastSafeRect) return;
+            lastScreenWidth = width;
+            lastScreenHeight = height;
+            lastSafeRect = area;
+            safeRoot.anchorMin = new Vector2(area.xMin / width, area.yMin / height);
+            safeRoot.anchorMax = new Vector2(area.xMax / width, area.yMax / height);
+            safeRoot.offsetMin = Vector2.zero;
+            safeRoot.offsetMax = Vector2.zero;
+            Canvas.ForceUpdateCanvases();
+            float sx = safeRoot.rect.width / 1600f;
+            float sy = safeRoot.rect.height / 900f;
+            float scale = Mathf.Clamp(Mathf.Min(sx, sy), .1f, 4f);
+            designStage.localScale = new Vector3(scale, scale, 1f);
+            designStage.anchoredPosition = Vector2.zero;
+        }
 
         // Some original game scenes do not contain an EventSystem. Creating
         // one only when absent keeps pause/back/settings clickable on Android.
