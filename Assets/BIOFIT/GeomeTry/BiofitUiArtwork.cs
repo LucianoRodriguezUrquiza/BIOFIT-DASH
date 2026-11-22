@@ -49,9 +49,9 @@ namespace Biofit.GeomeTryOriginal
             // corner decorations and original arrow graphics. Each repaired
             // strip is interpolated between source rows at the same X.
             Color32[] clean = (Color32[])pixels.Clone();
-            EraseStrip(clean, pixels, 132, 1528, 322, 675, 316, 686);
-            EraseStrip(clean, pixels, 424, 1245, 695, 771, 690, 775);
-            EraseStrip(clean, pixels, 633, 1039, 772, 866, 767, 876);
+            EraseStrip(clean, pixels, 132, 1528, 322, 675, 316, 686, 5, 16);
+            EraseStrip(clean, pixels, 424, 1245, 695, 771, 690, 775, 10, 7);
+            EraseStrip(clean, pixels, 633, 1039, 772, 866, 767, 876, 10, 7);
             background = Own(MakeTexture(clean, ReferenceWidth, ReferenceHeight,
                 "BIOFIT selector sin tarjetas ni indicadores duplicados"));
 
@@ -144,18 +144,26 @@ namespace Biofit.GeomeTryOriginal
         }
 
         private static void EraseStrip(Color32[] destination, Color32[] original,
-            int x0, int x1, int y0, int y1, int fromY, int toY)
+            int x0, int x1, int y0, int y1, int fromY, int toY,
+            int featherX, int featherY)
         {
             for (int x = x0; x < x1; x++)
             {
                 Color32 a = original[PixelIndex(x, fromY)];
                 Color32 b = original[PixelIndex(x, toY)];
+                float tx = Mathf.Clamp01(Mathf.Min(x - x0, x1 - 1 - x) /
+                    (float)Mathf.Max(featherX, 1));
                 for (int y = y0; y < y1; y++)
                 {
                     float t = Mathf.Clamp01((y - fromY) / (float)(toY - fromY));
-                    Color32 blend = Color32.Lerp(a, b, t);
-                    blend.a = 255;
-                    destination[PixelIndex(x, y)] = blend;
+                    Color32 inferredBackground = Color32.Lerp(a, b, t);
+                    inferredBackground.a = 255;
+                    float ty = Mathf.Clamp01(
+                        Mathf.Min(y - y0, y1 - 1 - y) /
+                        (float)Mathf.Max(featherY, 1));
+                    int at = PixelIndex(x, y);
+                    destination[at] = Color32.Lerp(original[at],
+                        inferredBackground, tx * ty);
                 }
             }
         }
