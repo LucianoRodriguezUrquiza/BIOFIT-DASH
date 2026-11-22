@@ -25,6 +25,9 @@ namespace Biofit.GeomeTryOriginal
         private int accepted, executed, ignored, holdPresses, holdReleases;
         private int receiverEpoch;
         private bool heldInput;
+        private Cube cachedCube;
+        private Rigidbody2D cachedBody;
+        private float nextAvatarLookupAt;
         private static BiofitGeomeTryLegacyBridge activeBridge;
 
         // The imported JumpOrb compatibility patch already calls this method.
@@ -124,6 +127,8 @@ namespace Biofit.GeomeTryOriginal
                 heldMotion.Reset();
             }
             heldInput = false;
+            cachedCube = null;
+            cachedBody = null;
             if (activeBridge == this) activeBridge = null;
             SceneManager.sceneLoaded -= OnSceneLoaded;
         }
@@ -144,6 +149,9 @@ namespace Biofit.GeomeTryOriginal
             monitor.JumpDetector.ClearPending();
             heldMotion.Reset();
             heldInput = false;
+            cachedCube = null;
+            cachedBody = null;
+            nextAvatarLookupAt = 0f;
             receiverEpoch = monitor.ControlEpoch;
             monitor.ShowDiagnostics = false;
         }
@@ -214,6 +222,21 @@ namespace Biofit.GeomeTryOriginal
                     " connected=" + monitor.BothTrackersConnected);
         }
 
+        private Cube ResolveCube()
+        {
+            // The level may contain hundreds of objects. Do not run a
+            // FindGameObjectWithTag scan at 60 FPS: cache the original Cube
+            // and retry only after death, respawn, or a character portal.
+            if (cachedCube != null && cachedCube.isAlive) return cachedCube;
+            if (Time.unscaledTime < nextAvatarLookupAt) return null;
+            nextAvatarLookupAt = Time.unscaledTime + .12f;
+            GameObject avatar = GameObject.FindGameObjectWithTag("Player");
+            cachedCube = avatar == null ? null : avatar.GetComponent<Cube>();
+            cachedBody = cachedCube == null ? null :
+                cachedCube.GetComponent<Rigidbody2D>();
+            return cachedCube;
+        }
+
         private void LateUpdate()
         {
             // Unity calls all Update() methods before any LateUpdate().
@@ -221,10 +244,9 @@ namespace Biofit.GeomeTryOriginal
             // before the hold is translated into the Cube action.
             RefreshHeldState();
             if (!heldInput || !ReadyForGameplay()) return;
-            GameObject avatar = GameObject.FindGameObjectWithTag("Player");
-            Cube cube = avatar == null ? null : avatar.GetComponent<Cube>();
+            Cube cube = ResolveCube();
             if (cube == null || !cube.isAlive) return;
-            Rigidbody2D body = cube.GetComponent<Rigidbody2D>();
+            Rigidbody2D body = cachedBody;
             float beforeY = body == null ? 0f : body.linearVelocity.y;
 
             // EXACT same original action used by Space or mouse hold:
