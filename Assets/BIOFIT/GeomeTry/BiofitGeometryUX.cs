@@ -1043,10 +1043,14 @@ namespace Biofit.GeomeTryOriginal
                         "2 / 2 CONECTADOS" : "ESPERANDO 2 TRACKERS") +
                     "\nRELOJES: " + (m.ClockAlignmentReady ?
                         "SINCRONIZADOS" : "ESPERANDO STATUS");
+                // The movement state, not the 900ms legacy UP pair timer,
+                // now drives Cube.onClick() continuously while held.
                 eventLabel.text =
-                    "PARES RECIBIDOS: " + (bridge == null ?
+                    "CONTROL: " + (bridge != null && bridge.MovementHeld ?
+                        "MOVIMIENTO ACTIVO" : "REPOSO") +
+                    "\nPARES LEGACY: " + (bridge == null ?
                         "0" : bridge.AcceptedPairs.ToString()) +
-                    "\nSALTOS CUBO: " + (bridge == null ?
+                    "   |   SALTOS: " + (bridge == null ?
                         "0" : bridge.ExecutedJumps.ToString());
                 captureLabel.text =
                     "CAPTURA: " + (m.GameCaptureActive ? "ACTIVA" : "INACTIVA") +
