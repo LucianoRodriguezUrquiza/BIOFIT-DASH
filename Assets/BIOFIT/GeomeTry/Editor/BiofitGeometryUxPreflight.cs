@@ -108,6 +108,15 @@ namespace Biofit.GeomeTryOriginal.Editor
                         changed = true;
                     }
                 }
+                // The selector is rebuilt once into transparent card,
+                // logo and corner textures. CPU access is required only
+                // during scene initialization; generated textures then
+                // release CPU pixels via Apply(false, true).
+                if (art == "LevelSelect" && !importer.isReadable)
+                {
+                    importer.isReadable = true;
+                    changed = true;
+                }
                 if (art == "Skins" && !importer.isReadable)
                 {
                     importer.isReadable = true;
@@ -186,6 +195,11 @@ namespace Biofit.GeomeTryOriginal.Editor
             if (selector.width < 1600 || selector.height < 900)
                 throw new InvalidOperationException(
                     "Selector de baja resolucion. Instala BIOFIT_GeomeTry_UI_Assets_HD_v2.zip.");
+            if (!selector.isReadable || selector.width != 1672 || selector.height != 941)
+                throw new InvalidOperationException(
+                    "El selector HD debe ser 1672x941 y legible para separar " +
+                    "tarjetas, logo y decoraciones. Ejecuta BIOFIT > GeomeTry UX > " +
+                    "1. Configurar modulo tactil Android.");
             EnsureOriginalUrpPreview();
             Texture2D skin = AssetDatabase.LoadAssetAtPath<Texture2D>(ImagePath + "Skins.png");
             if (skin.width != 1280 || skin.height != 887)
