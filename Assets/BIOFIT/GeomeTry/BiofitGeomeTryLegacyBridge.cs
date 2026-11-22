@@ -15,6 +15,8 @@ namespace Biofit.GeomeTryOriginal
     public sealed class BiofitGeomeTryLegacyBridge : MonoBehaviour
     {
         private BiofitBLEMonitor monitor;
+        private readonly BiofitGeometryHeldMotion heldMotion =
+            new BiofitGeometryHeldMotion();
         private static readonly FieldInfo KeyPressed =
             typeof(Character).GetField("keyPressed", BindingFlags.Instance | BindingFlags.NonPublic);
         private const string LevelScene = "Level";
@@ -105,6 +107,9 @@ namespace Biofit.GeomeTryOriginal
             monitor.LiftCycleMode = false;
             receiverEpoch = monitor.ControlEpoch;
             monitor.BilateralJumpCandidate += OnBilateralLegacyCandidate;
+            monitor.MotionStatusReceived += OnMotionStatus;
+            monitor.MotionTransitionReceived += OnMotionTransition;
+            monitor.MotionEpochReset += OnMotionReset;
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
@@ -113,7 +118,10 @@ namespace Biofit.GeomeTryOriginal
             if (monitor != null)
             {
                 monitor.BilateralJumpCandidate -= OnBilateralLegacyCandidate;
-                monitor.GeometryHeldMotion.Reset();
+                monitor.MotionStatusReceived -= OnMotionStatus;
+                monitor.MotionTransitionReceived -= OnMotionTransition;
+                monitor.MotionEpochReset -= OnMotionReset;
+                heldMotion.Reset();
             }
             heldInput = false;
             if (activeBridge == this) activeBridge = null;
@@ -124,7 +132,7 @@ namespace Biofit.GeomeTryOriginal
         {
             if (!pause) return;
             heldInput = false;
-            monitor?.GeometryHeldMotion.Reset();
+            heldMotion.Reset();
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -134,10 +142,28 @@ namespace Biofit.GeomeTryOriginal
             // previous player life into the next scene. Fresh STATUS will
             // reestablish the movement state automatically.
             monitor.JumpDetector.ClearPending();
-            monitor.GeometryHeldMotion.Reset();
+            heldMotion.Reset();
             heldInput = false;
             receiverEpoch = monitor.ControlEpoch;
             monitor.ShowDiagnostics = false;
+        }
+
+        private void OnMotionStatus(byte foot, byte flags, uint sensorMs,
+            double callbackSeconds)
+        {
+            heldMotion.ObserveStatus(foot, flags, sensorMs, callbackSeconds);
+        }
+
+        private void OnMotionTransition(byte foot, bool moving,
+            uint sensorMs, double callbackSeconds)
+        {
+            heldMotion.ObserveEvent(foot, moving, sensorMs, callbackSeconds);
+        }
+
+        private void OnMotionReset()
+        {
+            heldMotion.Reset();
+            heldInput = false;
         }
 
         private bool ReadyForGameplay()
@@ -157,7 +183,7 @@ namespace Biofit.GeomeTryOriginal
             {
                 receiverEpoch = monitor.ControlEpoch;
                 monitor.JumpDetector.ClearPending();
-                monitor.GeometryHeldMotion.Reset();
+                heldMotion.Reset();
                 heldInput = false;
             }
             if (monitor.PhaseFastPairs) monitor.PhaseFastPairs = false;
@@ -170,7 +196,7 @@ namespace Biofit.GeomeTryOriginal
             double now = System.Diagnostics.Stopwatch.GetTimestamp() /
                 (double)System.Diagnostics.Stopwatch.Frequency;
             bool ready = ReadyForGameplay();
-            heldInput = monitor.GeometryHeldMotion.Tick(now,
+            heldInput = heldMotion.Tick(now,
                 monitor.BothTrackersConnected, monitor.ClockAlignmentReady,
                 ready);
             if (old == heldInput) return;
@@ -178,8 +204,8 @@ namespace Biofit.GeomeTryOriginal
             if (monitor.GameCaptureActive)
                 monitor.RecordControlDiagnostic(
                     "GEOMETRY_HOLD_" + (heldInput ? "ON" : "OFF") +
-                    " feet=" + (monitor.GeometryHeldMotion.LeftMoving ? "1" : "0") +
-                    (monitor.GeometryHeldMotion.RightMoving ? "1" : "0") +
+                    " feet=" + (heldMotion.LeftMoving ? "1" : "0") +
+                    (heldMotion.RightMoving ? "1" : "0") +
                     " clockReady=" + monitor.ClockAlignmentReady +
                     " connected=" + monitor.BothTrackersConnected);
         }
