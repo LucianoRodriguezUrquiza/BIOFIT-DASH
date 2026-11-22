@@ -9,7 +9,8 @@ using UnityEngine;
 /// No modifica el firmware ni la calibracion de las Waveshare.
 /// El evento UP_IMPULSE es un candidato; no equivale a un salto confirmado.
 /// </summary>
-public sealed class BiofitBLEMonitor : MonoBehaviour
+[DefaultExecutionOrder(-200)] // Dispatch BLE before default-order Character.Update.
+public sealed partial class BiofitBLEMonitor : MonoBehaviour
 {
     [Header("MAC de los trackers (verificadas con nRF Connect)")]
     [SerializeField] private string leftAddress = "80:45:6B:35:DE:61";
@@ -49,9 +50,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public double LastCyclePairSeconds => liftPairs.LastPairSeconds;
     private int cyclePairsAtCaptureStart;
     public int CyclePairCount => liftPairs.Pairs-cyclePairsAtCaptureStart;
-    private void InvalidateControl() {
+    private void InvalidateControl(string reason = "control_change") {
         liftPairs.Clear(); jumpDetector.ClearPending(); ControlEpoch++;
-        MotionEpochReset?.Invoke();
+        NotifyMotionReset(reason);
     }
 
     public bool LastPairedWasFastPhase { get; private set; }
@@ -189,15 +190,17 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     }
     private void OnApplicationPause(bool paused)
     {
+        motionAppPaused = paused;
         if(!paused)return;
-        MotionEpochReset?.Invoke();
+        NotifyMotionReset("app_pause");
         if(gameCaptureActive) { eventCapture.MarkSync("APP_PAUSA_FIN",Time.realtimeSinceStartup); StopGameCapture(); }
         else RawOperation=SetRawCaptureAsync(false);
     }
     private void OnDestroy()
     {
-        MotionEpochReset?.Invoke();
+        NotifyMotionReset("monitor_destroyed");
         if(gameCaptureActive)StopGameCapture(); else RawOperation=SetRawCaptureAsync(false);
+        ShutdownMotionRecovery();
     }
 
     // v0.9.6: archived sessions remain private and untouched until independently
@@ -687,7 +690,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private GUIStyle heading, normal, small, buttonStyle;
     private Vector2 diagnosticsScroll;
 
-    private sealed class Tracker
+    private sealed partial class Tracker
     {
         public readonly string name;
         public readonly byte id;
@@ -755,6 +758,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 return;
             }
 
+            motionPermissionGranted = true;
             message = "Comprobando Bluetooth con permisos autorizados...";
             if (!await adapter.IsAvailableAsync())
             {
@@ -780,31 +784,29 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     {
         try
         {
+            if (TrackerLinkFresh(tracker, MonotonicNow)) return;
             tracker.connection = "Conectando " + address + "...";
-            IBleDevice device = await adapter.GetDeviceAsync(address);
+            await ReleaseTrackerLinkAsync(tracker);
+            using var operation = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(motionLifetime.Token);
+            operation.CancelAfter(TimeSpan.FromSeconds(12));
+            var token = operation.Token;
+            IBleDevice device = await adapter.GetDeviceAsync(address, token);
+            token.ThrowIfCancellationRequested();
             if (tracker.id == 1) leftDevice = device;
             else rightDevice = device;
-
-            device.OnConnectionStateChanged += state =>
-            {
-                tracker.connection = state.ToString();
-                if (state == BleConnectionState.Disconnected)
-                {
-                    System.Threading.Interlocked.Increment(ref tracker.generation);
-                    Enqueue(new Packet { expectedId = tracker.id, reset = true });
-                }
-            };
-
-            await device.ConnectAsync();
+            tracker.device = device;
+            tracker.connectionHandler = state => ObserveConnection(tracker, device, state);
+            device.OnConnectionStateChanged += tracker.connectionHandler;
+            int generation = tracker.generation;
+            await device.ConnectAsync(token);
             tracker.connection = "Buscando el servicio GATT...";
-            IBleService service = await device.GetServiceAsync(ServiceUuid);
-            IBleCharacteristic characteristic = await service.GetCharacteristicAsync(EventUuid);
+            IBleService service = await device.GetServiceAsync(ServiceUuid, token);
+            IBleCharacteristic characteristic = await service.GetCharacteristicAsync(EventUuid, token);
 
             if (tracker.id == 1) leftEvents = characteristic;
             else rightEvents = characteristic;
 
             byte id = tracker.id;
-            int generation = tracker.generation;
             await characteristic.SubscribeAsync(bytes =>
             {
                 // El callback nativo puede llegar desde otro hilo.
@@ -821,7 +823,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                         callbackTicks = ticksAtCallback
                     });
                 }
-            });
+            }, token);
 
             // El firmware ya emite STATUS con millis del sensor.
             // Se usa para aproximar los relojes sin reflashear placas.
@@ -829,7 +831,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             try
             {
                 IBleCharacteristic status =
-                    await service.GetCharacteristicAsync(StatusUuid);
+                    await service.GetCharacteristicAsync(StatusUuid, token);
                 if (tracker.id == 1) leftStatus = status;
                 else rightStatus = status;
                 await status.SubscribeAsync(bytes =>
@@ -846,7 +848,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                             isStatus = true
                         });
                     }
-                });
+                }, token);
             }
             catch (Exception statusError)
             {
@@ -857,7 +859,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             // Optional extension; older V2 firmware remains readable.
             try
             {
-                var transport = await service.GetCharacteristicAsync(TransportUuid);
+                var transport = await service.GetCharacteristicAsync(TransportUuid, token);
                 if (id == 1) leftTransport = transport; else rightTransport = transport;
                 await transport.SubscribeAsync(bytes =>
                 {
@@ -865,22 +867,28 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                         expectedId = id, generation = generation, isTransport = true,
                         bytes = (byte[])bytes.Clone(),
                         callbackTicks = System.Diagnostics.Stopwatch.GetTimestamp() });
-                });
+                }, token);
             }
             catch (Exception ex) { Debug.LogWarning("BIOFIT TX opcional: " + ex.Message); }
             try
             {
-                var raw=await service.GetCharacteristicAsync(RawUuid);
-                var config=await service.GetCharacteristicAsync(ConfigUuid);
+                var raw=await service.GetCharacteristicAsync(RawUuid, token);
+                var config=await service.GetCharacteristicAsync(ConfigUuid, token);
                 var link=new BiofitRawLink(raw,config);
                 await link.SetAsync(false,null);
                 if(id==1)leftRaw=link;else rightRaw=link;
             }
             catch(Exception ex) { RawStatus="RAW no disponible: "+ex.Message; }
+            token.ThrowIfCancellationRequested();
+            if (generation != tracker.generation || motionDestroyed)
+                throw new OperationCanceledException("Connection changed during subscription");
+            tracker.subscriptionsReady = true;
+            tracker.linkEstablishedAt = MonotonicNow;
             tracker.connection = "CONECTADO - NOTIFICACIONES ACTIVAS";
         }
         catch (Exception ex)
         {
+            tracker.subscriptionsReady = false;
             tracker.connection = "ERROR: " + ex.Message;
             Debug.LogWarning("BIOFIT " + tracker.name + ": " + ex);
         }
@@ -888,6 +896,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
 
     private void Enqueue(Packet packet)
     {
+        ObserveNativePacket(packet);
         if (System.Threading.Interlocked.Increment(ref pendingCount) > 1024 && !packet.reset)
         {
             System.Threading.Interlocked.Decrement(ref pendingCount);
@@ -917,10 +926,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 tracker.statusWindowStart = 0; tracker.lastStatusCallback = 0;
                 tracker.statusInWindow = 0; tracker.statusHz = 0;
                 inputEngine.ProcessEvent(packet.expectedId, 2, Time.realtimeSinceStartup);
-                timeAligner.Reset(packet.expectedId); InvalidateControl(); tracker.firmwareVersion=0;
+                timeAligner.Reset(packet.expectedId); InvalidateControl("link_reset_" + packet.expectedId); tracker.firmwareVersion=0;
                 continue;
             }
-            if (packet.generation != tracker.generation) continue;
+            if (packet.generation != tracker.generation) { tracker.oldGenerationPackets++; continue; }
             if (packet.isTransport) ReadTransport(packet);
             else if (packet.isStatus) ReadStatus(packet);
             else ReadEvent(packet);
@@ -943,6 +952,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         }
         inputEngine.Update(Time.realtimeSinceStartup);
         sessionLogger.ObserveCadence(inputEngine.EstimatedCadence);
+        TickMotionRecovery(updateAt);
     }
 
     private void ReadStatus(Packet packet)
@@ -955,13 +965,20 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             (double)System.Diagnostics.Stopwatch.Frequency;
         Tracker tracker = packet.expectedId == 1 ? left : right;
         uint sensor = U32(b, 6);
+        tracker.statusProcessed++;
+        // Sequence order is independent of the EVENT stream. Replayed STATUS
+        // must not reset the clock or renew the watchdog. A real reconnection
+        // resets both sequence gates through its generation packet.
+        if (!tracker.statusGate.ObserveSequence(U16(b,4)))
+        { tracker.statusRejected++; tracker.lastStatusRejection = "sequence"; return; }
+        if (tracker.hasStatus && sensor == tracker.lastStatusMs)
+        { tracker.statusRejected++; tracker.lastStatusRejection = "imu_timestamp_stalled"; return; }
         if (tracker.hasStatus && unchecked((int)(sensor - tracker.lastStatusMs)) < 0)
         {
             tracker.gate.Reset(); tracker.statusGate.Reset(); tracker.hasLastTimestamp = false;
             jumpDetector.ClearPending();
-            MotionEpochReset?.Invoke();
+            InvalidateControl("sensor_clock_restart_" + packet.expectedId);
         }
-        tracker.statusGate.ObserveSequence(U16(b,4));
         if (tracker.lastStatusCallback > 0)
             tracker.maxStatusGapMs = Math.Max(tracker.maxStatusGapMs,
                 (callbackSeconds - tracker.lastStatusCallback) * 1000d);
@@ -980,10 +997,11 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 "STATUS_FLAGS=" + b[2] + " sensorMs=" + sensor + " " + tracker.readiness.Detail(callbackSeconds));
         timeAligner.ObserveStatus(packet.expectedId, sensor,
             callbackSeconds);
-        // STATUS bit0 is the firmware's existing MOV classifier (10 Hz);
-        // no always-on RAW stream or CONFIG changes are required.
-        MotionStatusReceived?.Invoke(packet.expectedId, b[2],
-            sensor, callbackSeconds);
+        ObserveMotionStatusQuality(tracker, b, callbackSeconds);
+        // Unknown clocks still collect heartbeats during initial alignment.
+        // Once mapped, old batches cannot keep a virtual button pressed.
+        if (tracker.statusUsable)
+            MotionStatusReceived?.Invoke(packet.expectedId, b[2], sensor, callbackSeconds);
         if(gameCaptureActive && rawCapture!=null)
             eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,
                 "RAW_CLOCK_ANCHOR sensorMs="+sensor+" callbackS="+callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture));
@@ -1097,7 +1115,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         }
         if (timeAligned != previousUsedAlignedTime)
         {
-            InvalidateControl();
+            InvalidateControl("event_clock_source");
             previousUsedAlignedTime = timeAligned;
         }
         bool sequenceValid = state.gate.ObserveSequence(sequence);
@@ -1105,6 +1123,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         string rejection = BiofitEventGate.Rejection(sequenceValid, timeAligned,
             callbackSeconds, pairSeconds, queueDelayMs, firmwareQueueMs);
         bool fresh = rejection.Length == 0;
+        state.eventsProcessed++; state.lastEventRejection = rejection;
+        if (fresh) state.eventsAccepted++; else state.eventsRejected++;
+        if (fresh && eventType == 1) state.lastMovOnAt = callbackSeconds;
+        if (fresh && eventType == 2) state.lastMovOffAt = callbackSeconds;
         if (!fresh)
         {
             RejectedEvents++;

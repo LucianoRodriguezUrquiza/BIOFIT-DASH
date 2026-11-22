@@ -6,6 +6,7 @@ namespace UnityEngine {
  public static class Application { public static string persistentDataPath=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"biofit-host"); public static void OpenURL(string path){} }
  public class MonoBehaviour { public T GetComponent<T>()=>(T)Activator.CreateInstance(typeof(T)); public GameObject gameObject=new GameObject(); protected void Destroy(object o){} }
  public class GameObject { public T AddComponent<T>()=>default(T); }
+ public class DefaultExecutionOrder:Attribute {public DefaultExecutionOrder(int order){}}
  public class HeaderAttribute:Attribute { public HeaderAttribute(string s){} }
  public class SerializeField:Attribute {}
  public static partial class Time { public static float realtimeSinceStartup=10; }
@@ -31,8 +32,8 @@ namespace UniBLE {
  // Surface checked against UniBLE v0.1.1 dba3f296; this does not execute BLE.
  public enum BleConnectionState { Disconnected,Connecting,Connected,Disconnecting }
  public interface IBleCharacteristic { Task SubscribeAsync(Action<byte[]> a, System.Threading.CancellationToken cancellationToken=default); Task UnsubscribeAsync(System.Threading.CancellationToken cancellationToken=default); Task WriteAsync(byte[] data,bool withResponse=true,System.Threading.CancellationToken cancellationToken=default); }
- public interface IBleService { Task<IBleCharacteristic> GetCharacteristicAsync(string s); }
- public interface IBleDevice { event Action<BleConnectionState> OnConnectionStateChanged; Task ConnectAsync(); Task<IBleService> GetServiceAsync(string s); }
- public interface IBleAdapter { Task<bool> RequestPermissionAsync(); Task<bool> IsAvailableAsync(); Task<IBleDevice> GetDeviceAsync(string s); }
+ public interface IBleService { Task<IBleCharacteristic> GetCharacteristicAsync(string s, System.Threading.CancellationToken token=default); }
+ public interface IBleDevice { event Action<BleConnectionState> OnConnectionStateChanged; Task ConnectAsync(System.Threading.CancellationToken token=default); Task DisconnectAsync(System.Threading.CancellationToken token=default); Task<IBleService> GetServiceAsync(string s, System.Threading.CancellationToken token=default); }
+ public interface IBleAdapter { Task<bool> RequestPermissionAsync(); Task<bool> IsAvailableAsync(System.Threading.CancellationToken token=default); Task<IBleDevice> GetDeviceAsync(string s, System.Threading.CancellationToken token=default); }
  public static class BleManager { public static IBleAdapter Adapter; }
 }

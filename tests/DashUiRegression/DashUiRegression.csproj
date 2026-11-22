@@ -15,6 +15,7 @@
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitDashLayout.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSingleFootDiagnostic.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs" />
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBLEMonitor.Motion.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitClockAligner.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventGate.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs" />

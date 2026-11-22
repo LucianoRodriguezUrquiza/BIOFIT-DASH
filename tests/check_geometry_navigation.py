@@ -91,7 +91,7 @@ assert 'Resources.Load<TextAsset>("maps/BASE/" + levelName)' in editor
 bridge = (root / "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs").read_text(encoding="utf-8")
 assert "VerifyMenuNavigationInEditor();" in bridge
 assert "BilateralJumpCandidate += OnBilateralLegacyCandidate" in bridge
-assert "cube.onClick();" in bridge
+assert "ReadHeldInput(Character value" in bridge
 assert "monitor.PhaseFastPairs = false;" in bridge
 assert "monitor.LiftCycleMode = false;" in bridge
 assert "TryConsumeOrbPulse()" in bridge

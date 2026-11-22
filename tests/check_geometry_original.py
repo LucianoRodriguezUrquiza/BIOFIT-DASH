@@ -9,8 +9,8 @@ modules = (root / ".gitmodules").read_text()
 assert 'url = https://github.com/Christ0u/GeomeTry.git' in modules
 assert 'path = ThirdParty/GeomeTryOriginal' in modules
 bridge = (root / "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs").read_text()
-assert "cube.onClick();" in bridge and 'BilateralJumpCandidate += OnBilateralLegacyCandidate' in bridge
-assert "if (cube == null" in bridge
+assert "ReadHeldInput(Character value" in bridge and 'BilateralJumpCandidate += OnBilateralLegacyCandidate' in bridge
+assert "value != null && value is Cube && value.isAlive" in bridge
 assert "Time.timeScale = 1.5" not in bridge
 assert (root / "tools/prepare_geometry_original.ps1").is_file()
 assert "Assets/GeomeTryOriginal/Assets/" in (root / ".gitignore").read_text()
@@ -20,52 +20,27 @@ for path in ("ProjectSettings/Physics2DSettings.asset", "ProjectSettings/TimeMan
     baseline = subprocess.check_output(["git", "show", "5616fc4571193d4a2d076550a909089344144384:" + path], cwd=root)
     assert (root / path).read_bytes() == baseline, path + " was modified"
 
-# The MOV/STATUS taps in BiofitBLEMonitor are the only permitted additive
-# changes to the BLE receiver. Strip these exact additions and require a
-# byte-for-byte match with v0.9.11: UUIDs, thresholds, event sequencing,
-# 900ms bilateral detector and BLE data collection MUST remain untouched.
-monitor_path = "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs"
-baseline = subprocess.check_output(["git", "show",
-    "5616fc4571193d4a2d076550a909089344144384:" + monitor_path], cwd=root)
-actual = (root / monitor_path).read_text()
-allowed = [
-    ("""
-    // Motion telemetry is only published here. Individual game modes decide
-    // how to interpret it; the BLE receiver has NO dependency on GeomeTry.
-    // Callbacks run on Unity's main thread from ReadStatus/ReadEvent.
-    public event Action<byte, byte, uint, double> MotionStatusReceived;
-    public event Action<byte, bool, uint, double> MotionTransitionReceived;
-    public event Action MotionEpochReset;
-""", ""),
-    ("""    private void InvalidateControl() {
-        liftPairs.Clear(); jumpDetector.ClearPending(); ControlEpoch++;
-        MotionEpochReset?.Invoke();
-    }""",
-     "    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();ControlEpoch++;}"),
-    ("            MotionEpochReset?.Invoke();\n", ""),
-    ("        MotionEpochReset?.Invoke();\n", ""),
-    ("""        // STATUS bit0 is the firmware's existing MOV classifier (10 Hz);
-        // no always-on RAW stream or CONFIG changes are required.
-        MotionStatusReceived?.Invoke(packet.expectedId, b[2],
-            sensor, callbackSeconds);
-""", ""),
-    ("""        // Only fresh MOV_ON/MOV_OFF events are supplied to consumers.
-        // The clock and per-tracker sequence checks above are unchanged.
-        if (fresh && (eventType == 1 || eventType == 2))
-            MotionTransitionReceived?.Invoke(state.id, eventType == 1,
-                millis, callbackSeconds);
-        if (fresh && eventType <= 3)""",
-     "        else if(eventType<=3)")
-]
-for added, original in allowed:
-    assert added in actual, "Missing expected narrow monitor hook"
-    actual = actual.replace(added, original)
-assert actual.encode() == baseline, "Unexpected receiver BLE/protocol change"
+# V2 deliberately repairs receiver subscription lifecycle/STATUS validation.
+# Whole-file v0.9.11 equivalence is no longer claimed for that receiver.
+# The signal thresholds, event-age gate, clocks, RAW and storage implementations
+# themselves remain byte-identical to the v1 baseline.
+base = "0d83449a5fa9257a642e123d1b160c553eaaf9d2"
+for name in (
+    "BiofitBilateralJumpDetector.cs", "BiofitClockAligner.cs", "BiofitEventGate.cs",
+    "BiofitInputEngine.cs", "BiofitTrackerReadiness.cs", "BiofitRawLink.cs",
+    "BiofitRawCapture.cs", "BiofitSessionFile.cs", "BiofitCaptureArchive.cs",
+    "BiofitAndroidExport.cs", "BiofitEventCapture.cs", "BiofitLiftPairDetector.cs"):
+    path = "Assets/BIOFIT/Scripts/" + name
+    assert (root / path).read_bytes() == subprocess.check_output(["git", "show", base + ":" + path], cwd=root), path
+for path in ("Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs", "Assets/BIOFIT/GeomeTry/BiofitUiArtwork.cs",
+             "Packages/manifest.json", "ProjectSettings/ProjectSettings.asset",
+             "ProjectSettings/EditorBuildSettings.asset"):
+    assert (root / path).read_bytes() == subprocess.check_output(["git", "show", base + ":" + path], cwd=root), path
 
-cfg = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 # GeomeTry needs the old Input Manager for Cube/Ship/Wave on Android.
 # The prior branch used Both (unsupported on Android); this dedicated UI
 # release switches to 0 and repairs the scene EventSystem through the Editor.
+cfg = (root / 'ProjectSettings/ProjectSettings.asset').read_text()
 assert '  activeInputHandler: 0' in cfg, 'Android must use legacy Input Manager'
 module = root / "ThirdParty/GeomeTryOriginal"
 assert (module / ".git").exists(), "Original GeomeTry submodule not initialized!"

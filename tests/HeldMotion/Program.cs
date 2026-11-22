@@ -79,8 +79,8 @@ static class Verify
             m.ObserveEvent(1, false, 1150, .15);
             m.ObserveEvent(2, false, 1150, .15);
             Check(m.Tick(.15, true, true, true), "release grace begins");
-            Check(m.Tick(.30, true, true, true), "short gap bridged");
-            Check(!m.Tick(.32, true, true, true), "rest must release after grace");
+            Check(m.Tick(.39, true, true, true), "short gap bridged");
+            Check(!m.Tick(.41, true, true, true), "rest must release after bounded 250ms envelope");
             Check(m.ReleaseCount == 1, "single release edge");
             checks++;
         }
@@ -161,7 +161,7 @@ static class Verify
             m.ObserveStatus(1, Calm, 1200, .20);
             m.ObserveStatus(2, Calm, 1200, .20);
             Check(m.Tick(.20, true, true, true), "grace");
-            Check(!m.Tick(.40, true, true, true), "end hold");
+            Check(!m.Tick(.46, true, true, true), "end hold");
             m.ObserveStatus(1, Move, 1500, .50);
             m.ObserveStatus(2, Calm, 1500, .50);
             Check(!m.Tick(.50, true, true, true), "isolated movement after rest");

@@ -22,6 +22,10 @@ jobs:
       - run: dotnet run --project tests/LiftCycle
       - run: dotnet run --project tests/JumpControl
       - run: dotnet run --project tests/HeldMotion
+      - run: dotnet run --project tests/ContinuousMotion
+      - run: dotnet run --project tests/ContinuousReceiver
+      - run: dotnet run --project tests/ContinuousRuntime
+      - run: python3 tests/verify_motion_v1_failures.py
       - run: python3 tests/JumpControl/compare_cooldowns.py
       - run: dotnet run --project tests/PhaseAudit
       - run: dotnet run --project tests/RawRegression
@@ -62,7 +66,7 @@ jobs:
           if (Test-Path "$root/Scripts/Camera.cs") { throw 'Old conflicting Camera script still present' }
           if (!(Test-Path "$root/Scripts/GeometryCamera.cs.meta")) { throw 'Camera GUID lost' }
           $orb = Get-Content -Raw "$root/Scripts/JumpOrb.cs"
-          if (!$orb.Contains('BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse()')) { throw 'BLE orb input absent' }
+          if (!$orb.Contains('BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse(other.GetComponent<Cube>())')) { throw 'BLE orb input absent' }
           if (!$orb.Contains('12.5f') -or !$orb.Contains('20.0f') -or !$orb.Contains('27.0f')) { throw 'Orb forces altered' }
           $selection = Get-Content -Raw "$root/Scripts/LevelSelectionManager.cs"
           if (!$selection.Contains('Resources.LoadAll<TextAsset>("maps/BASE")')) { throw 'Level selection path wrong' }
@@ -76,6 +80,11 @@ jobs:
               throw "Not a valid PNG signature: $f"
             }
           }
+          $character = Get-Content -Raw "$root/Scripts/GameMechanics/CharacterType/Character.cs"
+          if (!$character.Contains('ReadHeldInput(this, physicalHeld)')) { throw 'V2 native input hook absent' }
+          if (!$character.Contains('CharacterDestroyed(this)')) { throw 'V2 destruction hook absent' }
+          $cube = Get-Content -Raw "$root/Scripts/GameMechanics/CharacterType/Cube.cs"
+          if (!$cube.Contains('JumpApplied(this)')) { throw 'V2 actual jump telemetry absent' }
           $original = git -C ThirdParty/GeomeTryOriginal rev-parse HEAD
           if ($original.Trim() -ne 'd922caddb4d21ecb791a266143e279bdb969d42c') { throw 'Upstream changed' }
           Write-Host 'PASS Windows compatibility: original scenes, PNG, Camera, levels, input-orbs'

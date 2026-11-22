@@ -153,7 +153,7 @@ assert "BilateralJumpCandidate += OnBilateralLegacyCandidate;" in bridge
 assert "monitor.JumpDetector.ClearPending();" in bridge
 assert "monitor.PhaseFastPairs = false;" in bridge
 assert "monitor.LiftCycleMode = false;" in bridge
-assert "cube.onClick();" in bridge
+assert "ReadHeldInput(Character value" in bridge
 assert "TryConsumeOrbPulse()" in bridge
 for token in [
     'BindOriginalMenuButton("Play Button", Select);',

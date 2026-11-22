@@ -144,7 +144,8 @@ $newInput = $oldInput + ' ||' + [Environment]::NewLine +
     '            (other.GetComponent<Cube>() != null &&' + [Environment]::NewLine +
     '             Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse())'
 $orbCode = [IO.File]::ReadAllText($orbDest)
-if ($orbCode.Contains('TryConsumeOrbPulse()')) {
+if ($orbCode.Contains('TryConsumeOrbPulse()') -or
+    $orbCode.Contains('TryConsumeOrbPulse(other.GetComponent<Cube>())')) {
     Write-Host "OK: entrada BLE de JumpOrb ya integrada."
 } else {
     if (!(Same-Bytes $orbSource $orbDest)) {
@@ -185,6 +186,8 @@ if ($selectCode.Contains($after)) {
         (New-Object System.Text.UTF8Encoding($false)))
     Write-Host "OK: seleccion de mapas usa Resources/maps/BASE (sin alterar mapas)."
 }
+
+& (Join-Path $PSScriptRoot "apply_geometry_input_v2.ps1")
 
 Write-Host "OK: reparacion visual y de camara completada. Fuente original sin modificar."
 Write-Host "Ya podes abrir Unity 6000.3.28f1 y comprobar la consola."

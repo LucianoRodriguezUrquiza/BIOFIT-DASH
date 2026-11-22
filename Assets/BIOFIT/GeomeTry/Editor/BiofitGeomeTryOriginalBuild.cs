@@ -121,7 +121,7 @@ namespace Biofit.GeomeTryOriginal.Editor
             // or Polargeist/JumpyNightmare cannot be played by bodily input.
             string orbPath = Prefix + "Scripts/JumpOrb.cs";
             if (!File.Exists(orbPath) ||
-                !File.ReadAllText(orbPath).Contains("TryConsumeOrbPulse()"))
+                !File.ReadAllText(orbPath).Contains("TryConsumeOrbPulse(other.GetComponent<Cube>())"))
                 throw new InvalidOperationException(
                     "Falta compatibilidad de entrada BLE en JumpOrb. " +
                     "Cierra Unity, actualiza Git y ejecuta " +
@@ -157,6 +157,15 @@ namespace Biofit.GeomeTryOriginal.Editor
             if (!File.Exists(Prefix + "Scripts/GameMechanics/CharacterType/Cube.cs"))
                 throw new InvalidOperationException(
                     "Faltan los Assets originales. Cerra Unity y ejecuta tools/prepare_geometry_original.ps1 desde un clon NUEVO.");
+            foreach (string script in new[] { "Character", "Cube" })
+            {
+                string path = Prefix + "Scripts/GameMechanics/CharacterType/" + script + ".cs";
+                string overlay = "tools/geometry_compat/" + script + ".MotionV2.cs";
+                if (!File.Exists(path) || !File.Exists(overlay) ||
+                    File.ReadAllText(path).Replace("\r\n", "\n") != File.ReadAllText(overlay).Replace("\r\n", "\n"))
+                    throw new InvalidOperationException("Falta entrada V2 o hay cambios locales en " + script +
+                        ". Cerra Unity y ejecuta tools/apply_geometry_compat.ps1 en la copia experimental. No sobrescribas conflictos.");
+            }
             foreach (string name in SceneNames)
                 if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Scene(name)) == null)
                     throw new InvalidOperationException("Falta escena ORIGINAL: " + Scene(name));
@@ -219,7 +228,7 @@ namespace Biofit.GeomeTryOriginal.Editor
             UnityEngine.Debug.Log("Render BIOFIT restaurado a Built-in en esta copia.");
         }
 
-        [MenuItem("BIOFIT/GeomeTry ORIGINAL/3. Compilar APK MOV HOLD EXP + BLE LEGACY")]
+        [MenuItem("BIOFIT/GeomeTry ORIGINAL/3. Compilar APK MOV HOLD V2 EXP + BLE LEGACY")]
         public static void BuildAndroid()
         {
             Verify();
@@ -238,15 +247,15 @@ namespace Biofit.GeomeTryOriginal.Editor
             string folder = Path.Combine(Directory.GetCurrentDirectory(), "Builds");
             Directory.CreateDirectory(folder);
             string path = Path.Combine(folder,
-                "BIOFIT_GeomeTry_MOV_HOLD_EXP_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".apk");
+                "BIOFIT_GeomeTry_MOV_HOLD_V2_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".apk");
             try
             {
                 // Only for this build, then restore. Original URP asset is untouched.
                 // Install the EXPERIMENT as a third Android application:
                 // no overwrite of stable GeomeTry or existing BIOFIT DASH
                 // APKs, PlayerPrefs, private CSVs or keystore state.
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.biofitgame.geometryheldexp");
-                PlayerSettings.productName = "BIOFIT MOV HOLD EXP";
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.biofitgame.geometrymotionv2");
+                PlayerSettings.productName = "BIOFIT MOV HOLD V2";
                 GraphicsSettings.defaultRenderPipeline = urp;
                 EditorUserBuildSettings.buildAppBundle = false;
                 string[] scenes = Array.ConvertAll(SceneNames, Scene);
