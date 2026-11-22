@@ -219,7 +219,7 @@ namespace Biofit.GeomeTryOriginal.Editor
             UnityEngine.Debug.Log("Render BIOFIT restaurado a Built-in en esta copia.");
         }
 
-        [MenuItem("BIOFIT/GeomeTry ORIGINAL/3. Compilar APK Android original + BLE LEGACY")]
+        [MenuItem("BIOFIT/GeomeTry ORIGINAL/3. Compilar APK MOV HOLD EXP + BLE LEGACY")]
         public static void BuildAndroid()
         {
             Verify();
@@ -238,14 +238,15 @@ namespace Biofit.GeomeTryOriginal.Editor
             string folder = Path.Combine(Directory.GetCurrentDirectory(), "Builds");
             Directory.CreateDirectory(folder);
             string path = Path.Combine(folder,
-                "BIOFIT_GeomeTry_ORIGINAL_LEGACY_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".apk");
+                "BIOFIT_GeomeTry_MOV_HOLD_EXP_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".apk");
             try
             {
                 // Only for this build, then restore. Original URP asset is untouched.
-                // Build as a DIFFERENT Android application, protecting the existing
-                // BIOFIT DASH installation and its private recordings.
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.biofitgame.geometryoriginal");
-                PlayerSettings.productName = "BIOFIT GeomeTry";
+                // Install the EXPERIMENT as a third Android application:
+                // no overwrite of stable GeomeTry or existing BIOFIT DASH
+                // APKs, PlayerPrefs, private CSVs or keystore state.
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.biofitgame.geometryheldexp");
+                PlayerSettings.productName = "BIOFIT MOV HOLD EXP";
                 GraphicsSettings.defaultRenderPipeline = urp;
                 EditorUserBuildSettings.buildAppBundle = false;
                 string[] scenes = Array.ConvertAll(SceneNames, Scene);
