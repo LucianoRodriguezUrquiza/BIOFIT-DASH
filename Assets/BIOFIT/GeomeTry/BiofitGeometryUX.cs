@@ -677,6 +677,7 @@ namespace Biofit.GeomeTryOriginal
                 corner.pivot = new Vector2(right ? 1f : 0f, bottom ? 0f : 1f);
                 RawImage raw = corner.gameObject.AddComponent<RawImage>();
                 raw.texture = artwork.corners[i];
+                if (i == 0) raw.uvRect = new Rect(1f, 0f, -1f, 1f);
                 raw.raycastTarget = false;
             }
         }
