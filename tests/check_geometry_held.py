@@ -62,7 +62,7 @@ assert "Application.targetFrameRate = 60;" in ui
 assert '"com.biofitgame.geometryheldexp"' in builder
 assert '"BIOFIT MOV HOLD EXP"' in builder
 assert '"BIOFIT_GeomeTry_MOV_HOLD_EXP_"' in builder
-assert '"3. Compilar APK MOV HOLD EXP + BLE LEGACY"' in builder
+assert "3. Compilar APK MOV HOLD EXP + BLE LEGACY" in builder
 assert 'PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, previousIdentifier);' in builder
 assert 'PlayerSettings.productName = previousProductName;' in builder
 print("PASS: motion held, no mode selector, original physics and independent EXP APK preserved.")
