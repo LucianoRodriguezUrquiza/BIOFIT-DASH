@@ -15,8 +15,10 @@ namespace Biofit.GeomeTryOriginal
         internal const int ReferenceHeight = 941;
         internal const int CardTop = 339;
         internal const int CardBottom = 656;
-        internal static readonly int[] CardLeft = { 138, 414, 689, 963, 1238 };
-        internal const int CardWidth = 272;
+        internal static readonly int[] CardLeft = { 137, 421, 690, 963, 1238 };
+        // Each original card has its own black drop shadow. The fifth card
+        // reaches x=1533, beyond a regular 272px crop.
+        internal static readonly int[] CardWidths = { 282, 267, 271, 274, 296 };
 
         internal readonly Texture2D background;
         internal readonly Texture2D logo;
@@ -42,14 +44,14 @@ namespace Biofit.GeomeTryOriginal
             // copies; their original artwork and proportions remain intact.
             for (int i = 0; i < 5; i++)
                 cards[i] = Own(Extract(pixels, CardLeft[i], CardTop,
-                    CardWidth, CardBottom - CardTop, true, false,
+                    CardWidths[i], CardBottom - CardTop, true, false,
                     "BIOFIT tarjeta " + i));
 
             // Remove only baked content, preserving the header, background,
             // corner decorations and original arrow graphics. Each repaired
             // strip is interpolated between source rows at the same X.
             Color32[] clean = (Color32[])pixels.Clone();
-            EraseStrip(clean, pixels, 132, 1528, 322, 675, 316, 686, 5, 16);
+            EraseStrip(clean, pixels, 132, 1543, 322, 675, 316, 686, 5, 16);
             EraseStrip(clean, pixels, 424, 1245, 695, 771, 690, 775, 10, 7);
             EraseStrip(clean, pixels, 633, 1039, 772, 866, 767, 876, 10, 7);
             background = Own(MakeTexture(clean, ReferenceWidth, ReferenceHeight,
