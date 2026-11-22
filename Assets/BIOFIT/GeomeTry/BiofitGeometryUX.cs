@@ -310,6 +310,11 @@ namespace Biofit.GeomeTryOriginal
             // safe area. Fixed UI coordinates are never allowed to overflow.
             scaler.matchWidthOrHeight = 1f;
             RectTransform hostRect = host.GetComponent<RectTransform>();
+            // Letterbox gutters on ultrawide phones retain a matching blue
+            // background. Never add this background while playing a level:
+            // it could cover the original GeomeTry world behind the HUD.
+            if (sceneName != LevelScene)
+                Fill("Fondo exterior BIOFIT", hostRect, Blue);
             safeRoot = Rect("BIOFIT Android safe area", hostRect,
                 new Vector2(.5f, .5f), Vector2.zero, Vector2.zero);
             designStage = Rect("BIOFIT 16:9 responsive design", safeRoot,
