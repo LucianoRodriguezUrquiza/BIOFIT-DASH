@@ -128,9 +128,9 @@ assert "fpsFrames / fpsElapsed" in ui
 assert "Time.unscaledDeltaTime" in ui
 assert "fpsElapsed >= .75f" in ui
 assert '"EDITOR · FPS observados: "' in ui
-assert '"NO equivale a FPS de la APK"' in ui
+assert "NO equivale a FPS de la APK" in ui
 assert '"ANDROID · FPS observados: "' in ui
-assert '"Objetivo solicitado: 60 FPS (no garantizados)"' in ui
+assert "Objetivo solicitado: 60 FPS (no garantizados)" in ui
 assert "Application.targetFrameRate = 60;" in ui
 
 # Source import: HD exact geometry, CPU-readable texture, original URP 2D.
