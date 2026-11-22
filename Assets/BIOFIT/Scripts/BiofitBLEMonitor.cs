@@ -39,6 +39,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     // Opt-in. Old fw2.2.7 or unqualified UP pairs keep the 900ms cooldown.
     public bool PhaseFastPairs { get; set; } // retained for offline v0910 replay, not selected by UI
     private readonly BiofitLiftPairDetector liftPairs = new BiofitLiftPairDetector();
+    // GeomeTry experimental held-input uses firmware MOV/STATUS flags.
+    // Legacy pair detector and other BIOFIT game modes remain unchanged.
+    private readonly Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion geometryHeldMotion =
+        new Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion();
+    public Biofit.GeomeTryOriginal.BiofitGeometryHeldMotion GeometryHeldMotion =>
+        geometryHeldMotion;
     private bool liftCycleMode;
     public int ControlEpoch { get; private set; }
     public bool LiftCycleMode {
@@ -49,7 +55,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public double LastCyclePairSeconds => liftPairs.LastPairSeconds;
     private int cyclePairsAtCaptureStart;
     public int CyclePairCount => liftPairs.Pairs-cyclePairsAtCaptureStart;
-    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();ControlEpoch++;}
+    private void InvalidateControl() {
+        liftPairs.Clear(); jumpDetector.ClearPending();
+        geometryHeldMotion.Reset(); ControlEpoch++;
+    }
 
     public bool LastPairedWasFastPhase { get; private set; }
     private int phaseFastPairsAtCaptureStart;
@@ -187,11 +196,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private void OnApplicationPause(bool paused)
     {
         if(!paused)return;
+        geometryHeldMotion.Reset();
         if(gameCaptureActive) { eventCapture.MarkSync("APP_PAUSA_FIN",Time.realtimeSinceStartup); StopGameCapture(); }
         else RawOperation=SetRawCaptureAsync(false);
     }
     private void OnDestroy()
     {
+        geometryHeldMotion.Reset();
         if(gameCaptureActive)StopGameCapture(); else RawOperation=SetRawCaptureAsync(false);
     }
 
@@ -967,6 +978,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 "STATUS_FLAGS=" + b[2] + " sensorMs=" + sensor + " " + tracker.readiness.Detail(callbackSeconds));
         timeAligner.ObserveStatus(packet.expectedId, sensor,
             callbackSeconds);
+        // STATUS supplies both continuous MOV flag and heartbeat at ~10Hz.
+        // No RAW stream or firmware CONFIG write is required.
+        geometryHeldMotion.ObserveStatus(packet.expectedId, b[2],
+            sensor, callbackSeconds);
         if(gameCaptureActive && rawCapture!=null)
             eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,
                 "RAW_CLOCK_ANCHOR sensorMs="+sensor+" callbackS="+callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture));
@@ -1094,7 +1109,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             eventCapture.RecordDiagnostic(receivedSeconds, state.id,
                 "RECHAZO_" + rejection + " seq=" + sequence + " fwQueueMs=" + firmwareQueueMs);
         }
-        else if(eventType<=3) inputEngine.ProcessEvent(state.id, eventType,
+        // EVENT MOV_ON/OFF is a low-latency edge; strictly use only
+        // freshness-validated events. Older sensor timestamps cannot
+        // overwrite a more recent STATUS movement state.
+        if (fresh && (eventType == 1 || eventType == 2))
+            geometryHeldMotion.ObserveEvent(state.id, eventType == 1,
+                millis, callbackSeconds);
+        if (fresh && eventType <= 3) inputEngine.ProcessEvent(state.id, eventType,
             eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
         CurrentEventTrace = "seq=" + sequence + " sensorMs=" + millis + " callbackS=" +
             callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture);
