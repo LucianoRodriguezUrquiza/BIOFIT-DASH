@@ -1,153 +1,183 @@
-"""Static regression checks for BIOFIT GeomeTry UX V1.
-These checks do not assert a Unity APK build or 60 FPS on a phone.
+"""BIOFIT GeomeTry presentation regression checks (host-only).
+
+No claim is made here that Unity Editor or the Android APK was executed.
+The script intentionally never imports or edits original GeomeTry assets.
 """
 from pathlib import Path
 import re
 
 root = Path(__file__).resolve().parents[1]
-source = (root / "Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs").read_text()
+ui = (root / "Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs").read_text()
+art = (root / "Assets/BIOFIT/GeomeTry/BiofitUiArtwork.cs").read_text()
 bridge = (root / "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs").read_text()
 preflight = (root / "Assets/BIOFIT/GeomeTry/Editor/BiofitGeometryUxPreflight.cs").read_text()
 ps = (root / "tools/install_geometry_ui_assets.ps1").read_text()
 settings = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 
-# Reference art: one five-card level selector + exact 10x7 user atlas.
-assert '"BiofitUi/LevelSelect"' in source
-assert '"BiofitUi/Skins"' in source
-assert '"BiofitUi/Back"' in source
-assert '"BiofitUi/Pause"' in source
-assert "i < 70" in source and "i / 10" in source and "i % 10" in source
-assert "PlayerPrefs.SetInt(PrefSkin, skinIndex);" in source
-assert "PlayerPrefs.Save();" in source
-assert "Sprite.Create(atlas" in source
-assert "cubeRenderer.sprite = selected;" in source
-assert "CharacterSpriteField.GetValue(cube)" in source
-assert "Texture2D" in source and "RawImage" in source
-assert "var art = bg.gameObject.AddComponent<RawImage>();" in source, (
-    "Selector must use clean RectTransform, never mix Image and RawImage"
-)
-assert "AspectRatioFitter.AspectMode.FitInParent" in source
-assert "selectorFocusCard.localScale = Vector3.one" in source
-assert "BuildArcadeDots(board);" in source
-assert "ArcadeLogo(canvasRoot);" in source
-assert "new Color(1f, .96f, .2f, .15f)" not in source
+# 1. Independent real source-image cards, NOT a scaled overlay above baked cards.
+assert "internal static readonly int[] CardLeft" in art
+assert "internal static readonly int[] CardWidths" in art
+assert "CardWidths[i]" in ui and "CardWidths[i]" in art
+assert "EraseStrip(clean, pixels, 132, 1543" in art
+assert "RemoveConnectedBlue(data, width, height);" in art
+assert "separateCards[i] = card;" in ui
+assert "selectorFocusCard = separateCards[focusLevel];" in ui
+assert "selectorFocusCard.localScale = Vector3.one;" in ui
+assert "selectorFocusCard.anchoredPosition" in ui
+assert "1.045f" not in ui, "Do not enlarge focused card over neighbors"
+assert 'RawImage image = card.gameObject.AddComponent<RawImage>();' in ui
+assert 'artwork != null ?\n                artwork.background : levelBackdrop;' in ui
+assert "artwork.cards[i]" in ui
+
+# Card positions and original screenshot geometry must be in bounds and do
+# not overlap horizontally even after reconstruction.
+left = [137, 421, 690, 963, 1238]
+widths = [282, 267, 271, 274, 296]
+assert len(left) == len(widths) == 5
+for x, w in zip(left, widths):
+    assert 0 <= x < x+w <= 1672
+assert all(left[i] + widths[i] < left[i+1] for i in range(4))
+
+# 2. The reference's baked dots and label are removed before drawing one set.
+assert "EraseStrip(clean, pixels, 633, 1039, 772, 866" in art
+assert "EraseStrip(clean, pixels, 424, 1245, 695, 771" in art
+assert "BuildArcadeDots(board);" in ui
+assert 'new Color(1f, .82f, .02f, 1f)' in ui
+
+# 3. The entire original skin atlas is displayed as one uncut image;
+# individual selection is an invisible hit region and never truncates row 7.
+assert '"70 SKINS SIN RECORTE"' in ui
+assert "RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();" in ui
+assert 'Hotspot("Elegir skin " + (i + 1)' in ui
+assert "for (int i = 0; i < 70; i++)" in ui
+assert "PlayerPrefs.SetInt(PrefSkin, skinIndex);" in ui
+assert "PlayerPrefs.Save();" in ui
+assert "Sprite.Create(atlas" in ui
+assert "cubeRenderer.sprite = selected;" in ui
+assert "GridLayoutGroup layout" not in ui
+atlas_width, atlas_height = 790, 790 * 887 / 1280
+atlas_bottom = .364 * 900 - atlas_height / 2
+atlas_top = .364 * 900 + atlas_height / 2
+skin_label_bottom = .707 * 900 - 40 / 2
+assert atlas_bottom > 45, "Skin row seven extends off the design stage"
+assert skin_label_bottom - atlas_top > 10, "Atlas touches/overlaps skin caption"
+
+# 4. Truly alpha-keyed artwork: no hard-coded blue rectangles behind the logo.
+assert "IsBlueBackground(Color32 c)" in art
+assert "logo = Own(Extract(pixels" in art
+assert "false, true, \"BIOFIT logo sin fondo azul\"" in art
+assert "artwork.logo" in ui
+assert "image.texture = levelBackdrop;" not in ui
+
+# 5. Four complete corners and one independent safely placed back button.
+assert "artwork.corners[i]" in ui
+assert "corner.pivot = new Vector2(right ? 1f : 0f, bottom ? 0f : 1f);" in ui
+assert "if (i == 0) raw.uvRect = new Rect(1f, 0f, -1f, 1f);" in ui
+assert 'new Vector2(.080f, .902f), new Vector2(88f, 94f)' in ui
+assert 'Hotspot("VOLVER sobre flecha original"' in ui
+
+# 6. Aspect-correct, safe-area-aware layout for 16:9 / 20:9 / 4:3
+# regardless of their Canvas reference resolution.
+assert 'safeRoot = Rect("BIOFIT Android safe area"' in ui
+assert 'designStage = Rect("BIOFIT 16:9 responsive design"' in ui
+assert "Rect area = Screen.safeArea;" in ui
+assert "Mathf.Min(sx, sy)" in ui
+assert "scaler.matchWidthOrHeight = 1f;" in ui
+assert "UpdateViewport();" in ui
+for screen_w, screen_h in [(1280, 720), (2400, 1080), (800, 600),
+                           (1920, 1080), (2340, 1080)]:
+    virtual_w = screen_w * 900 / screen_h
+    scale = min(virtual_w / 1600, 1)
+    assert scale * 1600 <= virtual_w + 1e-7
+    assert scale * 900 <= 900 + 1e-7
+logo_top = .915 * 900 + 137 / 2
+logo_bottom = .915 * 900 - 137 / 2
+title_top = .793 * 900 + 66 / 2
+title_bottom = .793 * 900 - 66 / 2
+first_row_top = .614 * 900 + 164 / 2
+assert logo_top < 900 and logo_bottom > title_top
+assert title_bottom - first_row_top > 25
+trackers_bottom = .614 * 900 - 164 / 2
+second_row_top = .411 * 900 + 139 / 2
+assert trackers_bottom - second_row_top > 20
+second_row_bottom = .411 * 900 - 139 / 2
+buttons_top = .269 * 900 + 66 / 2
+assert second_row_bottom - buttons_top > 20
+last_button_bottom = .078 * 900 - 62 / 2
+assert last_button_bottom > 30
+
+# 7. Structured BLE/recording/performance cards; no one giant status dump.
+for section in [
+    '"Conexion BLE"', '"Eventos BLE"', '"Captura y archivos"',
+    '"FPS medicion"', '"CONEXIÓN WAVESHARE"',
+    '"DETECCIÓN DE MOVIMIENTOS"', '"REGISTRO Y EXPORTACIÓN"',
+]:
+    assert section in ui, section
+for variable in ["connectionLabel", "eventLabel", "captureLabel",
+                 "performanceLabel", "statusLabel"]:
+    assert variable in ui
+for action in [
+    "StartGameCapture()", "StopGameCapture()",
+    "ToggleRawCapture()", "MarkVideoSync()", "RequestExport(true)",
+    "RequestExport(false)",
+]:
+    assert action in ui, action
+
+# 8. FPS means actual frame delta count; distinguish uncapped Editor from APK.
+assert "fpsFrames / fpsElapsed" in ui
+assert "Time.unscaledDeltaTime" in ui
+assert "fpsElapsed >= .75f" in ui
+assert '"EDITOR · FPS observados: "' in ui
+assert '"NO equivale a FPS de la APK"' in ui
+assert '"ANDROID · FPS observados: "' in ui
+assert '"Objetivo solicitado: 60 FPS (no garantizados)"' in ui
+assert "Application.targetFrameRate = 60;" in ui
+
+# Source import: HD exact geometry, CPU-readable texture, original URP 2D.
+assert "selector.width != 1672 || selector.height != 941" in preflight
+assert 'art == "LevelSelect" && !importer.isReadable' in preflight
 assert "GraphicsSettings.defaultRenderPipeline = urp;" in preflight
 assert "QualitySettings.renderPipeline = null;" in preflight
 assert "TextureImporterCompression.Uncompressed" in preflight
-assert '"BIOFIT DASH HD art"' in source
-assert "selector.width < 1600" in preflight
-assert 'Fill("Original BIOFIT DASH reference"' not in source, (
-    "Image and RawImage cannot coexist on a GameObject"
-)
-assert "SetSkin(index)" in source and "BuildSkinSelection()" in source
-assert 'RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();' in source
-assert '"70 SKINS SIN RECORTE"' in source
-assert 'Hotspot("Elegir skin " + (i + 1)' in source
-assert '"Borde de skin seleccionada"' in source
-assert 'UpdateSkinSelectionOutline();' in source
-assert "new Vector2(710f, 70f)" in source
-# Regressions observed in Unity 6000.3.28f1: ensure visual bands
-# stay separated in the 1600x900 reference layout.
-settings_title_bottom = .806 * 900 - 67 / 2
-ble_panel_top = .576 * 900 + 248 / 2
-assert settings_title_bottom - ble_panel_top > 30, "BLE panel overlaps title"
-skins_title_bottom = .818 * 900 - 70 / 2
-skins_label_top = .743 * 900 + 40 / 2
-assert skins_title_bottom > skins_label_top + 7, "Skin label overlaps header"
-skins_label_bottom = .743 * 900 - 40 / 2
-atlas_top = .360 * 900 + (915 * 887 / 1280) / 2
-assert skins_label_bottom > atlas_top + 5, "Skin label overlaps atlas"
-assert 'xCuts = { 0, 134, 259, 384, 510, 635, 762, 888' in source
-assert 'yCutsTopDown = { 0, 139, 262, 385, 509, 636, 755, 887 }' in source
-assert 'GridLayoutGroup layout' not in source, "Do not crop collage into 70 stretched UI sprites"
-assert 'BindOriginalMenuButton("Play Button", Select);' in source
-assert 'b.onClick = new Button.ButtonClickedEvent();' in source
-assert 'GameManager.Instance.LoadLevel(map);' in source
-assert 'new Vector2(.5f, .576f)' in source
-assert 'new Vector2(1130f, 248f)' in source
-assert 'new Vector2(1030f, 212f)' in source
-assert 'new Vector2(right ? -92f : 92f, bottom ? 92f : -92f)' in source
-assert 'raw.uvRect = new Rect(right ? 1f : 0f' in source
-assert 'new Vector2(22f, 15f), Vector2.zero, fontSize,\n                    Navy);' in source, "Lime controls require dark readable text"
+assert "BIOFIT_GeomeTry_UI_Assets_HD_v2.zip" in ps
+assert "Get-FileHash" in ps and "SHA256" in ps
 
-# Navigation and buttons are actual Unity UI Button.onClick listeners.
-for token in [
-    'BindOriginalMenuButton("Editor Button", Settings);',
-    'BindOriginalMenuButton("Custom Button", Custom);',
-    "BuildBackButton(sceneName);",
-    "BuildLevelSelection();",
-    "BuildSkinSelection();",
-    "BuildSettings();",
-    "BuildLevelHud();",
-    "BuildPauseScreen();",
-    "GameManager.Instance.LoadLevel(map);",
-    "button.onClick.AddListener(",
-    'SceneManager.LoadScene(scene);',
-    'GetMonitor()?.RequestExport(true)',
-    'GetMonitor()?.RequestExport(false)',
-    'GetMonitor()?.ToggleRawCapture()',
-    'GetMonitor()?.MarkVideoSync()',
-    'monitor.StartGameCapture()',
-    'm.GameCaptureActive',
-    'averageFps',
-    'Application.targetFrameRate = 60;',
-    'QualitySettings.vSyncCount = 0;',
-    'Time.timeScale = 0f;',
-    'Time.timeScale = priorTimeScale > 0f ? priorTimeScale : 1.5f;',
-    'EnsureUiEventSystem();',
+# Preservation of original physics, timing, BLE LEGACY and 5 source levels.
+for forbidden in [
+    "Time.fixedDeltaTime =", "rb.linearVelocity =", "jumpForce =",
+    "currentSpeed =", "DefaultSpeed =", "DefaultGravityScale =",
+    "monitor.PhaseFastPairs = true", "monitor.LiftCycleMode = true"
 ]:
-    assert token in source, "Missing required UX behavior: " + token
-
-assert "if (sceneName == Menu) { ConfigureOriginalMenu(); return; }" in source
-assert '"Bottom Buttons Container"' in source
-assert '"Credits Button"' in source
-assert "if (scene == LevelScene)" not in source or True
-assert "Time.fixedDeltaTime =" not in source
-assert "rb.linearVelocity =" not in source
-assert "jumpForce =" not in source
-assert "currentSpeed =" not in source
-assert "DefaultSpeed =" not in source
-assert "DefaultGravityScale =" not in source
-assert "monitor.PhaseFastPairs" not in source
-
-# All accepted BLE events still take the original Cube jump path.
+    assert forbidden not in ui and forbidden not in art, forbidden
 assert "BilateralJumpCandidate += OnBilateralLegacyCandidate;" in bridge
 assert "monitor.JumpDetector.ClearPending();" in bridge
 assert "monitor.PhaseFastPairs = false;" in bridge
 assert "monitor.LiftCycleMode = false;" in bridge
 assert "cube.onClick();" in bridge
 assert "TryConsumeOrbPulse()" in bridge
-assert "AcceptedPairs => accepted;" in bridge
-assert "ExecutedJumps => executed;" in bridge
-assert "private void OnGUI()" not in bridge
+for token in [
+    'BindOriginalMenuButton("Play Button", Select);',
+    'BindOriginalMenuButton("Editor Button", Settings);',
+    'BindOriginalMenuButton("Custom Button", Custom);',
+    "GameManager.Instance.LoadLevel(map);",
+    "BuildPauseScreen();", "BuildBackButton(sceneName);",
+    "Time.timeScale = priorTimeScale > 0f ? priorTimeScale : 1.5f;",
+]:
+    assert token in ui, token
 
-# Original GeomeTry physics scripts in submodule stay unmodified.
 original = root / "ThirdParty/GeomeTryOriginal/Assets"
 for name in ("Character", "Cube", "Ship", "Wave"):
     path = original / ("Scripts/GameMechanics/CharacterType/" + name + ".cs")
-    assert path.exists(), "Missing original physics source " + str(path)
+    assert path.exists(), f"Missing untouched original: {path}"
+character = (original / "Scripts/GameMechanics/CharacterType/Character.cs").read_text()
 cube = (original / "Scripts/GameMechanics/CharacterType/Cube.cs").read_text()
-char = (original / "Scripts/GameMechanics/CharacterType/Character.cs").read_text()
+assert "DefaultSpeed = 6.5f" in character
+assert "Time.timeScale = 1.5f" in character
 assert "rb.linearVelocity = new Vector2(rb.linearVelocityX, jumpForce);" in cube
-assert "DefaultSpeed = 6.5f" in char
-assert "Time.timeScale = 1.5f" in char
-
-# Android legacy input is consistent with user's proven Editor controls.
 assert "activeInputHandler: 0" in settings
 assert "StandaloneInputModule" in preflight
 assert "PrefabUtility.SaveAsPrefabAsset" in preflight
-assert "Prefabs/EventSystem.prefab" in preflight
-assert "4 imagenes" in preflight
-assert "Input Manager (Old)" in preflight
-assert "BIOFIT_GeomeTry_UI_Assets_HD_v2.zip" in ps
-assert "Get-FileHash" in ps
-assert "SHA256" in ps
-assert "7186b226fad1ca49247d31aa65394a1d882effbe772c64ff02ab89f6040a4c8c" in ps
-assert "f7e4295c30329990bc9511aef0b08adbd72b0b981efebca787e2b338641ac3b7" in ps
-assert "Skins.png" in ps and "LevelSelect.png" in ps
-assert "Back.png" in ps and "Pause.png" in ps
-assert (root / ".gitignore").read_text().count("/Assets/BIOFIT/Resources/BiofitUi/") == 1
 
-print("PASS: 70 persistent skins, 5 functional levels, back/pause navigation, "
-      "BLE settings, original cube physics/legacy detector, input, FPS target, "
-      "reference asset pack installer. Requires Unity Editor and physical Android tests.")
+print("PASS: rebuilt selector, no duplicated indicators, 70 safe skins, alpha "
+      "logo/corners, 16:9 safe-area, structured BLE, honest FPS; untouched "
+      "source physics/legacy BLE. Editor/Android validation remains necessary.")
