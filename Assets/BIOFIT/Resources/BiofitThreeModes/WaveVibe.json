@@ -1,0 +1,90 @@
+{
+  "id": 5,
+  "name": "Nivel 5 - Tres modos avanzado",
+  "difficulty": 3,
+  "map": [
+    {
+      "type": "spike",
+      "x": 35,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 75,
+      "y": 0
+    },
+    {
+      "type": "biofitBallPortal",
+      "x": 110,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 155,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 203,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 247,
+      "y": 0
+    },
+    {
+      "type": "biofitSpiderPortal",
+      "x": 276,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 328,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 375,
+      "y": 0
+    },
+    {
+      "type": "biofitCubePortal",
+      "x": 404,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 445,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 483,
+      "y": 0
+    },
+    {
+      "type": "biofitBallPortal",
+      "x": 515,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 560,
+      "y": 0
+    },
+    {
+      "type": "biofitRoof",
+      "x": 0,
+      "y": 8
+    },
+    {
+      "type": "ground",
+      "x": 575,
+      "y": -2
+    }
+  ],
+  "music": "CantLetGo"
+}

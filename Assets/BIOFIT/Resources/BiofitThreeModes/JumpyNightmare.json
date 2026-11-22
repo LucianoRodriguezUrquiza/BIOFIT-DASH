@@ -1,0 +1,73 @@
+{
+  "id": 2,
+  "name": "Nivel 2 - Ball",
+  "difficulty": 1,
+  "map": [
+    {
+      "type": "spike",
+      "x": 58,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 110,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 162,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 214,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 266,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 318,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 370,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 422,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 474,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 526,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitRoof",
+      "x": 0,
+      "y": 8
+    },
+    {
+      "type": "ground",
+      "x": 575,
+      "y": -2
+    }
+  ],
+  "music": "BackOnTrack"
+}

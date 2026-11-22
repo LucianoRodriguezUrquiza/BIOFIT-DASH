@@ -1,0 +1,83 @@
+{
+  "id": 1,
+  "name": "Nivel 1 - Cubo",
+  "difficulty": 1,
+  "map": [
+    {
+      "type": "spike",
+      "x": 30,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 68,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 106,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 144,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 182,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 220,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 258,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 296,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 334,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 372,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 410,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 448,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 486,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 524,
+      "y": 0
+    },
+    {
+      "type": "ground",
+      "x": 575,
+      "y": -2
+    }
+  ],
+  "music": "StereoMadness"
+}

@@ -1,0 +1,80 @@
+{
+  "id": 4,
+  "name": "Nivel 4 - Tres modos",
+  "difficulty": 2,
+  "map": [
+    {
+      "type": "spike",
+      "x": 45,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 95,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 140,
+      "y": 0
+    },
+    {
+      "type": "biofitBallPortal",
+      "x": 180,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 230,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 290,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 345,
+      "y": 0
+    },
+    {
+      "type": "biofitSpiderPortal",
+      "x": 380,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 432,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 482,
+      "y": 0
+    },
+    {
+      "type": "biofitCubePortal",
+      "x": 515,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 558,
+      "y": 0
+    },
+    {
+      "type": "biofitRoof",
+      "x": 0,
+      "y": 8
+    },
+    {
+      "type": "ground",
+      "x": 575,
+      "y": -2
+    }
+  ],
+  "music": "DryOut"
+}

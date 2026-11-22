@@ -1,0 +1,78 @@
+{
+  "id": 3,
+  "name": "Nivel 3 - Spider",
+  "difficulty": 1,
+  "map": [
+    {
+      "type": "spike",
+      "x": 54,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 100,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 146,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 192,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 238,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 284,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 330,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 376,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 422,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 468,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 514,
+      "y": 0
+    },
+    {
+      "type": "biofitRoof",
+      "x": 0,
+      "y": 8
+    },
+    {
+      "type": "ground",
+      "x": 575,
+      "y": -2
+    }
+  ],
+  "music": "Polargeist"
+}
