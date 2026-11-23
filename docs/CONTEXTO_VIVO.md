@@ -16,7 +16,7 @@
 
 **Archivos relevantes:** `Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs`, `BiofitCooldownConfiguration.cs`, `BiofitBLEMonitor.cs`, `Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs`, `tests/CooldownRegression/`, `docs/COOLDOWN_BILATERAL_CONFIGURABLE.md`. Los harness/CI se adaptaron para incluir la nueva clase. Ver detalles completos de la auditoría, correcciones y procedimiento en [COOLDOWN_BILATERAL_CONFIGURABLE.md](COOLDOWN_BILATERAL_CONFIGURABLE.md).
 
-**Evidencia Git:** [PR #29](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), rama `feat/configurable-bilateral-cooldown-400-900ms`, autorizada para integrarse en `main` por el usuario en esta conversación. **El merge se confirmará mediante el estado real del repositorio; no asumir que ocurrió solo por autorizarlo.**
+**Evidencia Git comprobada:** [PR #29 fusionado](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29) a `main` el 2026-11-23, commit de integración [`e9356570d97b7ceba081a2bed540bf68ed1ff6dc`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/e9356570d97b7ceba081a2bed540bf68ed1ff6dc). Rama de origen `feat/configurable-bilateral-cooldown-400-900ms`. `main` pasa a ser la referencia estable para continuar el menú Configuración.
 
 **Pendiente para investigación futura:** sesiones comparativas instrumentadas, tasas de saltos aceptados/omitidos y falsos positivos, duplicados con el mismo gesto a 400 ms, FPS/latencia medida, pruebas individuales de 800/700/600/500 ms y persistencia/reinicio controlados si todavía no se documentaron con evidencia. No impedir avanzar el desarrollo visual y de Configuración mientras no haya una regresión observada.
 
@@ -91,7 +91,7 @@ El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y coold
 
 ## 5. Estado de la etapa actual
 
-**Versión funcional base:** los cinco niveles del PR #28 permanecen, y **PR #29** agrega el cooldown seleccionable y el HUD, con aprobación del usuario para adoptarlo como nueva versión principal. La referencia histórica de niveles es el commit [`017eb093a670703591479228307817db51c8197b`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/017eb093a670703591479228307817db51c8197b); verificar el merge más reciente de PR #29 en GitHub.
+**Versión funcional base:** los cinco niveles del PR #28 permanecen, y **PR #29** agrega el cooldown seleccionable y el HUD, con aprobación del usuario para adoptarlo como nueva versión principal. La referencia histórica de niveles es el commit [`017eb093a670703591479228307817db51c8197b`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/017eb093a670703591479228307817db51c8197b); la nueva versión principal de cooldown configurable está fusionada mediante [PR #29](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), merge `e9356570`.
 
 **Prueba funcional confirmada por el usuario:** ejecutó la versión en Unity Editor, construyó la APK e informó que en Android los movimientos físicos funcionan bien con los ESP32. Esta es la línea de base que **no se debe romper**. No se dispone de informe cuantitativo de falsas activaciones, latencia ni FPS.
 
@@ -109,7 +109,7 @@ El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y coold
 | 2026-11-23 | Biblioteca de recursos local inventariada y catálogo HTML generado | El usuario confirmó catálogo funcional; recuento comunicado: 194.750 registros |
 | 2026-11-23 | Scripts y documentación de recursos integrados | PR #26 fusionado, commit `17c92fcbdeb0c7d65b5610fcf649e089d7c9aced` |
 | 2026-11-23 | Cinco niveles más exigentes y selector español: Android con sensores físicos | El usuario confirmó que la APK y los movimientos corporales funcionan; PR #28 fusionado, commit `017eb093a670703591479228307817db51c8197b` |
-| 2026-11-23 | Cooldown configurable con seis opciones, 400 ms preferido | Validación física satisfactoria de 400 ms declarada por usuario; PR #29 autorizado para `main`; CI 251 checks, 5/5 jobs en verde. No hay todavía informe cuantitativo. |
+| 2026-11-23 | Cooldown configurable con seis opciones, 400 ms preferido | Validación física satisfactoria de 400 ms declarada por usuario; PR #29 fusionado a `main` (`e9356570`); CI 251 checks, 5/5 jobs en verde. No hay todavía informe cuantitativo. |
 
 **Regla:** agregar una entrada SOLO cuando un cambio esté implementado o un ensayo se haya realizado. Distinguir `propuesto`, `en desarrollo`, `CI aprobado`, `probado en Editor` y `probado en Android con sensores`. Añadir enlaces a PR/commit o evidencia de prueba. Para mantener legibilidad, resumir aquí los últimos 10–15 hitos y dejar el historial profundo en Git.
 
