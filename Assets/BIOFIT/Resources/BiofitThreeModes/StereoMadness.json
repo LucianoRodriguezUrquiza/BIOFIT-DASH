@@ -47,13 +47,13 @@
     {
       "type": "spike",
       "x": 432,
-      "y": 7,
-      "rotation": 180
+      "y": 0
     },
     {
       "type": "spike",
       "x": 482,
-      "y": 0
+      "y": 7,
+      "rotation": 180
     },
     {
       "type": "biofitCubePortal",
