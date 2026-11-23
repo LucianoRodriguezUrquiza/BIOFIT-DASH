@@ -1,6 +1,6 @@
-# BIOFIT DASH — cinco niveles progresivos, selector español y arte local (candidata)
+# BIOFIT DASH — cinco niveles progresivos, selector español y arte local (versión estable)
 
-> Estado: **candidata sin validación en Unity Editor ni en Android con los dos ESP32**. Este PR no altera el firmware, los parámetros BILATERAL LEGACY ni la física del Cube.
+> **Estado actualizado 2026-11-23:** PR #28 fusionado en `main` (`017eb093a670703591479228307817db51c8197b`). El usuario confirmó que se ejecuta correctamente en Unity Editor y que probó exitosamente los controles físicos en la APK Android con los ESP32. Sin métricas cuantitativas de rendimiento, latencia o detección. Se conservan firmware, BLE BILATERAL LEGACY y física Cube original. **Los sprites originales de Ball, Spider y portales siguen pendientes**.
 
 ## Cambios y criterio físico
 
@@ -59,11 +59,11 @@ No es accesible directamente desde el GitHub remoto. **No se ha afirmado que se 
 
 El arte protegido de Geometry Dash puede ser útil para estudio y prototipado personal; **la procedencia no constituye una licencia de redistribución**. Para publicación preferir Kenney CC0 verificado o dibujos propios.
 
-## Validación realizada y pendiente
+## Validación realizada y tareas pendientes
 
 Las pruebas automatizadas verifican estructura JSON, nombres, duraciones nominales, secuencia de portales, separación >=15 u, alternancia de superficies, recursos permitidos y un **sobre geométrico balístico simplificado** para Cube. Los cálculos **no ejecutan Unity**.
 
-Antes de fusionar con el juego estable:
+**Integración ya realizada:** [PR #28](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/28) fusionado el 2026-11-23. **Probado por el usuario:** Unity Editor funcional, APK Android compilada e instalada, movimientos físicos BLE satisfactorios. Los siguientes puntos son un protocolo de regresión y medición para futuros cambios, no una condición pendiente para esta fusión:
 
 1. Ejecutar `python tests/check_three_modes_60s.py`.
 2. En Unity 6000.3.28f1, ejecutar `BIOFIT > GeomeTry ORIGINAL > 8. Verificar niveles 3 MODOS (60 s)`.
@@ -72,4 +72,4 @@ Antes de fusionar con el juego estable:
 5. En Android 16:9 y con ambos sensores, medir al menos 20 pares de saltos a separaciones 15–18 u. Registrar `BLE_LEGACY_CUBE ... JUMP_APPLIED/NO_JUMP`, eventos por cooldown y FPS medidos.
 6. Verificar los PNG seleccionados, importador, efectos y consumo de memoria en el celular. Mantener respaldo y no reemplazar el clon principal sin pruebas físicas.
 
-**No se ha ejecutado una simulación Unity/Box2D real ni se ha medido una APK con BLE.** El modelo balístico continuo no evalúa exactamente los colliders, la carga del frame o la latencia real de eventos.
+**Se probó la APK con BLE según confirmación del usuario**, pero no se obtuvieron registros cuantitativos, mediciones sistemáticas de FPS o latencia ni ensayos reproducibles de todas las colisiones. El modelo balístico continuo no evalúa exactamente colliders, carga de frame o latencia.
