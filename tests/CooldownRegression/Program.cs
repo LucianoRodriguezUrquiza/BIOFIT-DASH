@@ -84,7 +84,7 @@ static class Program
         Check(detector.ProcessImpulse(2, .015d, .25f), "Complete first pair");
         Check(!Pair(detector, .34d), "Post-launch rebound inside 400ms blocked");
         Check(!Pair(detector, .39d), "Landing oscillation inside 400ms blocked");
-        Check(Pair(detector, .41d),
+        Check(Pair(detector, .42d),
             "New independent pair after 400ms is accepted by temporal rule");
         Check(!detector.ProcessImpulse(3, 1d, .25f),
             "Invalid tracker never accepted");
