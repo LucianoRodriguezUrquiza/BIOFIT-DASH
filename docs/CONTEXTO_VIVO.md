@@ -115,3 +115,14 @@ Y escribir:
 > Continuemos BIOFIT DASH. Leé primero `docs/CONTEXTO_VIVO.md` y luego `docs/CONTEXTO_ACTUAL.md` del repositorio. Confirmá el último commit de `main` y separá cambios implementados, pruebas realizadas y tareas pendientes. Respetá BILATERAL LEGACY y la física del Cube. En esta conversación te indicaré la siguiente tarea. Al terminar una modificación, actualizá el contexto vivo con el resultado real.
 
 **Importante:** abrir un nuevo chat no garantiza que ChatGPT lea este archivo automáticamente. El usuario debe enlazarlo o solicitar su lectura; si aún hay un PR sin fusionar, utilizar el enlace de esa rama hasta que llegue a `main`.
+
+## 9. Candidata de diseño de niveles más exigentes (NO validada físicamente)
+
+- **Rama de trabajo:** `feat/five-level-progression-1500ms-v1`; [PR #28 (borrador)](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/28).
+- Se rediseñaron los cinco mapas de ~60 segundos como `Nivel 1` a `Nivel 5`, con música original, progresión Cube / Ball / Spider / combinaciones, separación mínima >=15 u (>=1,538 s nominales entre pinchos) y validación estática ampliada.
+- Selector reconstruido con tarjetas vivas y etiquetas españolas, de izquierda a derecha; botones con feedback táctil.
+- Íconos y portales: fallbacks originales + carga preferente desde `Assets/BIOFIT/Resources/BiofitThreeModes/Artwork/` mediante importador local opt-in. El arte de la biblioteca de Windows no se incorporó en el repositorio público.
+- **GitHub Actions:** [ejecución #498](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45253573276) con cinco jobs exitosos, incluyendo regresiones estáticas, sintaxis C# y compatibilidad Windows. **No representa una prueba en Unity ni Android físico**.
+- **Estado:** pendiente verificar que Unity compila, que los cinco niveles son jugables en Editor y que las entradas BLE funcionan en Android real; no fusionar a main hasta confirmar esos puntos.
+- **Guía de diseño e instalación:** [NIVELES_PROGRESIVOS_1500MS.md](NIVELES_PROGRESIVOS_1500MS.md).
+- **Restricciones conservadas:** sin cambios a Cube original, BILATERAL LEGACY, firmware, tiempos de cooldown, sincronización ni UUIDs.

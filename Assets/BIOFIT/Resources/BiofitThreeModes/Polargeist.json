@@ -1,49 +1,139 @@
 {
   "id": 3,
-  "name": "Nivel 3 - Spider",
-  "difficulty": 1,
+  "name": "Nivel 3",
+  "difficulty": 3,
   "map": [
     {
+      "type": "biofitRoof",
+      "x": 0,
+      "y": 8
+    },
+    {
       "type": "spike",
-      "x": 54,
+      "x": 38,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 100,
+      "x": 65,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoCrystal",
+      "x": 71,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 90,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 114,
       "y": 7,
       "rotation": 180
     },
     {
       "type": "spike",
-      "x": 146,
+      "x": 138,
       "y": 0
     },
     {
+      "type": "biofitDecoCrystal",
+      "x": 144,
+      "y": 4
+    },
+    {
       "type": "spike",
-      "x": 192,
+      "x": 161,
       "y": 7,
       "rotation": 180
     },
     {
       "type": "spike",
-      "x": 238,
+      "x": 184,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 284,
+      "x": 206,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoCrystal",
+      "x": 212,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 228,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 249,
       "y": 7,
       "rotation": 180
     },
     {
       "type": "spike",
-      "x": 330,
+      "x": 270,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoCrystal",
+      "x": 276,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 290,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 310,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 376,
+      "x": 329,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoCrystal",
+      "x": 335,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 348,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 367,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 386,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoCrystal",
+      "x": 392,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 404,
       "y": 7,
       "rotation": 180
     },
@@ -54,19 +144,62 @@
     },
     {
       "type": "spike",
-      "x": 468,
+      "x": 440,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoCrystal",
+      "x": 446,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 458,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 476,
       "y": 7,
       "rotation": 180
     },
     {
       "type": "spike",
-      "x": 514,
+      "x": 493,
       "y": 0
     },
     {
-      "type": "biofitRoof",
-      "x": 0,
-      "y": 8
+      "type": "biofitDecoCrystal",
+      "x": 499,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 510,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 527,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 544,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoCrystal",
+      "x": 550,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 560,
+      "y": 0
     },
     {
       "type": "ground",

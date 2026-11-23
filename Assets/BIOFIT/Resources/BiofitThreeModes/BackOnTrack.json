@@ -1,66 +1,151 @@
 {
   "id": 1,
-  "name": "Nivel 1 - Cubo",
+  "name": "Nivel 1",
   "difficulty": 1,
   "map": [
     {
       "type": "spike",
-      "x": 30,
+      "x": 32,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 68,
+      "x": 58,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 64,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 83,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 106,
+      "x": 107,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 144,
+      "x": 130,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 136,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 153,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 182,
+      "x": 176,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 220,
+      "x": 198,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 204,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 219,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 258,
+      "x": 240,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 296,
+      "x": 260,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 266,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 281,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 334,
+      "x": 301,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 372,
+      "x": 321,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 327,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 341,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 410,
+      "x": 360,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 448,
+      "x": 379,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 385,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 398,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 416,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 434,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 440,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 452,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 469,
       "y": 0
     },
     {
@@ -69,8 +154,33 @@
       "y": 0
     },
     {
+      "type": "biofitDecoStar",
+      "x": 492,
+      "y": 3
+    },
+    {
       "type": "spike",
-      "x": 524,
+      "x": 503,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 519,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 535,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 541,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 552,
       "y": 0
     },
     {

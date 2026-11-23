@@ -12,21 +12,23 @@ EXPECTED_PORTALS = [
     [],
     [],
     [],
-    [("biofitBallPortal", 180), ("biofitSpiderPortal", 380), ("biofitCubePortal", 515)],
-    [("biofitBallPortal", 110), ("biofitSpiderPortal", 276), ("biofitCubePortal", 404), ("biofitBallPortal", 515)],
+    [("biofitBallPortal", 185), ("biofitSpiderPortal", 385), ("biofitCubePortal", 515)],
+    [("biofitBallPortal", 117), ("biofitSpiderPortal", 275), ("biofitCubePortal", 405), ("biofitBallPortal", 515)],
 ]
 ALLOWED = {"spike", "ground", "biofitRoof", "biofitBallPortal",
-           "biofitSpiderPortal", "biofitCubePortal"}
+           "biofitSpiderPortal", "biofitCubePortal",
+           "biofitDecoPulse", "biofitDecoCrystal", "biofitDecoStar"}
 SPEED_U_S = 6.5 * 1.5
 MIN_BILATERAL_S = .9
 MIN_COMFORT_S = 1.5
 
 for i, name in enumerate(NAMES, 1):
     data = json.loads((LEVELS / (name + ".json")).read_text("utf-8"))
-    assert data["id"] == i, (name, data["id"])
+    assert data["id"] == i and data["name"] == f"Nivel {i}", (name, data["id"], data["name"])
     items = data["map"]
     assert all(it["type"] in ALLOWED for it in items)
     assert len([it for it in items if it["type"] == "ground" and it["x"] == 575]) == 1
+    assert data["difficulty"] == i
     assert (sum(it["type"] == "biofitRoof" for it in items) == int(i != 1))
     portals = [(it["type"], it["x"]) for it in items if it["type"].endswith("Portal")]
     assert portals == EXPECTED_PORTALS[i - 1], (name, portals)
@@ -36,7 +38,7 @@ for i, name in enumerate(NAMES, 1):
     assert len(xs) >= 8
     assert xs[0] >= 25 and xs[-1] <= 565
     gaps = [b - a for a, b in zip(xs, xs[1:])]
-    assert all(dx / SPEED_U_S >= MIN_COMFORT_S for dx in gaps)
+    assert all(dx >= 15 and dx / SPEED_U_S >= MIN_COMFORT_S for dx in gaps)
     if i == 1:
         assert all(it["y"] == 0 for it in spikes)
     elif i in (2, 3):
@@ -59,17 +61,38 @@ for i, name in enumerate(NAMES, 1):
             continue
         if mode == "Cube":
             assert item["y"] == 0, (name, x, "ceiling spike in cube section")
-            actions.append(x - 4)
+            # Nominal launch 3u before spike; collider-aware envelope below.
+            actions.append(x - 3)
         else:
             if item["y"] == surface:
                 actions.append(x - 12)
                 surface = 7 if surface == 0 else 0
+    # Continuous-time envelope on level, not a Unity/Box2D simulation.
+    vy = 13.5 * 1.5
+    gravity_real = 9.81 * 4 * 1.5 ** 2
+    flight_s = 2 * vy / gravity_real
+    horizontal_flight = SPEED_U_S * flight_s
+    assert 4.3 < horizontal_flight < 4.6
+    for spike in spikes:
+        x = spike["x"]
+        is_cube = i == 1 or (
+            i == 4 and (x < 185 or x > 515)) or (
+            i == 5 and (x < 117 or 405 < x < 515))
+        if not is_cube:
+            continue
+        launch = x - 3.0
+        # Approximate overlap region: half-width player .5, hazard .125.
+        for boundary in (x - .625, x + .625):
+            t = (boundary - launch) / SPEED_U_S
+            elevation = vy * t - .5 * gravity_real * t * t
+            assert 0 < t < flight_s and elevation > .65, (name, x, t, elevation)
     action_gaps = [(b - a) / SPEED_U_S for a, b in zip(actions, actions[1:])]
     assert all(dt >= MIN_COMFORT_S for dt in action_gaps), (name, action_gaps)
     if i >= 2:
         assert len(actions) >= 7, (name, "not enough mode actions")
     nominal = (576 - (-10)) / SPEED_U_S
     assert 59 <= nominal <= 61
+    assert 6 <= sum(it["type"].startswith("biofitDeco") for it in items) <= 12
     print(f"L{i} {name}: {len(spikes)} spikes, {len(portals)} portals, "
           f"min-gap={min(gaps)/SPEED_U_S:.2f}s, nominal={nominal:.1f}s")
 
@@ -86,4 +109,4 @@ assert "body.position = destination;" in motor
 assert "BiofitThreeModes/" in ux
 assert "com.biofitgame.threemodeslab" in build and "com.biofitgame.threemodeslab" in motor
 assert "BiofitGeomeTryOriginalBuild.Verify()" in build
-print("PASS: 5 maps + mode portal sequence + conserved cube/legacy paths (STATIC ONLY)")
+print("PASS: 5 named maps + >=1.5 s nominal spike/action spacing + mode transitions (STATIC ONLY)")

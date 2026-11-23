@@ -88,3 +88,8 @@ __pycache__/
 
 # User-supplied graphics from the chat asset ZIP
 /Assets/BIOFIT/Resources/BiofitUi/
+
+# Local opt-in artwork from BIOFIT-RECURSOS-GD (third-party rights vary).
+# Replaced in runtime by original procedural fallback when absent.
+/Assets/BIOFIT/Resources/BiofitThreeModes/Artwork/
+/Assets/BIOFIT/Resources/BiofitThreeModes/Artwork.meta
