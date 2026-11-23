@@ -1,67 +1,189 @@
 {
   "id": 2,
-  "name": "Nivel 2 - Ball",
-  "difficulty": 1,
+  "name": "Nivel 2",
+  "difficulty": 2,
   "map": [
-    {
-      "type": "spike",
-      "x": 58,
-      "y": 0
-    },
-    {
-      "type": "spike",
-      "x": 110,
-      "y": 7,
-      "rotation": 180
-    },
-    {
-      "type": "spike",
-      "x": 162,
-      "y": 0
-    },
-    {
-      "type": "spike",
-      "x": 214,
-      "y": 7,
-      "rotation": 180
-    },
-    {
-      "type": "spike",
-      "x": 266,
-      "y": 0
-    },
-    {
-      "type": "spike",
-      "x": 318,
-      "y": 7,
-      "rotation": 180
-    },
-    {
-      "type": "spike",
-      "x": 370,
-      "y": 0
-    },
-    {
-      "type": "spike",
-      "x": 422,
-      "y": 7,
-      "rotation": 180
-    },
-    {
-      "type": "spike",
-      "x": 474,
-      "y": 0
-    },
-    {
-      "type": "spike",
-      "x": 526,
-      "y": 7,
-      "rotation": 180
-    },
     {
       "type": "biofitRoof",
       "x": 0,
       "y": 8
+    },
+    {
+      "type": "spike",
+      "x": 40,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 68,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 74,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 93,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 118,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 142,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 148,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 166,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 189,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 212,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 218,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 234,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 256,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 278,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 284,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 300,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 321,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 342,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 348,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 362,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 382,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 401,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 407,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 421,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 440,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 459,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 465,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 478,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 497,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 515,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoPulse",
+      "x": 521,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 533,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 551,
+      "y": 0
     },
     {
       "type": "ground",
