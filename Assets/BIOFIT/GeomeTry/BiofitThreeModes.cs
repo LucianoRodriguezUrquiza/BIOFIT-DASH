@@ -163,6 +163,11 @@ namespace Biofit.GeomeTryOriginal
                 icon.flipY = false;
                 icon.transform.localRotation = Quaternion.identity;
             }
+            BiofitBLEMonitor monitor = FindFirstObjectByType<BiofitBLEMonitor>();
+            if (monitor != null && monitor.GameCaptureActive)
+                monitor.RecordControlDiagnostic("GEOMETRY_MODE_CHANGE mode=" + newMode +
+                    " x=" + transform.position.x.ToString("F2",
+                        System.Globalization.CultureInfo.InvariantCulture));
         }
 
         private void Update()
