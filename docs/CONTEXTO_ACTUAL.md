@@ -61,6 +61,9 @@ APK separada: package `com.biofitgame.threemodeslab`, nombre `BIOFIT TRES MODOS`
 
 ## 5. Validación y límites actuales
 
+- **Integración verificada:** [PR #29 fusionado a `main`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), commit [`e9356570d97b7ceba081a2bed540bf68ed1ff6dc`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/e9356570d97b7ceba081a2bed540bf68ed1ff6dc). Esta es la nueva base oficial para seguir ampliando Configuración sin perder las seis opciones.
+
+
 - **Nueva versión principal aprobada por el usuario (2026-11-23):** PR #29, selector de seis cooldowns. Usuario confirmó prueba física del juego y respuesta satisfactoria de 400 ms con ambos tobillos; aceptó explícitamente integrarlo en `main`. Los otros valores se conservan disponibles para experimentación. No extrapolar a validación cuantitativa ni a pruebas físicas individuales de los seis valores.
 - **CI:** GitHub Actions #45276650454 aprobó 5/5 jobs del commit de PR #29, con 251 comprobaciones deterministas del cooldown. No sustituye Unity/Android.
 - **Principales archivos de la nueva arquitectura:** `BiofitBilateralJumpDetector.cs`, `BiofitCooldownConfiguration.cs`, `BiofitBLEMonitor.cs`, `BiofitGeometryUX.cs`. Ver `docs/COOLDOWN_BILATERAL_CONFIGURABLE.md` y `docs/CONTEXTO_VIVO.md` para cadena de aplicación, política de bloqueo en curso y registro CSV.
