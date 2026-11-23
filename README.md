@@ -44,6 +44,7 @@ La APK independiente es `com.biofitgame.threemodeslab` y se guarda en `Builds/`.
 ## Documentación y código principal
 
 - **[CONTEXTO ACTUAL](docs/CONTEXTO_ACTUAL.md)**: arquitectura completa, estructura de assets, BLE, mapas, instalación, validaciones y restricciones.
+- [Contexto maestro histórico completo](docs/CONTEXTO_MAESTRO_HISTORICO.md): documentación detallada previa, preservada en `main` como archivo de referencia.
 - [Diseño de los cinco niveles y tres modos](docs/TRES_MODOS_60S_BILATERAL.md).
 - `Assets/BIOFIT/GeomeTry/BiofitThreeModes.cs`: Ball, Spider, portales y gráficos temporales.
 - `Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs`: entrada bilateral hacia personaje activo.
