@@ -541,6 +541,7 @@ namespace Biofit.GeomeTryOriginal
             b.targetGraphic = image;
             b.transition = Selectable.Transition.None;
             b.onClick.AddListener(() => click());
+            rect.gameObject.AddComponent<BiofitSettingsButtonFeedback>();
             return b;
         }
 
@@ -572,6 +573,8 @@ namespace Biofit.GeomeTryOriginal
                 click, image == null ? Lime : new Color(1f, 1f, 1f, 0.001f));
             if (image != null)
             {
+                if (b.GetComponent<BiofitSettingsButtonFeedback>() == null)
+                    b.gameObject.AddComponent<BiofitSettingsButtonFeedback>();
                 var raw = Rect(name + " image", b.transform, new Vector2(.5f, .5f),
                     size, Vector2.zero).gameObject.AddComponent<RawImage>();
                 raw.texture = image;
