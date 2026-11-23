@@ -11,6 +11,37 @@ using UnityEngine;
 /// </summary>
 public sealed class BiofitBLEMonitor : MonoBehaviour
 {
+    private const string PairCooldownPreference = "BIOFIT_BILATERAL_COOLDOWN_MS_V1";
+
+    // The BLE receiver owns the authoritative runtime setting and persisted
+    // selection. No duplicate cooldown timer is created in the UI or bridge.
+    private void Awake()
+    {
+        int stored = PlayerPrefs.GetInt(PairCooldownPreference,
+            BiofitBilateralJumpDetector.DefaultPairCooldownMilliseconds);
+        if (!BiofitBilateralJumpDetector.IsSupportedPairCooldownMilliseconds(stored))
+        {
+            stored = BiofitBilateralJumpDetector.DefaultPairCooldownMilliseconds;
+            PlayerPrefs.SetInt(PairCooldownPreference, stored);
+            PlayerPrefs.Save();
+        }
+        jumpDetector.SetPairCooldownMilliseconds(stored);
+    }
+
+    public int PairCooldownMilliseconds => jumpDetector.PairCooldownMilliseconds;
+
+    public bool SetPairCooldownMilliseconds(int milliseconds)
+    {
+        if (!BiofitBilateralJumpDetector.IsSupportedPairCooldownMilliseconds(milliseconds))
+            return false;
+        jumpDetector.SetPairCooldownMilliseconds(milliseconds);
+        PlayerPrefs.SetInt(PairCooldownPreference, milliseconds);
+        PlayerPrefs.Save();
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, 0,
+            "COOLDOWN_MS=" + PairCooldownMilliseconds +
+            " source=CONFIGURACION lock=CONSERVADOR");
+        return true;
+    }
     [Header("MAC de los trackers (verificadas con nRF Connect)")]
     [SerializeField] private string leftAddress = "80:45:6B:35:DE:61";
     [SerializeField] private string rightAddress = "28:84:85:55:6B:B9";
@@ -500,6 +531,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 if (page != null) eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,tracker.id,page);
         eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
             MinUpG, PairWindowMs);
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, 0,
+            "COOLDOWN_MS=" + PairCooldownMilliseconds +
+            " source=INICIO_REGISTRO mode=BILATERAL_LEGACY");
         return true;
     }
 
@@ -618,6 +652,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " | DESCARTADOS=" + DroppedEventCount +
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
             " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
+            " | COOLDOWN_MS_FINAL=" + PairCooldownMilliseconds +
             "\nESTIMACION_RELOJ=" + (ClockAlignmentReady ? "ACTIVA" : "INACTIVA") +
             " | EVENTOS_ALINEADOS=" + (alignedEvents - gAlignedEvents) +
             "\nESTIMACION_STATUS: IZQ=" + ClockStatusLeft + " DER=" + ClockStatusRight +
@@ -1110,6 +1145,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     jumpDetector.LastDecision.ToString() : "ClockNotReady") + " " + CurrentEventTrace +
                 " pairClockS=" + pairSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) +
                 " cooldownRejected=" + jumpDetector.PairCooldownRejected +
+                " COOLDOWN_MS=" + PairCooldownMilliseconds +
                 " phaseHint=" + (phaseEvidence ? 1 : 0) +
                 " phaseMode=" + (PhaseFastPairs ? 1 : 0) +
                 " fastPhasePair=" + (LastPairedWasFastPhase ? 1 : 0) +
