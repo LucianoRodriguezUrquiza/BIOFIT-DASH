@@ -186,5 +186,76 @@ if ($selectCode.Contains($after)) {
     Write-Host "OK: seleccion de mapas usa Resources/maps/BASE (sin alterar mapas)."
 }
 
+# GeomeTry original assumes its Assets folder sits directly at project Assets.
+# In BIOFIT this is an imported copy under Assets/GeomeTryOriginal/Assets.
+# Patch only the verified imported copy; never modify ThirdParty sources.
+$devSource = Join-Path $original "Scripts\DevUtils.cs"
+$devDest = Join-Path $imported "Scripts\DevUtils.cs"
+if (!(Test-Path -LiteralPath $devSource -PathType Leaf) -or
+    !(Test-Path -LiteralPath $devDest -PathType Leaf)) {
+    throw "Falta DevUtils.cs para comprobar el origen de backgrounds."
+}
+$devCode = [IO.File]::ReadAllText($devDest)
+if ($devCode.Contains("BIOFIT_BACKGROUND_RESOURCE_FIX")) {
+    Write-Host "OK: DevUtils lee backgrounds desde Unity Resources."
+} else {
+    if (!(Same-Bytes $devDest $devSource)) {
+        throw "DevUtils.cs importado tiene cambios inesperados; no se sobrescribe."
+    }
+    $start = $devCode.IndexOf("    void CountBackgroundFiles()")
+    $end = $devCode.IndexOf("    #endregion", $start)
+    if ($start -lt 0 -or $end -le $start) {
+        throw "No se encuentra metodo CountBackgroundFiles original."
+    }
+    $replacement = @'
+    void CountBackgroundFiles()
+    {
+        // BIOFIT_BACKGROUND_RESOURCE_FIX: use Unity's Resources, not an old
+        // project-relative disk path. Include only numbered menu backgrounds.
+        int count = 0;
+        for (int i = 1; i <= 99; ++i)
+        {
+            if (Resources.Load("UI/Backgrounds/Background_" + i) == null)
+                break;
+            count++;
+        }
+        backgroundQuantity = Mathf.Max(1, count);
+    }
+
+'@
+    $devUpdated = $devCode.Substring(0, $start) + $replacement +
+        $devCode.Substring($end)
+    [IO.File]::WriteAllText($devDest, $devUpdated,
+        (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "OK: DevUtils ya no busca Assets/Resources/UI/Backgrounds inexistente."
+}
+
+# On sceneLoaded, the original UIManager can run before the BIOFIT overlay
+# creates its Canvas. Missing Canvas at that instant is not an application
+# failure: skip a transient legacy background attempt, keep future retries.
+$uiSource = Join-Path $original "Scripts\UIManager.cs"
+$uiDest = Join-Path $imported "Scripts\UIManager.cs"
+if (!(Test-Path -LiteralPath $uiSource -PathType Leaf) -or
+    !(Test-Path -LiteralPath $uiDest -PathType Leaf)) {
+    throw "Falta UIManager.cs para comprobar el orden de creacion de Canvas."
+}
+$uiCode = [IO.File]::ReadAllText($uiDest)
+if ($uiCode.Contains("BIOFIT_CANVAS_LOAD_RACE_FIX")) {
+    Write-Host "OK: UIManager tolera el Canvas todavia no creado."
+} else {
+    if (!(Same-Bytes $uiDest $uiSource)) {
+        throw "UIManager.cs importado tiene cambios inesperados; no se sobrescribe."
+    }
+    $oldCanvasError = 'Debug.LogError("Canvas introuvable dans la scène.");'
+    if (!$uiCode.Contains($oldCanvasError)) {
+        throw "No se encontro el mensaje de Canvas original de UIManager."
+    }
+    $uiUpdated = $uiCode.Replace($oldCanvasError,
+        '// BIOFIT_CANVAS_LOAD_RACE_FIX: BIOFIT UX creates this Canvas after sceneLoaded.')
+    [IO.File]::WriteAllText($uiDest, $uiUpdated,
+        (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "OK: UIManager omite error de Canvas transitorio (sin alterar fondos del nivel)."
+}
+
 Write-Host "OK: reparacion visual y de camara completada. Fuente original sin modificar."
 Write-Host "Ya podes abrir Unity 6000.3.28f1 y comprobar la consola."
