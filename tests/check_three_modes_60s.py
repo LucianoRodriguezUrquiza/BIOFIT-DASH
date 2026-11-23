@@ -44,6 +44,30 @@ for i, name in enumerate(NAMES, 1):
         assert all(it.get("rotation", 0) == (180 if it["y"] == 7 else 0) for it in spikes)
     for typ, x in portals:
         assert all(abs(x - s) >= 15 for s in xs), (name, typ, x)
+    # Symbolic lane/walkthrough check. This does not model collision geometry.
+    mode = "Ball" if i == 2 else "Spider" if i == 3 else "Cube"
+    surface = 0
+    actions = []
+    for item in sorted(items, key=lambda obj: obj["x"]):
+        typ, x = item["type"], item["x"]
+        if typ.endswith("Portal"):
+            mode = typ.removeprefix("biofit").removesuffix("Portal")
+            # Runtime transitions reset gravity and settle onto ground well
+            # ahead of the next spike in the manually spaced maps.
+            surface = 0
+        if typ != "spike":
+            continue
+        if mode == "Cube":
+            assert item["y"] == 0, (name, x, "ceiling spike in cube section")
+            actions.append(x - 4)
+        else:
+            if item["y"] == surface:
+                actions.append(x - 12)
+                surface = 7 if surface == 0 else 0
+    action_gaps = [(b - a) / SPEED_U_S for a, b in zip(actions, actions[1:])]
+    assert all(dt >= MIN_COMFORT_S for dt in action_gaps), (name, action_gaps)
+    if i >= 2:
+        assert len(actions) >= 7, (name, "not enough mode actions")
     nominal = (576 - (-10)) / SPEED_U_S
     assert 59 <= nominal <= 61
     print(f"L{i} {name}: {len(spikes)} spikes, {len(portals)} portals, "
@@ -56,7 +80,6 @@ build = (ROOT / "Assets/BIOFIT/GeomeTry/Editor/BiofitThreeModesBuild.cs").read_t
 assert "BilateralJumpCandidate += OnBilateralLegacyCandidate" in bridge
 assert "cube.onClick();" in bridge
 assert "motor.TryPulse()" in bridge
-assert "Body" not in ""  # Intentional: no fabricated claim of runtime physical validation.
 assert "body.gravityScale = flipped ? -BallSpiderGravity : BallSpiderGravity;" in motor
 assert "Physics2D.Raycast(" in motor
 assert "body.position = destination;" in motor
