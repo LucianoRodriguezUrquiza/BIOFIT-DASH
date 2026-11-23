@@ -2,25 +2,26 @@
 
 > **Leer primero al iniciar un chat nuevo.** Este documento es el punto de entrada operativo y se actualiza con cada cambio **confirmado** del proyecto. No sustituye al código fuente ni a las pruebas físicas.
 
-> **ADVERTENCIA: ESTE ARCHIVO EN LA RAMA `feat/configurable-bilateral-cooldown-400-900ms` CONTIENE TRABAJO EXPERIMENTAL.** El `main` estable sigue siendo el PR #28 con 900 ms; todavía no se ha fusionado ningún cooldown configurable.
+## Nueva base funcional aprobada — Cooldown configurable (2026-11-23)
 
-## Experimento activo — cooldown BILATERAL LEGACY desde Configuración (2026-11-23)
+**Decisión del usuario:** después de probar físicamente BIOFIT DASH en su teléfono Android con los dos trackers ESP32 en los tobillos, informó que el juego **funciona muy bien con 400 ms** y autorizó expresamente integrar la funcionalidad del PR #29 en `main` como **nueva versión principal**. Su valor **preferido por ahora es 400 ms**, pero deben **conservarse las seis opciones**: 900, 800, 700, 600, 500 y 400 ms. No bloquear el cooldown en 400 ni eliminar el selector.
 
-- **Objetivo:** permitir `900 / 800 / 700 / 600 / 500 / 400 ms` desde Configuración → Cooldown, con botones animados, un solo valor seleccionado, botón de restablecer, indicador `CD: NNN ms` durante los niveles y persistencia entre cierres de APK. **Predeterminado: 900 ms; los demás, experimentales.**
-- **Estado inicial:** PR #28 estable, 900 ms fijo en `BiofitBilateralJumpDetector.PairCooldownSeconds`; detector usa `pairTime = Max(tizq,tder)` sobre reloj compartido y rechaza cuando intervalo entre pares aceptados es menor que el cooldown. El puente `BiofitGeomeTryLegacyBridge` recibe `BilateralJumpCandidate`; UI `BiofitGeometryUX` ya contiene botón animado y almacenamiento `PlayerPrefs` para skins.
-- **Código examinado:** `BiofitBilateralJumpDetector.cs`, `BiofitClockAligner.cs`, `BiofitBLEMonitor.cs`, `BiofitGeomeTryLegacyBridge.cs`, `BiofitThreeModes.cs`, `BiofitGeometryUX.cs`, `BiofitSettingsButtonFeedback.cs`, `BiofitEventCapture.cs`, proyectos host y workflow CI.
-- **Archivos funcionales modificados:** `Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs`, `BiofitBLEMonitor.cs`, `Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs`. **Nuevo:** `Assets/BIOFIT/Scripts/BiofitCooldownConfiguration.cs` y su `.meta`.
-- **Decisión de arquitectura:** la propiedad `PairCooldownMilliseconds` del detector es la autoridad; `BiofitCooldownConfiguration` carga, valida y guarda una sola preferencia mediante `PlayerPrefs`. La UI lee y modifica el detector **a través de** `BiofitBLEMonitor`; no hay segundo temporizador, reconexión ni nueva escena. Ante un cambio de 900 a 400 ms durante un bloqueo, **no se acorta** el bloqueo iniciado; aumentar el valor sí puede extenderlo. El siguiente par aceptado adopta el valor elegido.
-- **Parámetros:** cooldown seleccionable 900/800/700/600/500/400 ms; 900 ms por defecto. Sin cambios en umbral 0,12 g, ventana 180 ms, refractario por tobillo 320 ms, firmware, BLE, fases experimentales, colisiones, física o música.
-- **Diagnósticos:** `COOLDOWN_MS=NNN` en inicio de captura, cambios de selección y decisiones bilaterales; `COOLDOWN_MS_FINAL` en resumen; se mantiene el formato CSV existente para evitar romper análisis/replay.
-- **Pruebas añadidas:** `tests/CooldownRegression` (fronteras de seis valores, cambios durante bloqueo, duplicados/rebotes, un solo tobillo, datos inválidos, persistencia simulada/restablecer); incorporada a `.github/workflows/latency-regression.yml`. Compatibilidad de los harness `ReceiverRegression` y `DashUiRegression` preparada con shim PlayerPrefs. **Resultado verificado:** GitHub Actions [run 45276413840](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45276413840) finalizó con las 5 tareas en verde; `tests/CooldownRegression` compiló y pasó **251 comprobaciones**. Son pruebas host/estáticas, no Unity/Android.
-- **Pruebas todavía pendientes:** Unity Editor, APK Android, seis ajustes físicos, visualización en diferentes resoluciones, persistencia real Android y diagnóstico de duplicados de un mismo salto a 400 ms.
-- **Regresión/riesgo conocido:** con un cooldown corto el detector puede aceptar un segundo par UP generado por el **mismo salto físico** pasados 400 ms. El detector temporal no distingue por sí solo una nueva acción humana; no se garantiza fiabilidad física sin ensayos.
-- **Rama y PR:** `feat/configurable-bilateral-cooldown-400-900ms` (base `main` documental `8d4ec590...`). **[PR #29 en borrador](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29). No fusionar a `main` sin aprobación explícita.**
-- **Incidencias y correcciones de CI:** (1) la verificación antigua de bytes idénticos del monitor/detector bloqueaba un cambio legítimo: se reemplazó por controles específicos de UUID, relojes, física y parámetros; (2) el test 400-100 ms coincidía con el refractario de tobillo 320 ms: se cambió el caso temporal aislado a 400-50 ms; (3) el contrafactual histórico 750 ms modificaba la constante ya no operativa: ahora altera solo el default de una compilación temporal, manteniendo 750 ms **fuera** del selector; (4) se añadió la nueva clase al harness de RawRegression. Todas las regresiones cerraron en verde.
-- **Commits principales:** detector `d18d286`, UI `363e597`, persistencia `b305cb6`, test `3d85b67`, pruebas de compatibilidad y correcciones posteriores; estado comprobado mediante Actions en `7c8d89de`.
-- **Documento completo y procedimiento experimental:** [COOLDOWN_BILATERAL_CONFIGURABLE.md](COOLDOWN_BILATERAL_CONFIGURABLE.md).
-- **Próximo paso:** consultar CI, inspeccionar el diff, probar en un **clon independiente**; conservar intacto `C:\Users\Capo\Documents\BIOFIT-DASH-NUEVOS-NIVELES`.
+**Diferenciar preferencia personal y default de aplicación:** una instalación nueva conserva el **valor predeterminado de 900 ms**; si el usuario selecciona 400 ms, `PlayerPrefs` guarda 400 y lo restaura al abrir. Esto preserva la referencia histórica y la capacidad de seguir experimentando. El cooldown es tiempo de bloqueo entre pares aceptados, **no** la latencia BLE del primer salto.
+
+**Estado de verificación:** 400 ms **validado físicamente por declaración del usuario**, satisfactoriamente en la experiencia que probó, sin métricas numéricas publicadas. No equivale a una prueba estadística de sensibilidad/especificidad, a demostrar cero duplicados ni a validar individualmente los otros cuatro tiempos intermedios. Los seis valores y las fronteras superaron **251 pruebas deterministas de host**, y el commit del PR #29 `3a5956dcec304a6ae49db31291a01b4ad19d9783` superó **5/5 jobs** en [GitHub Actions #45276650454](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45276650454).
+
+**Arquitectura aprobada:** `BiofitBilateralJumpDetector.PairCooldownMilliseconds` manda sobre el timer real; `BiofitCooldownConfiguration` persiste mediante `PlayerPrefs`; `BiofitBLEMonitor` expone/aplica la selección; `BiofitGeometryUX` muestra submenú independiente, resaltado de opción activa, restaurar a 900 y HUD `CD: NNN ms`. El CSV diagnóstico incorpora `COOLDOWN_MS` sin modificar la estructura existente. El bloqueo en curso no se acorta al seleccionar un valor menor; el nuevo valor gobierna pares posteriores.
+
+**Parámetros que NO cambiaron:** BILATERAL LEGACY, umbral UP 0,12 g, ventana bilateral 180 ms, refractario individual 320 ms, UUID y clocks BLE, firmware y física de Cube/Ball/Spider, cinco niveles, portales y música.
+
+**Archivos relevantes:** `Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs`, `BiofitCooldownConfiguration.cs`, `BiofitBLEMonitor.cs`, `Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs`, `tests/CooldownRegression/`, `docs/COOLDOWN_BILATERAL_CONFIGURABLE.md`. Los harness/CI se adaptaron para incluir la nueva clase. Ver detalles completos de la auditoría, correcciones y procedimiento en [COOLDOWN_BILATERAL_CONFIGURABLE.md](COOLDOWN_BILATERAL_CONFIGURABLE.md).
+
+**Evidencia Git:** [PR #29](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), rama `feat/configurable-bilateral-cooldown-400-900ms`, autorizada para integrarse en `main` por el usuario en esta conversación. **El merge se confirmará mediante el estado real del repositorio; no asumir que ocurrió solo por autorizarlo.**
+
+**Pendiente para investigación futura:** sesiones comparativas instrumentadas, tasas de saltos aceptados/omitidos y falsos positivos, duplicados con el mismo gesto a 400 ms, FPS/latencia medida, pruebas individuales de 800/700/600/500 ms y persistencia/reinicio controlados si todavía no se documentaron con evidencia. No impedir avanzar el desarrollo visual y de Configuración mientras no haya una regresión observada.
+
+**Próximo trabajo solicitado:** seguir mejorando el **menú Configuración** desde esta versión principal, sin alterar el control BLE. El proyecto de Windows validado `C:\Users\Capo\Documents\BIOFIT-DASH-NUEVOS-NIVELES` y el clon experimental deben conservarse, sin sobrescribir ni limpiar sus recursos locales.
+
 
 
 >
@@ -34,9 +35,9 @@
 
 **La prioridad absoluta de BIOFIT GAME es conservar operativo y fiable el detector BLE BILATERAL LEGACY.** Si un cambio visual, de niveles, interfaz o rendimiento compromete la detección o la ejecución de movimientos, se debe **restaurar el funcionamiento de BILATERAL LEGACY antes que conservar dicho cambio**.
 
-**Línea de base actual (no modificar sin ensayo controlado):** umbral UP 0,12 g, ventana bilateral 180 ms, cooldown entre pares aceptados **900 ms**, y lógica de firmware/recepción sin modificaciones.
+**Línea de base actual (no modificar sin ensayo controlado):** umbral UP 0,12 g, ventana bilateral 180 ms, refractario individual 320 ms, y **cooldown configurable de 900/800/700/600/500/400 ms**. El default es 900 ms; el usuario validó físicamente 400 ms y lo prefiere actualmente. No alterar lógica de firmware/recepción.
 
-**Idea futura, NO aprobada ni implementada:** evaluar bajar el cooldown de **900 ms a 600 ms**. Solo mediante rama experimental, copia de seguridad, comparación A/B con ambos tobillos, medición de falsos positivos, pares reconocidos, saltos efectivos y estabilidad en Unity/Android. No confundir cooldown con latencia BLE. Si empeora fiabilidad o estabilidad, regresar a 900 ms. **La versión estable mantiene 900 ms hasta que las mediciones justifiquen el cambio.**
+**Comparaciones futuras:** los seis valores ya se pueden seleccionar en la misma APK; 400 ms tiene evaluación física satisfactoria comunicada por el usuario. Pendiente: cuantificar A/B, falsos positivos, pares reconocidos y acciones ejecutadas, sin confundir cooldown con latencia BLE. Conservar la opción 900 ms y el botón de restablecimiento.
 
 ## 1. Resumen del proyecto (conocido y confirmado)
 
@@ -55,7 +56,7 @@ Hay cinco mapas JSON en `Assets/BIOFIT/Resources/BiofitThreeModes/` (duración n
 4. `StereoMadness.json` — Cube → Ball → Spider → Cube.
 5. `WaveVibe.json` — Cube → Ball → Spider → Cube → Ball.
 
-El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y cooldown 900 ms**. Los 900 ms son un intervalo refractario, **no** una medición de latencia BLE. La física del Cube y estos parámetros no deben cambiarse sin una prueba A/B explícita.
+El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y cooldown seleccionable 900/800/700/600/500/400 ms** (predeterminado 900; preferencia actual del usuario: 400 ms). El cooldown no es una medición de latencia BLE. La física del Cube y los demás filtros no deben cambiarse incidentalmente.
 
 ## 2. Evidencia y límites de lo que está validado
 
@@ -64,11 +65,11 @@ El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y coold
 - **No medido cuantitativamente:** tasa de falsos positivos/negativos, latencia real, FPS, prueba formal prolongada de transiciones, colisiones y respawn. Que funcione bien en una prueba no demuestra todas estas métricas.
 - **Pruebas automatizadas:** verificaciones estáticas y host en GitHub Actions; **no** sustituyen un ensayo Unity/Android real.
 - **Firmware:** repositorio independiente: https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-Firmware. La versión realmente instalada en los ESP32 no está verificada por esta documentación.
-- **Prohibido asumir como hecho:** que el detector entrega 900 ms de latencia; que los 60 FPS estén medidos; que una verificación CI en verde demuestre que el gameplay físico es fiable.
+- **Prohibido asumir como hecho:** que el cooldown representa la latencia BLE; que los 60 FPS estén medidos; que CI en verde demuestre fiabilidad estadística o ausencia de duplicados.
 
 ## 3. Recursos e instalaciones locales
 
-- Proyecto Unity de trabajo en Windows: `C:\Users\Capo\Documents\BIOFIT-DASH-PRINCIPAL`.
+- **Última carpeta funcional de referencia indicada por el usuario:** `C:\Users\Capo\Documents\BIOFIT-DASH-NUEVOS-NIVELES`. Conserva también el clon experimental `BIOFIT-DASH-COOLDOWN-EXPERIMENTAL`. No tocar la antigua `BIOFIT-DASH-PRINCIPAL` sin inspeccionar su estado.
 - Biblioteca local de referencia: `C:\Users\Capo\Documents\BIOFIT-RECURSOS-GD`.
 - Se catalogaron **194.750 registros** en el inventario local y se generó el catálogo HTML con buscador; el usuario confirmó que abre.
 - **PR #26 fusionado a main (2026-11-23):** scripts PowerShell e inventarios ligeros bajo `tools/assets/` y `docs/assets/`. Las bibliotecas completas y las vistas HTML permanecen locales.
@@ -90,11 +91,11 @@ El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y coold
 
 ## 5. Estado de la etapa actual
 
-**Versión estable de referencia:** cinco niveles más exigentes `Nivel 1` a `Nivel 5`, seleccionables de izquierda a derecha, con Cube, Ball, Spider y secuencias de portales. **PR #28 fusionado en `main` el 2026-11-23**, commit de integración [`017eb093a670703591479228307817db51c8197b`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/017eb093a670703591479228307817db51c8197b).
+**Versión funcional base:** los cinco niveles del PR #28 permanecen, y **PR #29** agrega el cooldown seleccionable y el HUD, con aprobación del usuario para adoptarlo como nueva versión principal. La referencia histórica de niveles es el commit [`017eb093a670703591479228307817db51c8197b`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/017eb093a670703591479228307817db51c8197b); verificar el merge más reciente de PR #29 en GitHub.
 
 **Prueba funcional confirmada por el usuario:** ejecutó la versión en Unity Editor, construyó la APK e informó que en Android los movimientos físicos funcionan bien con los ESP32. Esta es la línea de base que **no se debe romper**. No se dispone de informe cuantitativo de falsas activaciones, latencia ni FPS.
 
-**Restricciones:** mantener código de BLE BILATERAL LEGACY, umbral 0,12 g, ventana 180 ms, cooldown 900 ms, física original Cube y firmware intactos. La posibilidad de 600 ms es únicamente hipótesis futura para test A/B, no una configuración estable.
+**Restricciones:** mantener BILATERAL LEGACY, umbral 0,12 g, ventana 180 ms, refractario individual 320 ms, **selector completo 900/800/700/600/500/400 ms**, física original Cube y firmware intactos. La preferencia del usuario por 400 ms no justifica eliminar alternativas ni cambiar el default de 900 ms.
 
 **Arte pendiente:** los iconos de Ball y Spider y los gráficos de sus portales **siguen siendo provisionales**; NO se importaron los sprites originales desde la biblioteca de Windows. El repositorio contiene soporte para importar PNG individuales en `Assets/BIOFIT/Resources/BiofitThreeModes/Artwork/`, pero no incluye esos PNG. La biblioteca `BIOFIT-RECURSOS-GD` de unos 5,90 GB (~195.691 archivos) es local; el usuario contempla compartirla por Google Drive para seleccionar recursos. Comprobar licencia antes de publicar.
 
@@ -108,6 +109,7 @@ El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y coold
 | 2026-11-23 | Biblioteca de recursos local inventariada y catálogo HTML generado | El usuario confirmó catálogo funcional; recuento comunicado: 194.750 registros |
 | 2026-11-23 | Scripts y documentación de recursos integrados | PR #26 fusionado, commit `17c92fcbdeb0c7d65b5610fcf649e089d7c9aced` |
 | 2026-11-23 | Cinco niveles más exigentes y selector español: Android con sensores físicos | El usuario confirmó que la APK y los movimientos corporales funcionan; PR #28 fusionado, commit `017eb093a670703591479228307817db51c8197b` |
+| 2026-11-23 | Cooldown configurable con seis opciones, 400 ms preferido | Validación física satisfactoria de 400 ms declarada por usuario; PR #29 autorizado para `main`; CI 251 checks, 5/5 jobs en verde. No hay todavía informe cuantitativo. |
 
 **Regla:** agregar una entrada SOLO cuando un cambio esté implementado o un ensayo se haya realizado. Distinguir `propuesto`, `en desarrollo`, `CI aprobado`, `probado en Editor` y `probado en Android con sensores`. Añadir enlaces a PR/commit o evidencia de prueba. Para mantener legibilidad, resumir aquí los últimos 10–15 hitos y dejar el historial profundo en Git.
 
@@ -142,5 +144,5 @@ Y escribir:
 - **CI:** [GitHub Actions](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45253847730) completó pruebas estáticas/host. El CI no ejecuta una APK ni sustituye las pruebas físicas.
 - **Arte aún provisional:** Ball, Spider y portales usan sprites fallback programáticos porque los gráficos de `BIOFIT-RECURSOS-GD` todavía no fueron seleccionados/importados. Conservar esa integración como próximo trabajo separado.
 - **No afirmar sin datos:** FPS de 60 medidos, latencia exacta, validación de todos los eventos, cero falsos positivos o fiabilidad estadística.
-- **Restricciones intocadas:** física Cube original, detector BLE BILATERAL LEGACY, firmware, umbral 0,12 g, ventana 180 ms, cooldown 900 ms, sincronización y UUID.
+- **Restricciones intocadas:** física Cube original, BLE BILATERAL LEGACY, firmware, umbral 0,12 g, ventana 180 ms, sincronización y UUID; el cooldown ahora es seleccionable 900/800/700/600/500/400 ms sin reemplazar el detector.
 - **Detalles:** [NIVELES_PROGRESIVOS_1500MS.md](NIVELES_PROGRESIVOS_1500MS.md).
