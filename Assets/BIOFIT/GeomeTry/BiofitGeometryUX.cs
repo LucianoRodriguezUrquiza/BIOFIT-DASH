@@ -1050,7 +1050,7 @@ namespace Biofit.GeomeTryOriginal
                 eventLabel.text =
                     "PARES RECIBIDOS: " + (bridge == null ?
                         "0" : bridge.AcceptedPairs.ToString()) +
-                    "\nSALTOS CUBO: " + (bridge == null ?
+                    (BiofitThreeModesBootstrap.Active ? "\nACCIONES PERSONAJE: " : "\nSALTOS CUBO: ") + (bridge == null ?
                         "0" : bridge.ExecutedJumps.ToString());
                 captureLabel.text =
                     "CAPTURA: " + (m.GameCaptureActive ? "ACTIVA" : "INACTIVA") +
