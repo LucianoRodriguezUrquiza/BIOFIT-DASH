@@ -6,6 +6,8 @@ string[] sources = {
     "Assets/BIOFIT/GeomeTry/BiofitUiArtwork.cs",
     "Assets/BIOFIT/GeomeTry/Editor/BiofitGeometryUxPreflight.cs",
     "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs",
+    "Assets/BIOFIT/GeomeTry/BiofitThreeModes.cs",
+    "Assets/BIOFIT/GeomeTry/Editor/BiofitThreeModesBuild.cs",
 };
 bool broken = false;
 foreach (string path in sources)
