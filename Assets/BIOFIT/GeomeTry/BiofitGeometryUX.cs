@@ -29,8 +29,10 @@ namespace Biofit.GeomeTryOriginal
             "StereoMadness", "WaveVibe"
         };
         private static readonly string[] MapTitles = {
-            "NIVEL 1 · CUBO", "NIVEL 2 · BOLA", "NIVEL 3 · SPIDER",
-            "NIVEL 4 · TRES MODOS", "NIVEL 5 · TRES MODOS +"
+            "NIVEL 1", "NIVEL 2", "NIVEL 3", "NIVEL 4", "NIVEL 5"
+        };
+        private static readonly string[] MapModes = {
+            "CUBO", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"
         };
         private static BiofitGeometryUX instance;
         private static readonly FieldInfo CharacterSpriteField =
@@ -171,7 +173,7 @@ namespace Biofit.GeomeTryOriginal
                 // original cards, and the old baked card has been removed.
                 selectorFocusCard.anchoredPosition =
                     new Vector2(0f, 7f + bounce);
-                selectorFocusCard.localScale = Vector3.one;
+                // Keep the button feedback component in charge of press scaling.
             }
 
             if (currentScene == Settings && commandFeedbackLabel != null &&
@@ -414,6 +416,8 @@ namespace Biofit.GeomeTryOriginal
                 b.onClick = new Button.ButtonClickedEvent();
                 b.onClick.AddListener(() => Navigate(targetScene));
                 b.interactable = true;
+                if (b.GetComponent<BiofitSettingsButtonFeedback>() == null)
+                    b.gameObject.AddComponent<BiofitSettingsButtonFeedback>();
                 return;
             }
             Debug.LogWarning("BIOFIT UI: botón original no encontrado: " + objectName);
@@ -493,7 +497,7 @@ namespace Biofit.GeomeTryOriginal
             // In Settings the visible frame (including children) physically
             // shrinks on press and gently springs back on release. An invisible
             // overlay/color tint alone cannot animate the opaque nested artwork.
-            if (currentScene == Settings && background.a > 0.05f)
+            if (background.a > 0.05f)
                 frame.gameObject.AddComponent<BiofitSettingsButtonFeedback>();
 
             // Arcade beveled button. Transparent click zones remain invisible.
@@ -583,7 +587,7 @@ namespace Biofit.GeomeTryOriginal
             string target = scene == LevelScene ? Select : Menu;
             // Level selector already includes its OWN back-arrow artwork.
             // Add only a touch hit region, never a second image over the first.
-            if (scene == Select && levelBackdrop != null)
+            if (scene == Select && artwork != null)
             {
                 Hotspot("VOLVER sobre flecha original", canvasRoot,
                     new Vector2(.051f, .913f), new Vector2(144f, 135f),
@@ -731,8 +735,9 @@ namespace Biofit.GeomeTryOriginal
 
             EnsureArtwork();
 
-            Texture2D backdrop = artwork != null ?
-                artwork.background : levelBackdrop;
+            // Never show the unprocessed backdrop: it may contain baked old
+            // level names, which would remain visible behind live cards.
+            Texture2D backdrop = artwork != null ? artwork.background : null;
             if (backdrop != null)
             {
                 RectTransform bg = Rect("BIOFIT fondo limpio sin duplicados", board,
@@ -752,10 +757,16 @@ namespace Biofit.GeomeTryOriginal
                     Vector2.zero, 64, Lime);
             }
 
-            // A movable card is not a cropped DUPLICATE above a baked card:
-            // all five original cards were removed from the backdrop first.
-            // Every card has its own transparent graphic and independent touch
-            // target. Vertical-only focus lift stays inside the 4px gutters.
+            // Build ALL five cards from live UI objects. The source image may
+            // contain obsolete English names; it is NOT used as the card art.
+            // CardLeft is naturally ordered from left to right (index 0 first).
+            // The visual and clickable surface share the SAME RectTransform,
+            // so press feedback is visible for every card on 16:9 displays.
+            Color[] accents = {
+                new Color(.35f, .95f, .38f), new Color(.25f, .88f, 1f),
+                new Color(.79f, .46f, 1f), new Color(1f, .77f, .26f),
+                new Color(1f, .46f, .55f)
+            };
             for (int i = 0; i < MapKeys.Length; i++)
             {
                 int index = i;
@@ -770,26 +781,47 @@ namespace Biofit.GeomeTryOriginal
                     BiofitUiArtwork.ReferenceWidth;
                 float height = (BiofitUiArtwork.CardBottom - BiofitUiArtwork.CardTop) *
                     900f / BiofitUiArtwork.ReferenceHeight;
-                if (artwork != null)
+
+                Button btn = Button("BIOFIT " + MapTitles[i], board, "",
+                    center, new Vector2(width, height), Vector2.zero,
+                    () => StartLevel(index), accents[i], 31);
+                selectorHotspots[i] = btn;
+                separateCards[i] = btn.transform as RectTransform;
+
+                BiofitMode mode = i == 1 ? BiofitMode.Ball :
+                    i == 2 ? BiofitMode.Spider : BiofitMode.Cube;
+                RectTransform iconBox = Rect("Icono " + MapTitles[i], btn.transform,
+                    new Vector2(.5f, .68f), new Vector2(122f, 122f), Vector2.zero);
+                Image icon = iconBox.gameObject.AddComponent<Image>();
+                icon.sprite = BiofitThreeModeArt.Make(mode, false);
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                if (i >= 3)
                 {
-                    RectTransform card = Rect("Tarjeta independiente " + MapKeys[i],
-                        board, center, new Vector2(width, height), Vector2.zero);
-                    RawImage image = card.gameObject.AddComponent<RawImage>();
-                    image.texture = artwork.cards[i];
-                    image.raycastTarget = false;
-                    separateCards[i] = card;
-                    selectorHotspots[i] = Hotspot("Abrir nivel " + MapKeys[i],
-                        card, new Vector2(.5f, .5f),
-                        new Vector2(width, height), () => StartLevel(index));
+                    // Mixed levels show all three vehicle icons.
+                    iconBox.sizeDelta = new Vector2(82f, 82f);
+                    iconBox.anchoredPosition += new Vector2(-56f, 0f);
+                    foreach (BiofitMode other in new[] {BiofitMode.Ball, BiofitMode.Spider})
+                    {
+                        RectTransform second = Rect("Modo mixto " + other,
+                            btn.transform, new Vector2(.5f, .68f),
+                            new Vector2(72f, 72f),
+                            new Vector2(other == BiofitMode.Ball ? 30f : 95f, 0f));
+                        Image image = second.gameObject.AddComponent<Image>();
+                        image.sprite = BiofitThreeModeArt.Make(other, false);
+                        image.preserveAspect = true;
+                        image.raycastTarget = false;
+                    }
                 }
-                else if (levelBackdrop == null)
-                    selectorHotspots[i] = Button("Nivel " + MapKeys[i], board,
-                        MapTitles[i], center, new Vector2(width, height),
-                        Vector2.zero, () => StartLevel(index), Lime, 29);
-                else
-                    selectorHotspots[i] = Hotspot("Abrir nivel " + MapKeys[i],
-                        board, center, new Vector2(width, height),
-                        () => StartLevel(index));
+                Text("Nombre " + MapTitles[i], btn.transform, MapTitles[i],
+                    new Vector2(.5f, .31f), new Vector2(width - 12f, 64f),
+                    Vector2.zero, 35, Navy);
+                Text("Modo " + MapTitles[i], btn.transform, MapModes[i],
+                    new Vector2(.5f, .18f), new Vector2(width - 16f, 36f),
+                    Vector2.zero, 19, Navy);
+                Text("Duración " + MapTitles[i], btn.transform, "≈ 60 s",
+                    new Vector2(.5f, .07f), new Vector2(width - 20f, 32f),
+                    Vector2.zero, 18, Navy);
             }
 
             // These are the ONLY live progress indicators. The old dots were
@@ -808,7 +840,7 @@ namespace Biofit.GeomeTryOriginal
 
             // Arrow art belongs to the user's original reference screenshot.
             // Do not paint another arrow or copy of the artwork on top of it.
-            if (levelBackdrop != null)
+            if (artwork != null)
             {
                 Hotspot("Nivel anterior", board, new Vector2(.041f, .476f),
                     new Vector2(123f, 200f), () => CycleFocus(-1));
@@ -828,7 +860,7 @@ namespace Biofit.GeomeTryOriginal
         {
             focusSince = Time.unscaledTime;
             if (focusLabel != null)
-                focusLabel.text = "NIVEL ACTUAL: " + MapTitles[focusLevel];
+                focusLabel.text = "SELECCIONADO: " + MapTitles[focusLevel];
             for (int i = 0; i < selectorDotFills.Length; i++)
             {
                 if (selectorDotFills[i] != null)
