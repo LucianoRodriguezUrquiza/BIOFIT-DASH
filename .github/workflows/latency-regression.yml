@@ -63,7 +63,7 @@ jobs:
           $dev = Get-Content -Raw "$root/Scripts/DevUtils.cs"
           $manager = Get-Content -Raw "$root/Scripts/UIManager.cs"
           if (!$dev.Contains('BIOFIT_BACKGROUND_RESOURCE_FIX') -or $dev.Contains('string folderPath = "Assets/Resources/UI/Backgrounds"')) { throw 'DevUtils background path not repaired' }
-          if (!$manager.Contains('BIOFIT_CANVAS_LOAD_RACE_FIX') -or $manager.Contains('Debug.LogError("Canvas introuvable dans la scène.")')) { throw 'UIManager transient Canvas error not repaired' }
+          if (!$manager.Contains('BIOFIT_CANVAS_LOAD_RACE_FIX') -or $manager.Contains('Debug.LogError("Canvas introuvable')) { throw 'UIManager transient Canvas error not repaired' }
           $orb = Get-Content -Raw "$root/Scripts/JumpOrb.cs"
           if (!$orb.Contains('BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse()')) { throw 'BLE orb input absent' }
           if (!$orb.Contains('12.5f') -or !$orb.Contains('20.0f') -or !$orb.Contains('27.0f')) { throw 'Orb forces altered' }
