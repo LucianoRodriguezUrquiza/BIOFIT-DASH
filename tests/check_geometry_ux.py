@@ -118,10 +118,22 @@ for variable in ["connectionLabel", "eventLabel", "captureLabel",
     assert variable in ui
 for action in [
     "StartGameCapture()", "StopGameCapture()",
-    "ToggleRawCapture()", "MarkVideoSync()", "RequestExport(true)",
-    "RequestExport(false)",
+    "ToggleRawCapture()", "MarkVideoSync()", "RequestExport(saf)",
 ]:
     assert action in ui, action
+
+# 7b. A finger press has visible feedback without duplicating a BLE action.
+press = (root / "Assets/BIOFIT/GeomeTry/BiofitSettingsButtonFeedback.cs").read_text()
+assert "frame.gameObject.AddComponent<BiofitSettingsButtonFeedback>()" in ui
+for token in ["IPointerDownHandler", "IPointerUpHandler", "IPointerExitHandler",
+              "Time.unscaledDeltaTime", "Vector3.one * .92f", "1.04f"]:
+    assert token in press, token
+for action in ["StartCapture", "StopCapture", "ToggleRawCapture",
+               "MarkSync", "ExportCapture"]:
+    assert ("private void " + action + "(") in ui, action
+assert "commandFeedbackLabel.text = message;" in ui
+assert '"SYNC NO MARCADO · INICIÁ REGISTRO"' in ui
+assert '" SOLICITADA · ESPERÁ CONFIRMACIÓN"' in ui
 
 # 8. FPS means actual frame delta count; distinguish uncapped Editor from APK.
 assert "fpsFrames / fpsElapsed" in ui
