@@ -23,6 +23,7 @@ namespace Biofit.GeomeTryOriginal
         private const string LevelScene = "Level";
         private const string Custom = "Customisation";
         private const string Settings = "Settings";
+        private static readonly int[] CooldownOptionsMs = { 900, 800, 700, 600, 500, 400 };
         private const string PrefSkin = "BIOFIT_GEOMETRY_SKIN_V1";
         private static readonly string[] MapKeys = {
             "BackOnTrack", "JumpyNightmare", "Polargeist",
@@ -53,6 +54,11 @@ namespace Biofit.GeomeTryOriginal
         private TMP_Text performanceLabel;
         private TMP_Text statusLabel;
         private TMP_Text commandFeedbackLabel;
+        private TMP_Text cooldownValueLabel;
+        private TMP_Text cooldownHudLabel;
+        private readonly Button[] cooldownOptionButtons = new Button[6];
+        private bool cooldownPage;
+        private float refreshCooldownAt;
         private float commandFeedbackUntil;
         private TMP_Text skinLabel;
         private RectTransform skinSelectionOutline;
@@ -140,6 +146,7 @@ namespace Biofit.GeomeTryOriginal
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            if (scene.name != Settings) cooldownPage = false;
             if (paused) RestorePause();
             BuildScreen(scene.name);
         }
@@ -186,6 +193,12 @@ namespace Biofit.GeomeTryOriginal
             {
                 refreshStatusAt = Time.unscaledTime + 0.4f;
                 RefreshBleStatus();
+            }
+            if (currentScene == LevelScene && cooldownHudLabel != null &&
+                Time.unscaledTime >= refreshCooldownAt)
+            {
+                refreshCooldownAt = Time.unscaledTime + .4f;
+                RefreshCooldownHud();
             }
             if (currentScene == LevelScene && Time.unscaledTime >= findCubeAt)
             {
@@ -277,6 +290,11 @@ namespace Biofit.GeomeTryOriginal
             currentScene = sceneName;
             statusLabel = null;
             commandFeedbackLabel = null;
+            cooldownValueLabel = null;
+            cooldownHudLabel = null;
+            refreshCooldownAt = 0f;
+            for (int i = 0; i < cooldownOptionButtons.Length; i++)
+                cooldownOptionButtons[i] = null;
             commandFeedbackUntil = 0f;
             connectionLabel = null;
             eventLabel = null;
@@ -338,7 +356,11 @@ namespace Biofit.GeomeTryOriginal
 
             if (sceneName == Select) BuildLevelSelection();
             else if (sceneName == Custom) BuildSkinSelection();
-            else if (sceneName == Settings) BuildSettings();
+            else if (sceneName == Settings)
+            {
+                if (cooldownPage) BuildCooldownSettings();
+                else BuildSettings();
+            }
             else if (sceneName == LevelScene) BuildLevelHud();
             else BuildOtherScene(sceneName);
             if (sceneName != Menu) BuildBackButton(sceneName);
@@ -588,6 +610,15 @@ namespace Biofit.GeomeTryOriginal
         private void BuildBackButton(string scene)
         {
             string target = scene == LevelScene ? Select : Menu;
+            Action goBack = () =>
+            {
+                if (scene == Settings && cooldownPage)
+                {
+                    cooldownPage = false;
+                    BuildScreen(Settings);
+                }
+                else Navigate(target);
+            };
             // Level selector already includes its OWN back-arrow artwork.
             // Add only a touch hit region, never a second image over the first.
             if (scene == Select && artwork != null)
@@ -599,7 +630,7 @@ namespace Biofit.GeomeTryOriginal
             }
             ImageButton("VOLVER", canvasRoot, backIcon, "<",
                 new Vector2(.080f, .902f), new Vector2(88f, 94f),
-                Vector2.zero, () => Navigate(target));
+                Vector2.zero, goBack);
         }
 
         private void Navigate(string scene)
@@ -1066,7 +1097,103 @@ namespace Biofit.GeomeTryOriginal
             Button("Export SAF", canvasRoot, "GUARDAR ARCHIVOS (SAF)",
                 new Vector2(.500f, .078f), new Vector2(620f, 62f),
                 Vector2.zero, () => ExportCapture(true), Lime, 27);
+            // Dedicated subpage; do not crowd the existing capture controls.
+            Button("Abrir cooldown", canvasRoot, "COOLDOWN",
+                new Vector2(.180f, .078f), new Vector2(320f, 62f),
+                Vector2.zero, () => { cooldownPage = true; BuildScreen(Settings); },
+                Ice, 26);
             RefreshBleStatus();
+        }
+
+        private void BuildCooldownSettings()
+        {
+            Fill("BIOFIT cooldown fondo", canvasRoot, Blue);
+            ArcadeCorners(canvasRoot);
+            ArcadeLogo(canvasRoot);
+
+            RectTransform heading = ArcadePanel("Cooldown titulo",
+                canvasRoot, new Vector2(.5f, .793f),
+                new Vector2(1060f, 76f), Vector2.zero);
+            Text("Cooldown titulo texto", heading, "COOLDOWN BILATERAL",
+                new Vector2(.5f, .5f), new Vector2(1000f, 60f),
+                Vector2.zero, 38, Color.white);
+            Text("Cooldown indicacion", canvasRoot,
+                "ELEGÍ EL TIEMPO ENTRE ACCIONES BILATERALES",
+                new Vector2(.5f, .686f), new Vector2(1200f, 52f),
+                Vector2.zero, 26, Ice);
+
+            for (int i = 0; i < CooldownOptionsMs.Length; i++)
+            {
+                int milliseconds = CooldownOptionsMs[i];
+                float x = .23f + (i % 3) * .27f;
+                float y = i < 3 ? .525f : .355f;
+                cooldownOptionButtons[i] = Button(
+                    "Cooldown opcion " + milliseconds, canvasRoot,
+                    milliseconds + " ms",
+                    new Vector2(x, y), new Vector2(310f, 105f),
+                    Vector2.zero, () => SelectCooldown(milliseconds), Ice, 33);
+            }
+
+            RectTransform current = ArcadePanel("Cooldown actual panel",
+                canvasRoot, new Vector2(.5f, .195f),
+                new Vector2(890f, 76f), Vector2.zero);
+            cooldownValueLabel = Text("Cooldown real del detector",
+                current, "", new Vector2(.5f, .5f),
+                new Vector2(845f, 60f), Vector2.zero, 31, Color.white);
+            Button("Restaurar cooldown", canvasRoot, "RESTABLECER A 900 ms",
+                new Vector2(.5f, .077f), new Vector2(575f, 65f),
+                Vector2.zero, () => SelectCooldown(900), Lime, 27);
+            RefreshCooldownControls();
+        }
+
+        private void SelectCooldown(int milliseconds)
+        {
+            BiofitBLEMonitor monitor = GetMonitor();
+            if (monitor == null || !monitor.SetPairCooldownMilliseconds(milliseconds))
+            {
+                if (cooldownValueLabel != null)
+                    cooldownValueLabel.text = "ERROR: RECEPTOR BLE NO DISPONIBLE";
+                Debug.LogError("BIOFIT cooldown: no se pudo aplicar al detector real.");
+                return;
+            }
+            RefreshCooldownControls();
+        }
+
+        private void RefreshCooldownControls()
+        {
+            BiofitBLEMonitor monitor = GetMonitor();
+            int active = monitor == null ? -1 : monitor.PairCooldownMilliseconds;
+            bool consistent = monitor != null && monitor.CooldownPreferenceMatchesDetector;
+            if (cooldownValueLabel != null)
+                cooldownValueLabel.text = monitor == null ?
+                    "COOLDOWN: RECEPTOR NO DISPONIBLE" :
+                    "COOLDOWN ACTUAL: " + active + " ms" +
+                    (consistent ? "" : "  · ERROR DE PREFERENCIA");
+            for (int i = 0; i < cooldownOptionButtons.Length; i++)
+            {
+                Button option = cooldownOptionButtons[i];
+                if (option == null) continue;
+                bool selected = active == CooldownOptionsMs[i];
+                Color color = selected ? Lime : Ice;
+                Image outer = option.GetComponent<Image>();
+                if (outer != null) outer.color = color;
+                foreach (Image image in option.GetComponentsInChildren<Image>())
+                    if (image.name.EndsWith("lime inset", StringComparison.Ordinal))
+                        image.color = color;
+                TMP_Text label = option.GetComponentInChildren<TMP_Text>();
+                if (label != null)
+                    label.text = CooldownOptionsMs[i] + " ms" +
+                        (selected ? "\nACTIVO" : "");
+            }
+        }
+
+        private void RefreshCooldownHud()
+        {
+            if (cooldownHudLabel == null) return;
+            BiofitBLEMonitor monitor = GetMonitor();
+            cooldownHudLabel.text = monitor == null ? "CD: --" :
+                "CD: " + monitor.PairCooldownMilliseconds + " ms" +
+                (monitor.CooldownPreferenceMatchesDetector ? "" : " !");
         }
 
         private static BiofitBLEMonitor GetMonitor()
@@ -1210,6 +1337,10 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildLevelHud()
         {
+            cooldownHudLabel = Text("Cooldown BLE activo HUD", canvasRoot,
+                "", new Vector2(.780f, .946f), new Vector2(285f, 48f),
+                Vector2.zero, 26, Ice);
+            RefreshCooldownHud();
             ImageButton("Pause game", canvasRoot, pauseIcon, "Ⅱ",
                 new Vector2(.948f, .884f), new Vector2(119, 123),
                 Vector2.zero, TogglePause);
