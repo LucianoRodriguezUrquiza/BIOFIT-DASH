@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -23,6 +24,9 @@ namespace Biofit.GeomeTryOriginal
             Register("biofitBallPortal", BiofitMode.Ball);
             Register("biofitSpiderPortal", BiofitMode.Spider);
             Register("biofitCubePortal", BiofitMode.Cube);
+            RegisterDecoration("biofitDecoPulse");
+            RegisterDecoration("biofitDecoCrystal");
+            RegisterDecoration("biofitDecoStar");
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
@@ -48,6 +52,22 @@ namespace Biofit.GeomeTryOriginal
             trigger.isTrigger = true;
             trigger.size = new Vector2(1.5f, 10f);
             template.AddComponent<BiofitModePortal>().Target = mode;
+            Prefab.Prefabs[key] = template;
+        }
+
+        // Decorative sprites are instantiated by the ORIGINAL map loader through
+        // Prefab.Prefabs, without a collider or any change to player physics.
+        // Optional licensed artwork overrides are loaded from Resources.
+        private static void RegisterDecoration(string key)
+        {
+            if (Prefab.Prefabs.ContainsKey(key) && Prefab.Prefabs[key] != null) return;
+            GameObject template = new GameObject("BIOFIT_TEMPLATE_" + key);
+            DontDestroyOnLoad(template);
+            template.transform.position = new Vector3(-50000f, 0f, 0f);
+            var sprite = template.AddComponent<SpriteRenderer>();
+            sprite.sprite = BiofitThreeModeArt.MakeDecoration(key);
+            sprite.sortingOrder = -2;
+            template.transform.localScale = Vector3.one * 1.55f;
             Prefab.Prefabs[key] = template;
         }
 
@@ -101,7 +121,26 @@ namespace Biofit.GeomeTryOriginal
             Cube cube = other.GetComponent<Cube>();
             if (cube == null || !cube.isAlive) return;
             BiofitModeMotor motor = cube.GetComponent<BiofitModeMotor>();
-            if (motor != null) motor.SetMode(Target);
+            if (motor == null || motor.Mode == Target) return;
+            motor.SetMode(Target);
+            StartCoroutine(PortalFlash(transform.position));
+        }
+
+        private IEnumerator PortalFlash(Vector3 position)
+        {
+            GameObject flash = new GameObject("BIOFIT_PORTAL_TRANSITION");
+            SpriteRenderer ring = flash.AddComponent<SpriteRenderer>();
+            ring.sprite = BiofitThreeModeArt.Make(Target, true);
+            ring.sortingOrder = 24;
+            flash.transform.position = position;
+            for (float t = 0f; t < .24f; t += Time.unscaledDeltaTime)
+            {
+                float phase = Mathf.Clamp01(t / .24f);
+                flash.transform.localScale = Vector3.one * (1.0f + phase * .45f);
+                ring.color = new Color(1f, 1f, 1f, 0.7f * (1f - phase));
+                yield return null;
+            }
+            Destroy(flash);
         }
     }
 
@@ -321,7 +360,8 @@ namespace Biofit.GeomeTryOriginal
 
     internal static class BiofitThreeModeArt
     {
-        private static Sprite ball, spider, cubePortal, ballPortal, spiderPortal;
+        private static Sprite ball, spider, cubeIcon, cubePortal, ballPortal, spiderPortal;
+        private static readonly Dictionary<string, Sprite> decorationCache = new Dictionary<string, Sprite>();
         public static Sprite Make(BiofitMode mode, bool portal)
         {
             // A licensed PNG sprite can be supplied later via Resources.
@@ -331,6 +371,7 @@ namespace Biofit.GeomeTryOriginal
             if (provided != null) return provided;
             if (!portal)
             {
+                if (mode == BiofitMode.Cube) return cubeIcon ?? (cubeIcon = Build(mode, false));
                 if (mode == BiofitMode.Ball) return ball ?? (ball = Build(mode, false));
                 return spider ?? (spider = Build(mode, false));
             }
@@ -363,6 +404,15 @@ namespace Biofit.GeomeTryOriginal
                     if (ellipse < .53f && ellipse > .46f) c = accent;
                     if (Mathf.Abs(u) < .09f && Mathf.Abs(v) < .15f) c = accent;
                 }
+                else if (mode == BiofitMode.Cube)
+                {
+                    float ax = Mathf.Abs(u), ay = Mathf.Abs(v);
+                    if (ax < .92f && ay < .92f) c = Color.black;
+                    if (ax < .78f && ay < .78f) c = accent;
+                    if (ax < .56f && ay < .56f) c = Color.white;
+                    if (ax < .42f && ay < .42f) c = accent;
+                    if (ay < .16f && ax > .23f && ax < .37f) c = Color.black;
+                }
                 else if (mode == BiofitMode.Ball)
                 {
                     if (r < .92f) c = Color.black;
@@ -391,5 +441,58 @@ namespace Biofit.GeomeTryOriginal
             return Sprite.Create(texture, new Rect(0, 0, n, n),
                 new Vector2(.5f, .5f), portal ? 36f : 96f);
         }
+        // Generic ORIGINAL icons, not copied from the proprietary Geometry Dash pack.
+        // The user may replace them locally with verified-license PNG files.
+        public static Sprite MakeDecoration(string key)
+        {
+            string fileName = key == "biofitDecoPulse" ? "DecoPulse" :
+                key == "biofitDecoCrystal" ? "DecoCrystal" : "DecoStar";
+            Sprite supplied = Resources.Load<Sprite>("BiofitThreeModes/Artwork/" + fileName);
+            if (supplied != null) return supplied;
+            if (decorationCache.TryGetValue(key, out Sprite sprite)) return sprite;
+
+            const int n = 64;
+            Texture2D texture = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Point;
+            for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float u = (x - 31.5f) / 32f;
+                float v = (y - 31.5f) / 32f;
+                float r = Mathf.Sqrt(u*u + v*v);
+                Color c = Color.clear;
+                if (key == "biofitDecoPulse")
+                {
+                    if (r > .64f && r < .81f) c = Color.black;
+                    if (r > .69f && r < .77f) c = new Color(.26f, 1f, .96f);
+                    if (Mathf.Abs(u) < .095f && Mathf.Abs(v) < .39f ||
+                        Mathf.Abs(v) < .095f && Mathf.Abs(u) < .39f)
+                        c = new Color(.95f, 1f, .96f);
+                }
+                else if (key == "biofitDecoCrystal")
+                {
+                    float diamond = Mathf.Abs(u) + Mathf.Abs(v);
+                    if (diamond < .86f) c = Color.black;
+                    if (diamond < .75f) c = new Color(.5f, .35f, 1f);
+                    if (diamond < .56f) c = new Color(.78f, .7f, 1f);
+                    if (u < -.06f && v > .06f && diamond < .46f) c = Color.white;
+                }
+                else
+                {
+                    float angle = Mathf.Atan2(v, u);
+                    float radius = .53f + .30f * Mathf.Cos(angle * 5f);
+                    if (r < radius) c = Color.black;
+                    if (r < radius - .12f) c = new Color(1f, .86f, .25f);
+                    if (r < .20f) c = Color.white;
+                }
+                texture.SetPixel(x, y, c);
+            }
+            texture.Apply(false, true);
+            sprite = Sprite.Create(texture, new Rect(0, 0, n, n),
+                new Vector2(.5f, .5f), 64f);
+            decorationCache[key] = sprite;
+            return sprite;
+        }
+
     }
 }
