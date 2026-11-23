@@ -246,11 +246,16 @@ if ($uiCode.Contains("BIOFIT_CANVAS_LOAD_RACE_FIX")) {
     if (!(Same-Bytes $uiDest $uiSource)) {
         throw "UIManager.cs importado tiene cambios inesperados; no se sobrescribe."
     }
-    $oldCanvasError = 'Debug.LogError("Canvas introuvable dans la scène.");'
-    if (!$uiCode.Contains($oldCanvasError)) {
-        throw "No se encontro el mensaje de Canvas original de UIManager."
+    # Use an ASCII-only expression: Windows PowerShell 5.1 interprets
+    # UTF-8 scripts without BOM in the system code page, breaking accented
+    # French literal matches even when UIManager.cs is valid UTF-8.
+    $canvasPattern = 'Debug\.LogError\("Canvas introuvable dans la sc[^"]*"\);'
+    $canvasMatches = [Text.RegularExpressions.Regex]::Matches($uiCode, $canvasPattern)
+    if ($canvasMatches.Count -ne 1) {
+        throw "No se encontro un unico mensaje de Canvas original de UIManager."
     }
-    $uiUpdated = $uiCode.Replace($oldCanvasError,
+    $uiUpdated = [Text.RegularExpressions.Regex]::Replace($uiCode,
+        $canvasPattern,
         '// BIOFIT_CANVAS_LOAD_RACE_FIX: BIOFIT UX creates this Canvas after sceneLoaded.')
     [IO.File]::WriteAllText($uiDest, $uiUpdated,
         (New-Object System.Text.UTF8Encoding($false)))
