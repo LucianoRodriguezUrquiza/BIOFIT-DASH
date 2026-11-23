@@ -14,20 +14,25 @@ preflight = (root / "Assets/BIOFIT/GeomeTry/Editor/BiofitGeometryUxPreflight.cs"
 ps = (root / "tools/install_geometry_ui_assets.ps1").read_text()
 settings = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 
-# 1. Independent real source-image cards, NOT a scaled overlay above baked cards.
+# 1. User-visible titles are live Spanish cards, not baked English artwork.
+# The reference is used only for clean background geometry/corners/dots.
 assert "internal static readonly int[] CardLeft" in art
 assert "internal static readonly int[] CardWidths" in art
 assert "CardWidths[i]" in ui and "CardWidths[i]" in art
 assert "EraseStrip(clean, pixels, 132, 1543" in art
 assert "RemoveConnectedBlue(data, width, height);" in art
-assert "separateCards[i] = card;" in ui
+assert "separateCards[i] = btn.transform as RectTransform;" in ui
 assert "selectorFocusCard = separateCards[focusLevel];" in ui
-assert "selectorFocusCard.localScale = Vector3.one;" in ui
+assert "selectorFocusCard.localScale = Vector3.one;" not in ui, (
+    "Do not override pointer press animation")
 assert "selectorFocusCard.anchoredPosition" in ui
 assert "1.045f" not in ui, "Do not enlarge focused card over neighbors"
-assert 'RawImage image = card.gameObject.AddComponent<RawImage>();' in ui
-assert 'artwork != null ?\n                artwork.background : levelBackdrop;' in ui
-assert "artwork.cards[i]" in ui
+assert 'Button("BIOFIT " + MapTitles[i], board, ""' in ui
+assert '"NIVEL 1", "NIVEL 2", "NIVEL 3", "NIVEL 4", "NIVEL 5"' in ui
+assert '"CUBO", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"' in ui
+assert "BiofitThreeModeArt.Make(mode, false)" in ui
+assert "artwork.cards[i]" not in ui, "Baked legacy names must not show"
+assert "artwork != null ? artwork.background : null;" in ui
 
 # Card positions and original screenshot geometry must be in bounds and do
 # not overlap horizontally even after reconstruction.
@@ -190,6 +195,6 @@ assert "activeInputHandler: 0" in settings
 assert "StandaloneInputModule" in preflight
 assert "PrefabUtility.SaveAsPrefabAsset" in preflight
 
-print("PASS: rebuilt selector, no duplicated indicators, 70 safe skins, alpha "
+print("PASS: live Spanish numbered selector, no duplicated indicators, 70 safe skins, alpha "
       "logo/corners, 16:9 safe-area, structured BLE, honest FPS; untouched "
       "source physics/legacy BLE. Editor/Android validation remains necessary.")
