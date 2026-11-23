@@ -18,6 +18,7 @@
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitClockAligner.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventGate.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs" />
+    <Compile Include="../../Assets/BIOFIT/Scripts/BiofitCooldownConfiguration.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventCapture.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitSessionLogger.cs" />
     <Compile Include="../../Assets/BIOFIT/Scripts/BiofitInputEngine.cs" />
