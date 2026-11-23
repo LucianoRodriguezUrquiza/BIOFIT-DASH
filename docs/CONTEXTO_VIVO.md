@@ -8,6 +8,14 @@
 > **Estado fuente:** [CONTEXTO_ACTUAL.md](CONTEXTO_ACTUAL.md) · [Tres modos y niveles](TRES_MODOS_60S_BILATERAL.md) · [Recursos](ASSET_SOURCES.md).
 > **Historial extenso (no vigente):** [CONTEXTO_MAESTRO_HISTORICO.md](CONTEXTO_MAESTRO_HISTORICO.md).
 
+## REGLA PRIORITARIA E INNEGOCIABLE — CONTROL BLE
+
+**La prioridad absoluta de BIOFIT GAME es conservar operativo y fiable el detector BLE BILATERAL LEGACY.** Si un cambio visual, de niveles, interfaz o rendimiento compromete la detección o la ejecución de movimientos, se debe **restaurar el funcionamiento de BILATERAL LEGACY antes que conservar dicho cambio**.
+
+**Línea de base actual (no modificar sin ensayo controlado):** umbral UP 0,12 g, ventana bilateral 180 ms, cooldown entre pares aceptados **900 ms**, y lógica de firmware/recepción sin modificaciones.
+
+**Idea futura, NO aprobada ni implementada:** evaluar bajar el cooldown de **900 ms a 600 ms**. Solo mediante rama experimental, copia de seguridad, comparación A/B con ambos tobillos, medición de falsos positivos, pares reconocidos, saltos efectivos y estabilidad en Unity/Android. No confundir cooldown con latencia BLE. Si empeora fiabilidad o estabilidad, regresar a 900 ms. **La versión estable mantiene 900 ms hasta que las mediciones justifiquen el cambio.**
+
 ## 1. Resumen del proyecto (conocido y confirmado)
 
 BIOFIT GAME es una plataforma de exergaming. Su primer juego, BIOFIT DASH, se desarrolla con **Unity 6.3 LTS 6000.3.28f1** para Android. Dos trackers Waveshare ESP32-S3-LCD-1.47B con IMU QMI8658, montados en los tobillos, envían eventos por BLE. Unity utiliza **BILATERAL LEGACY** para activar una acción del personaje.
