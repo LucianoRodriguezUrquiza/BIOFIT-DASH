@@ -43,6 +43,8 @@ if (Test-Path -LiteralPath (Join-Path $targetParent "ProjectSettings")) {
 }
 # Apply only checked Unity import compatibility overlays after SHA-256 source verification.
 & (Join-Path $PSScriptRoot "apply_geometry_compat.ps1")
+# Reutiliza los PNG de interfaz del usuario cuando hay una copia local disponible.
+& (Join-Path $PSScriptRoot "restore_local_biofit_ui.ps1")
 
 Write-Host "OK: copia exacta de $($files.Count) archivos originales en Assets/GeomeTryOriginal/Assets"
 Write-Host "OK: ProjectSettings y Packages de GeomeTry quedan FUERA de Unity, sin importarse."

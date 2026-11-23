@@ -1,4 +1,4 @@
-# BIOFIT DASH — Tres modos (BILATERAL LEGACY), plan experimental
+# BIOFIT DASH — Tres modos (BILATERAL LEGACY), version principal
 
 ## Contrato de niveles
 - Longitud de todos los mapas: marcador final x=575; spawn original en x~-10; velocidad original 6.5u/s, Time.timeScale=1.5 -> ~60s reales. No se modifica velocidad, gravedad del Cube ni impulso original de salto.
@@ -20,7 +20,7 @@
 - No hay cambio de firmware, ni manipulación de los parámetros de detección BLE.
 
 ## Validación pendiente
-Estos archivos se pueden revisar estáticamente. Sin ejecutar Unity Editor ni probar el paquete Android con dos sensores **no se afirma** que la mecánica o las colisiones están validadas en el dispositivo. Revisar especialmente altura de techo, punto de aterrizaje Spider, portales desde techo y cambios de escena/respawn. No fusionar en main sin pruebas reales.
+Estos archivos se pueden revisar estáticamente. Sin ejecutar Unity Editor ni probar el paquete Android con dos sensores **no se afirma** que la mecánica o las colisiones están validadas en el dispositivo. Revisar especialmente altura de techo, punto de aterrizaje Spider, portales desde techo y cambios de escena/respawn. La rama principal integra esta version; antes de afirmar su validacion BLE/Android se requieren pruebas reales.
 
 
 ## Instalación segura desde PowerShell (proyecto separado)
@@ -28,18 +28,18 @@ Cerrar Unity antes de preparar el nuevo proyecto. En Windows PowerShell ejecutar
 
 ```powershell
 cd "C:\Users\Capo\Documents"
-git clone --recurse-submodules --branch feat/three-modes-60s-bilateral-v1 https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY.git BIOFIT-TRES-MODOS
-cd ".\BIOFIT-TRES-MODOS"
+git clone --recurse-submodules https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY.git BIOFIT-DASH-PRINCIPAL
+cd ".\BIOFIT-DASH-PRINCIPAL"
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\prepare_geometry_original.ps1"
 ```
 
-- No ejecutar **install_wavevibe_training.ps1**: los cinco mapas nuevos ya vienen incluidos en Assets/BIOFIT/Resources/BiofitThreeModes y se seleccionan por el nuevo paquete experimental. En el submódulo permanece el WaveVibe original.
-- Copiar los cuatro recursos gráficos *propios del usuario* LevelSelect.png, Skins.png, Back.png y Pause.png desde la instalación local de SPIKE-LAB que sí funciona hacia Assets/BIOFIT/Resources/BiofitUi. No están distribuidos en el repositorio.
-- Abrir la carpeta BIOFIT-TRES-MODOS en Unity 6000.3 LTS, activar Android en Build Profiles, y ejecutar el preflight original/configuración de UI usados en la versión anterior.
+- Los cinco mapas nuevos vienen incluidos en `Assets/BIOFIT/Resources/BiofitThreeModes`; no hay instalador separado de SPIKE LAB.
+- El preparador busca automáticamente los cuatro PNG de interfaz aportados por el usuario en copias locales anteriores y verifica SHA256. No están distribuidos en GitHub. Si no encuentra fuente, los solicita explícitamente.
+- Abrir la carpeta BIOFIT-DASH-PRINCIPAL en Unity 6000.3 LTS, activar Android en Build Profiles, y ejecutar el preflight original/configuración de UI usados en la versión anterior.
 - Verificar con **BIOFIT > GeomeTry ORIGINAL > 8. Verificar niveles 3 MODOS (60 s)**.
 - Compilar con **BIOFIT > GeomeTry ORIGINAL > 9. Compilar BIOFIT 3 MODOS (BLE LEGACY)**.
-- La APK tiene package com.biofitgame.threemodeslab y nombre BIOFIT TRES MODOS, independientes de SPIKE LAB LEGACY y de la app estable. Se genera en Builds/BIOFIT_TRES_MODOS_BILATERAL_*.apk.
-- En Unity Editor, el selector carga los cinco mapas experimentales. En un Android con identificador diferente, la UI vuelve a los mapas originales.
+- La APK usa package com.biofitgame.threemodeslab y nombre BIOFIT TRES MODOS, independientes de las instalaciones antiguas. Se genera en Builds/BIOFIT_TRES_MODOS_BILATERAL_*.apk.
+- En Unity Editor y en la APK de Tres Modos, el selector carga los cinco mapas principales. El constructor antiguo de GeomeTry tiene otro package y cargaría sus mapas originales.
 
 ## Rutas de prueba
 - L2: tras cada pincho de suelo (requiere cambio a techo), el siguiente pincho está en el techo (requiere retorno a suelo), y así sucesivamente.
