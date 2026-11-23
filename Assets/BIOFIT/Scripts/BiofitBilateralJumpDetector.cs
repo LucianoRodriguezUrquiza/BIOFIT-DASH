@@ -174,7 +174,8 @@ public sealed class BiofitBilateralJumpDetector
             // Inactive PhaseFastPairs retains its historical replay behavior.
             double requiredUntil = eligibleFast ? lastPairSeconds + cooldown :
                 Math.Max(nextPairAllowedSeconds, lastPairSeconds + cooldown);
-            if (pairTime < requiredUntil)
+            // Timestamps are doubles; 1 ns guards equality from rounding.
+            if (pairTime + 1e-9d < requiredUntil)
             {
                 LastDecision = Decision.PairCooldown;
                 PairCooldownRejected++;
