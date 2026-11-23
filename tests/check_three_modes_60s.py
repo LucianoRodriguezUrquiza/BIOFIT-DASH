@@ -61,11 +61,31 @@ for i, name in enumerate(NAMES, 1):
             continue
         if mode == "Cube":
             assert item["y"] == 0, (name, x, "ceiling spike in cube section")
-            actions.append(x - 4)
+            # Nominal launch 3u before spike; collider-aware envelope below.
+            actions.append(x - 3)
         else:
             if item["y"] == surface:
                 actions.append(x - 12)
                 surface = 7 if surface == 0 else 0
+    # Continuous-time envelope on level, not a Unity/Box2D simulation.
+    vy = 13.5 * 1.5
+    gravity_real = 9.81 * 4 * 1.5 ** 2
+    flight_s = 2 * vy / gravity_real
+    horizontal_flight = SPEED_U_S * flight_s
+    assert 4.3 < horizontal_flight < 4.6
+    for spike in spikes:
+        x = spike["x"]
+        is_cube = i == 1 or (
+            i == 4 and (x < 185 or x > 515)) or (
+            i == 5 and (x < 117 or 405 < x < 515))
+        if not is_cube:
+            continue
+        launch = x - 3.0
+        # Approximate overlap region: half-width player .5, hazard .125.
+        for boundary in (x - .625, x + .625):
+            t = (boundary - launch) / SPEED_U_S
+            elevation = vy * t - .5 * gravity_real * t * t
+            assert 0 < t < flight_s and elevation > .65, (name, x, t, elevation)
     action_gaps = [(b - a) / SPEED_U_S for a, b in zip(actions, actions[1:])]
     assert all(dt >= MIN_COMFORT_S for dt in action_gaps), (name, action_gaps)
     if i >= 2:
