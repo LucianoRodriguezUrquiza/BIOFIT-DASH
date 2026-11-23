@@ -152,7 +152,7 @@ static class Program
         string bridge = File.ReadAllText(
             "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs");
         Check(detector.Contains("PairCooldownMilliseconds / 1000d") &&
-            detector.Contains("pairTime < requiredUntil"),
+            detector.Contains("pairTime + 1e-9d < requiredUntil"),
             "Runtime pairing uses the selected value, not fixed 900ms");
         Check(monitor.Contains("cooldownConfiguration.Select(milliseconds)") &&
             monitor.Contains("cooldownConfiguration.Load()") &&
