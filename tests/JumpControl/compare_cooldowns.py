@@ -1,5 +1,5 @@
 """Counterfactuals compile real production sources in a temporary project.
-No source file in Assets is modified. Requires base commit in local Git history.
+No source file in Assets is modified. Requires base commit in local Git history.\nThe 750ms comparison edits only a temporary, compiled default value: NOT a UI selection.
 """
 import argparse, pathlib, subprocess, tempfile
 parser=argparse.ArgumentParser();parser.add_argument('--dotnet',default='dotnet');args=parser.parse_args()
@@ -26,7 +26,7 @@ expected={
  'v0961': ['0.0,1.7,2.7,3.7,4.7','0.0,1.6,3.2','False'],
  'v097': ['0.0,1.0,2.0,3.0,4.0','0.0,1.6,3.2','False'],
  'counterfactual_750ms': ['0.0,1.0,2.0,3.0,4.0','0.0,0.8,1.6,2.4,3.2','True']}
-for name,source in [('v0961',old),('v097',current),('counterfactual_750ms',current.replace('PairCooldownSeconds = 0.90f','PairCooldownSeconds = 0.75f'))]:
+for name,source in [('v0961',old),('v097',current),('counterfactual_750ms',current.replace('DefaultPairCooldownMilliseconds = 900','DefaultPairCooldownMilliseconds = 750'))]:
  with tempfile.TemporaryDirectory() as tmp:
   p=pathlib.Path(tmp)
   (p/'test.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>')
