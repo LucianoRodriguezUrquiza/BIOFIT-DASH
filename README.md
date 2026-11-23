@@ -43,6 +43,7 @@ La APK independiente es `com.biofitgame.threemodeslab` y se guarda en `Builds/`.
 
 ## Documentación y código principal
 
+- **[CONTEXTO VIVO — iniciar nueva conversación](docs/CONTEXTO_VIVO.md)**: último estado verificado, novedades, pendientes, próximas tareas y protocolo de actualización por paso.
 - **[CONTEXTO ACTUAL](docs/CONTEXTO_ACTUAL.md)**: arquitectura completa, estructura de assets, BLE, mapas, instalación, validaciones y restricciones.
 - [Contexto maestro histórico completo](docs/CONTEXTO_MAESTRO_HISTORICO.md): documentación detallada previa, preservada en `main` como archivo de referencia.
 - [Diseño de los cinco niveles y tres modos](docs/TRES_MODOS_60S_BILATERAL.md).
