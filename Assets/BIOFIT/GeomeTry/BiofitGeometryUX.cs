@@ -50,6 +50,8 @@ namespace Biofit.GeomeTryOriginal
         private TMP_Text captureLabel;
         private TMP_Text performanceLabel;
         private TMP_Text statusLabel;
+        private TMP_Text commandFeedbackLabel;
+        private float commandFeedbackUntil;
         private TMP_Text skinLabel;
         private RectTransform skinSelectionOutline;
         private TMP_FontAsset fallbackFont;
@@ -172,6 +174,11 @@ namespace Biofit.GeomeTryOriginal
                 selectorFocusCard.localScale = Vector3.one;
             }
 
+            if (currentScene == Settings && commandFeedbackLabel != null &&
+                commandFeedbackLabel.text.Length > 0 &&
+                Time.unscaledTime >= commandFeedbackUntil)
+                commandFeedbackLabel.text = "";
+
             if (currentScene == Settings && statusLabel != null &&
                 Time.unscaledTime >= refreshStatusAt)
             {
@@ -267,6 +274,8 @@ namespace Biofit.GeomeTryOriginal
         {
             currentScene = sceneName;
             statusLabel = null;
+            commandFeedbackLabel = null;
+            commandFeedbackUntil = 0f;
             connectionLabel = null;
             eventLabel = null;
             captureLabel = null;
@@ -481,6 +490,11 @@ namespace Biofit.GeomeTryOriginal
             colors.pressedColor = new Color(.94f, .94f, .94f, 1f);
             button.colors = colors;
             if (click != null) button.onClick.AddListener(() => click());
+            // In Settings the visible frame (including children) physically
+            // shrinks on press and gently springs back on release. An invisible
+            // overlay/color tint alone cannot animate the opaque nested artwork.
+            if (currentScene == Settings && background.a > 0.05f)
+                frame.gameObject.AddComponent<BiofitSettingsButtonFeedback>();
 
             // Arcade beveled button. Transparent click zones remain invisible.
             if (background.a > 0.05f)
@@ -983,6 +997,12 @@ namespace Biofit.GeomeTryOriginal
                 new Vector2(.5f, .22f), new Vector2(530f, 48f),
                 Vector2.zero, 18, Ice);
 
+            // Space between the heading and status cards: brief acknowledgement,
+            // distinct from CaptureBanner which reports actual file/BLE state.
+            commandFeedbackLabel = Text("Confirmacion boton", canvasRoot, "",
+                new Vector2(.5f, .731f), new Vector2(1140f, 32f),
+                Vector2.zero, 20, Ice);
+
             RectTransform performance = ArcadePanel("FPS medicion",
                 canvasRoot, new Vector2(.690f, .411f),
                 new Vector2(596f, 139f), Vector2.zero);
@@ -998,19 +1018,19 @@ namespace Biofit.GeomeTryOriginal
                 Vector2.zero, StartCapture, Lime, 27);
             Button("Stop capture", canvasRoot, "FINALIZAR",
                 new Vector2(.690f, .269f), new Vector2(430f, 66f),
-                Vector2.zero, () => GetMonitor()?.StopGameCapture(), Lime, 27);
+                Vector2.zero, StopCapture, Lime, 27);
             Button("RAW", canvasRoot, "RAW",
                 new Vector2(.205f, .167f), new Vector2(305f, 64f),
-                Vector2.zero, () => GetMonitor()?.ToggleRawCapture(), Lime, 28);
+                Vector2.zero, ToggleRawCapture, Lime, 28);
             Button("SYNC", canvasRoot, "MARCAR SYNC",
                 new Vector2(.500f, .167f), new Vector2(305f, 64f),
-                Vector2.zero, () => GetMonitor()?.MarkVideoSync(), Lime, 27);
+                Vector2.zero, MarkSync, Lime, 27);
             Button("Downloads", canvasRoot, "DESCARGAS",
                 new Vector2(.795f, .167f), new Vector2(305f, 64f),
-                Vector2.zero, () => GetMonitor()?.RequestExport(false), Lime, 27);
+                Vector2.zero, () => ExportCapture(false), Lime, 27);
             Button("Export SAF", canvasRoot, "GUARDAR ARCHIVOS (SAF)",
                 new Vector2(.500f, .078f), new Vector2(620f, 62f),
-                Vector2.zero, () => GetMonitor()?.RequestExport(true), Lime, 27);
+                Vector2.zero, () => ExportCapture(true), Lime, 27);
             RefreshBleStatus();
         }
 
@@ -1019,11 +1039,81 @@ namespace Biofit.GeomeTryOriginal
             return FindFirstObjectByType<BiofitBLEMonitor>();
         }
 
+        private void ShowCommandFeedback(string message)
+        {
+            // Visual feedback confirms only that the UI received the command.
+            // The persistent CaptureBanner confirms saving/export completion.
+            if (commandFeedbackLabel != null)
+            {
+                commandFeedbackLabel.text = message;
+                commandFeedbackUntil = Time.unscaledTime + 2.2f;
+            }
+            RefreshBleStatus();
+        }
+
         private void StartCapture()
         {
             BiofitBLEMonitor monitor = GetMonitor();
-            if (monitor != null && monitor.StartGameCapture())
+            if (monitor == null)
+            {
+                ShowCommandFeedback("REGISTRO NO INICIADO: RECEPTOR BLE AUSENTE");
+                return;
+            }
+            bool started = monitor.StartGameCapture();
+            if (started)
                 monitor.RecordControlDiagnostic("BIOFIT UI GAME=GEOMETRY INPUT=BILATERAL_LEGACY");
+            ShowCommandFeedback(started ? "REGISTRO INICIADO · CAPTURA ACTIVA" :
+                "REGISTRO NO INICIADO · REVISÁ ESTADO");
+        }
+
+        private void StopCapture()
+        {
+            BiofitBLEMonitor monitor = GetMonitor();
+            bool stopped = monitor != null && monitor.StopGameCapture();
+            ShowCommandFeedback(stopped ? "FINALIZANDO CSV · ESPERÁ ARCHIVO GUARDADO" :
+                "NO SE FINALIZÓ NINGUNA CAPTURA");
+        }
+
+        private void ToggleRawCapture()
+        {
+            BiofitBLEMonitor monitor = GetMonitor();
+            if (monitor == null)
+            {
+                ShowCommandFeedback("RAW: RECEPTOR BLE AUSENTE");
+                return;
+            }
+            monitor.ToggleRawCapture();
+            ShowCommandFeedback(monitor.RawStatus);
+        }
+
+        private void MarkSync()
+        {
+            BiofitBLEMonitor monitor = GetMonitor();
+            if (monitor == null || !monitor.GameCaptureActive)
+            {
+                ShowCommandFeedback("SYNC NO MARCADO · INICIÁ REGISTRO");
+                return;
+            }
+            string previous = monitor.SyncLabel;
+            monitor.MarkVideoSync();
+            ShowCommandFeedback(monitor.SyncLabel != previous ?
+                monitor.SyncLabel + " MARCADO" : "SYNC NO MARCADO");
+        }
+
+        private void ExportCapture(bool saf)
+        {
+            BiofitBLEMonitor monitor = GetMonitor();
+            if (monitor == null)
+            {
+                ShowCommandFeedback("EXPORTACIÓN NO SOLICITADA · SIN RECEPTOR");
+                return;
+            }
+            bool blocked = monitor.GameCaptureActive || monitor.CaptureSaving ||
+                monitor.ExportBusy;
+            monitor.RequestExport(saf);
+            ShowCommandFeedback(blocked ? "EXPORTACIÓN NO DISPONIBLE · FINALIZÁ PRIMERO" :
+                (saf ? "SAF" : "DESCARGAS") +
+                " SOLICITADA · ESPERÁ CONFIRMACIÓN");
         }
 
         private void RefreshBleStatus()
