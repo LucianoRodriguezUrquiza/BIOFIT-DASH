@@ -312,6 +312,11 @@ namespace Biofit.GeomeTryOriginal
         private static Sprite ball, spider, cubePortal, ballPortal, spiderPortal;
         public static Sprite Make(BiofitMode mode, bool portal)
         {
+            // A licensed PNG sprite can be supplied later via Resources.
+            // No unofficial RobTop sprite extraction is committed to the repo.
+            string artName = (portal ? "Portal" : "Icon") + mode;
+            Sprite provided = Resources.Load<Sprite>("BiofitThreeModes/Artwork/" + artName);
+            if (provided != null) return provided;
             if (!portal)
             {
                 if (mode == BiofitMode.Ball) return ball ?? (ball = Build(mode, false));
