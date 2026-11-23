@@ -62,6 +62,9 @@ namespace Biofit.GeomeTryOriginal
             DontDestroyOnLoad(root);
             root.AddComponent<BiofitBLEMonitor>();
             root.AddComponent<BiofitGeomeTryLegacyBridge>();
+            // Optional three-mode experiment; never enables in stable BLE builds.
+            if (BiofitThreeModesBootstrap.Active)
+                root.AddComponent<BiofitThreeModesBootstrap>();
 #if UNITY_ANDROID && !UNITY_EDITOR
             Screen.orientation = ScreenOrientation.LandscapeLeft;
             // Preserve original GeomeTry's GetMouseButton(0) held-touch input.
@@ -159,6 +162,22 @@ namespace Biofit.GeomeTryOriginal
             }
 
             GameObject avatar = GameObject.FindGameObjectWithTag("Player");
+            BiofitModeMotor motor = avatar == null ? null : avatar.GetComponent<BiofitModeMotor>();
+            if (motor != null && motor.Mode != BiofitMode.Cube)
+            {
+                // Accepted BLE pair -> one action in Ball or Spider.
+                // Preserve the upstream Cube.onClick path for Cube unchanged below.
+                bool applied = motor.TryPulse();
+                if (applied) executed++; else ignored++;
+                if (monitor.GameCaptureActive)
+                    monitor.RecordControlDiagnostic(
+                        "GEOMETRY_THREE_MODES BLE_LEGACY_" + motor.Mode +
+                        " gapMs=" + pairGapMs.ToString("F2",
+                            System.Globalization.CultureInfo.InvariantCulture) +
+                        " outcome=" + (applied ? "APPLIED" : "NO_ACTION"));
+                return;
+            }
+
             Cube cube = avatar == null ? null : avatar.GetComponent<Cube>();
             if (cube == null || !cube.isAlive)
             {
