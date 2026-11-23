@@ -37,7 +37,11 @@ namespace Biofit.GeomeTryOriginal
             GameObject template = new GameObject("BIOFIT_TEMPLATE_" + mode);
             DontDestroyOnLoad(template);
             template.transform.position = new Vector3(-50000f, 0f, 0f);
-            SpriteRenderer renderer = template.AddComponent<SpriteRenderer>();
+            // Visible across floor and roof, while trigger stays on the root.
+            GameObject visual = new GameObject("PortalVisual");
+            visual.transform.SetParent(template.transform, false);
+            visual.transform.localScale = new Vector3(1f, 3.1f, 1f);
+            SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
             renderer.sprite = BiofitThreeModeArt.Make(mode, true);
             renderer.sortingOrder = 8;
             BoxCollider2D trigger = template.AddComponent<BoxCollider2D>();
@@ -208,6 +212,7 @@ namespace Biofit.GeomeTryOriginal
                 body.gravityScale = flipped ? -BallSpiderGravity : BallSpiderGravity;
                 body.linearVelocity = new Vector2(body.linearVelocity.x, 0f);
                 lastManualAction = Time.unscaledTime;
+                StartCoroutine(GravityFlipEffect(transform.position));
                 return true;
             }
 
@@ -244,6 +249,25 @@ namespace Biofit.GeomeTryOriginal
             return true;
         }
 
+        private IEnumerator GravityFlipEffect(Vector3 position)
+        {
+            GameObject ring = new GameObject("BIOFIT_BALL_GRAVITY_FLIP");
+            SpriteRenderer sr = ring.AddComponent<SpriteRenderer>();
+            sr.sprite = BiofitThreeModeArt.Make(BiofitMode.Ball, false);
+            sr.sortingOrder = 19;
+            ring.transform.position = position;
+            float t = 0f;
+            while (t < .2f)
+            {
+                t += Time.unscaledDeltaTime;
+                float p = Mathf.Clamp01(t / .2f);
+                ring.transform.localScale = Vector3.one * (1f + p * .8f);
+                sr.color = new Color(1f, .5f, .5f, 1f - p);
+                yield return null;
+            }
+            Destroy(ring);
+        }
+
         private IEnumerator SpiderEffect(Vector3 from, Vector3 to)
         {
             GameObject trail = new GameObject("BIOFIT_SPIDER_TELEPORT_TRAIL");
@@ -258,6 +282,11 @@ namespace Biofit.GeomeTryOriginal
             Shader shader = Shader.Find("Sprites/Default");
             if (shader != null) line.material = new Material(shader);
             line.sortingOrder = 20;
+            GameObject flash = new GameObject("BIOFIT_SPIDER_ARRIVAL_FLASH");
+            SpriteRenderer flashRenderer = flash.AddComponent<SpriteRenderer>();
+            flashRenderer.sprite = BiofitThreeModeArt.Make(BiofitMode.Spider, false);
+            flashRenderer.sortingOrder = 19;
+            flash.transform.position = to;
             float timer = 0f;
             while (timer < .18f)
             {
@@ -267,9 +296,12 @@ namespace Biofit.GeomeTryOriginal
                 line.endColor = new Color(.9f, .3f, 1f, alpha);
                 line.startWidth = Mathf.Lerp(.18f, 0f, 1f - alpha);
                 line.endWidth = line.startWidth;
+                flash.transform.localScale = Vector3.one * Mathf.Lerp(1.8f, .5f, 1f - alpha);
+                flashRenderer.color = new Color(.7f, .25f, 1f, .75f * alpha);
                 yield return null;
             }
             if (line.material != null) Destroy(line.material);
+            Destroy(flash);
             Destroy(trail);
         }
     }
