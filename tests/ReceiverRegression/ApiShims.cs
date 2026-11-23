@@ -9,6 +9,14 @@ namespace UnityEngine {
  public class HeaderAttribute:Attribute { public HeaderAttribute(string s){} }
  public class SerializeField:Attribute {}
  public static partial class Time { public static float realtimeSinceStartup=10; }
+ public static class PlayerPrefs {
+  private static readonly System.Collections.Generic.Dictionary<string,int> ints =
+      new System.Collections.Generic.Dictionary<string,int>();
+  public static int GetInt(string key,int fallback=0) =>
+      ints.TryGetValue(key,out int value) ? value : fallback;
+  public static void SetInt(string key,int value) { ints[key]=value; }
+  public static void Save() {}
+ }
  public static class Debug { public static void Log(object o){} public static void LogWarning(object o){} public static void LogException(Exception e){throw e;} }
  public static partial class Screen { public static int width=1080,height=1920; }
  public static partial class Mathf { public static float Max(float a,float b)=>Math.Max(a,b); }

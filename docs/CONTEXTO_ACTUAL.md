@@ -8,8 +8,8 @@
 
 - Dos dispositivos Waveshare ESP32-S3-LCD-1.47B, con IMU QMI8658, en tobillos, transmiten eventos de movimiento por BLE a Android.
 - Receptor general: `Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs`. Emparejamiento de impulsos: `BiofitBilateralJumpDetector.cs`, alineación de relojes: `BiofitClockAligner.cs`.
-- En GeomeTry el puente `Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs` escucha `BilateralJumpCandidate`. Cuando dos impulsos UP válidos llegan en una ventana de hasta 180 ms y pasan el cooldown de 900 ms, emite **una acción de juego**.
-- Umbral UP de Unity: 0,12 g; ventana bilateral 180 ms; cooldown 900 ms; el rearmado por tobillo tiene su propio refractario. Estos valores NO se modificaron con Tres Modos. 900 ms es tiempo de bloqueo de pares, NO una latencia de la radio BLE.
+- En GeomeTry el puente `Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs` escucha `BilateralJumpCandidate`. Cuando dos impulsos UP válidos llegan en una ventana de hasta 180 ms y pasan el cooldown **seleccionado por el usuario (900/800/700/600/500/400 ms)**, emite **una acción de juego**.
+- Umbral UP de Unity: 0,12 g; ventana bilateral 180 ms; refractario individual 320 ms; cooldown entre pares **configurable desde el juego: 900/800/700/600/500/400 ms**. **900 ms sigue siendo predeterminado** y la preferencia queda en PlayerPrefs. El usuario comunicó evaluación física satisfactoria de **400 ms** con ambos ESP32 en Android y lo prefiere actualmente (2026-11-23). Cooldown NO significa latencia BLE.
 - En Cube se ejecuta el `Cube.onClick()` original. En Ball, `BiofitModeMotor.TryPulse()` invierte la gravedad desde una superficie; en Spider teletransporta a la superficie contraria y agrega línea/flash breve. Mismo evento BLE, distinta acción según modo.
 - Movimiento horizontal original `DefaultSpeed=6.5`, `Time.timeScale=1.5` => ~9,75 unidades de mundo por segundo real; física y `jumpForce=13.5` del Cube original NO cambiados. Cada nivel termina en marcador x=575 (~60,1s nominales sin morir).
 - En Android se solicita un objetivo de 60 FPS. No confundir FPS solicitados con FPS medidos.
@@ -61,14 +61,18 @@ APK separada: package `com.biofitgame.threemodeslab`, nombre `BIOFIT TRES MODOS`
 
 ## 5. Validación y límites actuales
 
+- **Nueva versión principal aprobada por el usuario (2026-11-23):** PR #29, selector de seis cooldowns. Usuario confirmó prueba física del juego y respuesta satisfactoria de 400 ms con ambos tobillos; aceptó explícitamente integrarlo en `main`. Los otros valores se conservan disponibles para experimentación. No extrapolar a validación cuantitativa ni a pruebas físicas individuales de los seis valores.
+- **CI:** GitHub Actions #45276650454 aprobó 5/5 jobs del commit de PR #29, con 251 comprobaciones deterministas del cooldown. No sustituye Unity/Android.
+- **Principales archivos de la nueva arquitectura:** `BiofitBilateralJumpDetector.cs`, `BiofitCooldownConfiguration.cs`, `BiofitBLEMonitor.cs`, `BiofitGeometryUX.cs`. Ver `docs/COOLDOWN_BILATERAL_CONFIGURABLE.md` y `docs/CONTEXTO_VIVO.md` para cadena de aplicación, política de bloqueo en curso y registro CSV.
+
 - Usuario confirmó funcionamiento de menús y mecánicas de Tres Modos **en Unity Editor**. No extrapolar a APK/Android BLE: quedan por validar sensores reales, sincronización, repetición tras muerte, fallas de teletransporte, techo/colliders y 60 FPS.
 - SPIKE LAB anterior se probó físicamente con los dos trackers y un CSV. Detectó la funcionalidad general de LEGACY y permitió analizar rechazo por cooldown; NO se concluyó latencia BLE absoluta. El escenario SPIKE LAB ya no forma parte de la compilación principal.
 - Prueba estática de escenarios: `python tests/check_three_modes_60s.py`. Sintaxis C# y pruebas de módulos vía GitHub Actions; no equivalen a ejecutar Unity ni medir saltos físicos.
-- Optimización de latencia BLE pendiente. No subir la prioridad de GATT ni modificar cooldown/umbrales/firmware sin una prueba A/B controlada.
+- Optimización de latencia BLE pendiente y separada de la elección del cooldown. Se puede experimentar seleccionando uno de los seis valores ya implementados; no modificar otros umbrales/firmware/GATT sin un ensayo controlado. No se dispone de métricas cuantitativas de detecciones duplicadas.
 - Limpiar ramas remotas no elimina ni mejora los archivos de Unity. Las carpetas de trabajo existentes en Windows no deben borrarse por mantenimiento Git.
 
 ## 6. Restricciones del proyecto
 
 **No modificar sin prueba explícita:** motor de salto Cube original, velocidad, gravedad, fuerza de salto, firma de eventos, parámetros de BILATERAL LEGACY, firmware ESP32/QMI8658, NVS, UUID BLE, configuración Android de captura y exportación. No activar MOV HOLD, FASE EXP o CICLO EXP en el juego.
 
-Prioridad: pulir y validar físicamente la experiencia Cube/Ball/Spider de los cinco niveles; después, medir y optimizar latencia de forma independiente. Mantener la rama principal `main` como única referencia pública de trabajo.
+Prioridad: continuar ampliando el menú Configuración sobre la versión principal con selector 900–400 ms, sin alterar firmware, filtros ni física. Medir después efectos de cooldown y latencia BLE por separado. Mantener la rama `main` como referencia de trabajo.

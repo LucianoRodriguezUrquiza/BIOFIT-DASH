@@ -11,7 +11,16 @@ public sealed class BiofitBilateralJumpDetector
     public const float MinimumVerticalG = 0.12f;
     public const float MaxPairGapSeconds = 0.18f;
     public const float SameAnkleRefractorySeconds = 0.32f;
+    // Stable default. The current runtime value may be changed from Settings.
     public const float PairCooldownSeconds = 0.90f;
+    public const int DefaultPairCooldownMilliseconds = 900;
+    public int PairCooldownMilliseconds { get; private set; } = DefaultPairCooldownMilliseconds;
+
+    public static bool IsSupportedPairCooldownMilliseconds(int value)
+    {
+        return value == 900 || value == 800 || value == 700 ||
+            value == 600 || value == 500 || value == 400;
+    }
     // EXPERIMENTAL: only for TWO firmware-confirmed phase evidence flags.
     // Do not use a shorter timer on ordinary +Z accelerations alone.
     public const float PhaseFastMinGapSeconds = 0.60f;
@@ -36,6 +45,9 @@ public sealed class BiofitBilateralJumpDetector
     private double lastLeftAccepted = -10000d;
     private double lastRightAccepted = -10000d;
     private double lastPairSeconds = -10000d;
+    // An in-flight lock is never shortened when Settings reduces the value.
+    // The newly selected duration governs the NEXT accepted legacy pair.
+    private double nextPairAllowedSeconds = -10000d;
 
     // Decision for EVERY processed UP, including a matched pair suppressed by cooldown.
     // Names describe software decisions, never a biomechanical phase.
@@ -64,6 +76,17 @@ public sealed class BiofitBilateralJumpDetector
         MaxPairGapWindowSeconds = maxPairWindowSeconds < 0.12f ? 0.12f :
             maxPairWindowSeconds > 0.40f ? 0.40f : maxPairWindowSeconds;
         ClearPending();
+    }
+
+    public void SetPairCooldownMilliseconds(int value)
+    {
+        if (!IsSupportedPairCooldownMilliseconds(value))
+            throw new ArgumentOutOfRangeException(nameof(value),
+                "Only 400, 500, 600, 700, 800 or 900 ms are supported.");
+        PairCooldownMilliseconds = value;
+        if (lastPairSeconds > -9999d)
+            nextPairAllowedSeconds = Math.Max(nextPairAllowedSeconds,
+                lastPairSeconds + value / 1000d);
     }
 
     public void ClearPending()
@@ -144,8 +167,15 @@ public sealed class BiofitBilateralJumpDetector
             // Fast phase mode needs independently qualified READY->UP cycles
             // on BOTH ankles. A single strong +Z impulse is never sufficient.
             bool eligibleFast = phaseFastEnabled && phaseEvidence && other.PhaseEvidence;
-            double cooldown = eligibleFast ? PhaseFastMinGapSeconds : PairCooldownSeconds;
-            if (pairTime - lastPairSeconds < cooldown)
+            double cooldown = eligibleFast ? PhaseFastMinGapSeconds :
+                PairCooldownMilliseconds / 1000d;
+            // Preserve the previous interval on a shorter selection; for
+            // LEGACY also enforce the newly selected duration if increased.
+            // Inactive PhaseFastPairs retains its historical replay behavior.
+            double requiredUntil = eligibleFast ? lastPairSeconds + cooldown :
+                Math.Max(nextPairAllowedSeconds, lastPairSeconds + cooldown);
+            // Timestamps are doubles; 1 ns guards equality from rounding.
+            if (pairTime + 1e-9d < requiredUntil)
             {
                 LastDecision = Decision.PairCooldown;
                 PairCooldownRejected++;
@@ -169,6 +199,7 @@ public sealed class BiofitBilateralJumpDetector
 
             own.Clear();
             lastPairSeconds = pairTime;
+            nextPairAllowedSeconds = pairTime + cooldown;
             LastPairUsedFastPhase = eligibleFast &&
                 LastPairIntervalSeconds < PairCooldownSeconds;
             if (LastPairUsedFastPhase) FastPhasePairsAccepted++;

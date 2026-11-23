@@ -11,6 +11,31 @@ using UnityEngine;
 /// </summary>
 public sealed class BiofitBLEMonitor : MonoBehaviour
 {
+    private BiofitCooldownConfiguration cooldownConfiguration;
+
+    // BLE receiver is the authoritative owner; selections are committed only
+    // after the actual detector accepts them.
+    private void Awake()
+    {
+        cooldownConfiguration = new BiofitCooldownConfiguration(jumpDetector,
+            PlayerPrefs.GetInt, PlayerPrefs.SetInt, PlayerPrefs.Save);
+        cooldownConfiguration.Load();
+    }
+
+    public int PairCooldownMilliseconds => jumpDetector.PairCooldownMilliseconds;
+    public bool CooldownPreferenceMatchesDetector =>
+        cooldownConfiguration != null && cooldownConfiguration.IsConsistent;
+
+    public bool SetPairCooldownMilliseconds(int milliseconds)
+    {
+        if (cooldownConfiguration == null ||
+            !cooldownConfiguration.Select(milliseconds)) return false;
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, 0,
+            "COOLDOWN_MS=" + PairCooldownMilliseconds +
+            " source=CONFIGURACION lock=CONSERVADOR");
+        return true;
+    }
+
     [Header("MAC de los trackers (verificadas con nRF Connect)")]
     [SerializeField] private string leftAddress = "80:45:6B:35:DE:61";
     [SerializeField] private string rightAddress = "28:84:85:55:6B:B9";
@@ -500,6 +525,9 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 if (page != null) eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,tracker.id,page);
         eventCapture.RecordGameConfig(Time.realtimeSinceStartup,
             MinUpG, PairWindowMs);
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, 0,
+            "COOLDOWN_MS=" + PairCooldownMilliseconds +
+            " source=INICIO_REGISTRO mode=BILATERAL_LEGACY");
         return true;
     }
 
@@ -618,6 +646,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             " | DESCARTADOS=" + DroppedEventCount +
             "\nUMBRAL_UP_FINAL=" + MinUpG.ToString("F2") + " g" +
             " | VENTANA_FINAL=" + PairWindowMs.ToString("F0") + " ms" +
+            " | COOLDOWN_MS_FINAL=" + PairCooldownMilliseconds +
             "\nESTIMACION_RELOJ=" + (ClockAlignmentReady ? "ACTIVA" : "INACTIVA") +
             " | EVENTOS_ALINEADOS=" + (alignedEvents - gAlignedEvents) +
             "\nESTIMACION_STATUS: IZQ=" + ClockStatusLeft + " DER=" + ClockStatusRight +
@@ -1110,6 +1139,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                     jumpDetector.LastDecision.ToString() : "ClockNotReady") + " " + CurrentEventTrace +
                 " pairClockS=" + pairSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) +
                 " cooldownRejected=" + jumpDetector.PairCooldownRejected +
+                " COOLDOWN_MS=" + PairCooldownMilliseconds +
                 " phaseHint=" + (phaseEvidence ? 1 : 0) +
                 " phaseMode=" + (PhaseFastPairs ? 1 : 0) +
                 " fastPhasePair=" + (LastPairedWasFastPhase ? 1 : 0) +

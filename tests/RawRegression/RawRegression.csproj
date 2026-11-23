@@ -2,6 +2,7 @@
  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
  <ItemGroup>
   <Compile Include="Program.cs"/><Compile Include="../ReceiverRegression/ApiShims.cs"/>
+  <Compile Include="../../Assets/BIOFIT/Scripts/BiofitCooldownConfiguration.cs" />
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs"/>
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitClockAligner.cs"/>
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitEventGate.cs"/>
