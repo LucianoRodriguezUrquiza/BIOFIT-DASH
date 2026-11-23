@@ -1,59 +1,147 @@
 {
   "id": 4,
-  "name": "Nivel 4 - Tres modos",
-  "difficulty": 2,
+  "name": "Nivel 4",
+  "difficulty": 4,
   "map": [
     {
+      "type": "biofitRoof",
+      "x": 0,
+      "y": 8
+    },
+    {
       "type": "spike",
-      "x": 45,
+      "x": 35,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 95,
+      "x": 65,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 71,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 93,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 140,
+      "x": 120,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 146,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 152,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 163,
       "y": 0
     },
     {
       "type": "biofitBallPortal",
-      "x": 180,
+      "x": 185,
       "y": 3
     },
     {
       "type": "spike",
-      "x": 230,
+      "x": 211,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 290,
+      "x": 237,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 243,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 262,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 285,
       "y": 7,
       "rotation": 180
     },
     {
       "type": "spike",
-      "x": 345,
+      "x": 308,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 314,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 331,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 353,
       "y": 0
     },
     {
       "type": "biofitSpiderPortal",
-      "x": 380,
+      "x": 385,
       "y": 3
     },
     {
       "type": "spike",
-      "x": 432,
+      "x": 410,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 416,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 431,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 451,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 482,
+      "x": 470,
       "y": 7,
       "rotation": 180
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 476,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 490,
+      "y": 0
     },
     {
       "type": "biofitCubePortal",
@@ -62,13 +150,18 @@
     },
     {
       "type": "spike",
-      "x": 558,
+      "x": 539,
       "y": 0
     },
     {
-      "type": "biofitRoof",
-      "x": 0,
-      "y": 8
+      "type": "spike",
+      "x": 556,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 562,
+      "y": 3
     },
     {
       "type": "ground",
