@@ -12,21 +12,23 @@ EXPECTED_PORTALS = [
     [],
     [],
     [],
-    [("biofitBallPortal", 180), ("biofitSpiderPortal", 380), ("biofitCubePortal", 515)],
-    [("biofitBallPortal", 110), ("biofitSpiderPortal", 276), ("biofitCubePortal", 404), ("biofitBallPortal", 515)],
+    [("biofitBallPortal", 185), ("biofitSpiderPortal", 385), ("biofitCubePortal", 515)],
+    [("biofitBallPortal", 117), ("biofitSpiderPortal", 275), ("biofitCubePortal", 405), ("biofitBallPortal", 515)],
 ]
 ALLOWED = {"spike", "ground", "biofitRoof", "biofitBallPortal",
-           "biofitSpiderPortal", "biofitCubePortal"}
+           "biofitSpiderPortal", "biofitCubePortal",
+           "biofitDecoPulse", "biofitDecoCrystal", "biofitDecoStar"}
 SPEED_U_S = 6.5 * 1.5
 MIN_BILATERAL_S = .9
 MIN_COMFORT_S = 1.5
 
 for i, name in enumerate(NAMES, 1):
     data = json.loads((LEVELS / (name + ".json")).read_text("utf-8"))
-    assert data["id"] == i, (name, data["id"])
+    assert data["id"] == i and data["name"] == f"Nivel {i}", (name, data["id"], data["name"])
     items = data["map"]
     assert all(it["type"] in ALLOWED for it in items)
     assert len([it for it in items if it["type"] == "ground" and it["x"] == 575]) == 1
+    assert data["difficulty"] == i
     assert (sum(it["type"] == "biofitRoof" for it in items) == int(i != 1))
     portals = [(it["type"], it["x"]) for it in items if it["type"].endswith("Portal")]
     assert portals == EXPECTED_PORTALS[i - 1], (name, portals)
@@ -36,7 +38,7 @@ for i, name in enumerate(NAMES, 1):
     assert len(xs) >= 8
     assert xs[0] >= 25 and xs[-1] <= 565
     gaps = [b - a for a, b in zip(xs, xs[1:])]
-    assert all(dx / SPEED_U_S >= MIN_COMFORT_S for dx in gaps)
+    assert all(dx >= 15 and dx / SPEED_U_S >= MIN_COMFORT_S for dx in gaps)
     if i == 1:
         assert all(it["y"] == 0 for it in spikes)
     elif i in (2, 3):
@@ -70,6 +72,7 @@ for i, name in enumerate(NAMES, 1):
         assert len(actions) >= 7, (name, "not enough mode actions")
     nominal = (576 - (-10)) / SPEED_U_S
     assert 59 <= nominal <= 61
+    assert 6 <= sum(it["type"].startswith("biofitDeco") for it in items) <= 12
     print(f"L{i} {name}: {len(spikes)} spikes, {len(portals)} portals, "
           f"min-gap={min(gaps)/SPEED_U_S:.2f}s, nominal={nominal:.1f}s")
 
@@ -86,4 +89,4 @@ assert "body.position = destination;" in motor
 assert "BiofitThreeModes/" in ux
 assert "com.biofitgame.threemodeslab" in build and "com.biofitgame.threemodeslab" in motor
 assert "BiofitGeomeTryOriginalBuild.Verify()" in build
-print("PASS: 5 maps + mode portal sequence + conserved cube/legacy paths (STATIC ONLY)")
+print("PASS: 5 named maps + >=1.5 s nominal spike/action spacing + mode transitions (STATIC ONLY)")
