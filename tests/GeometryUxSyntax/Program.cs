@@ -3,6 +3,9 @@ using Microsoft.CodeAnalysis.CSharp;
 
 string[] sources = {
     "Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs",
+    "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs",
+    "Assets/BIOFIT/Scripts/BiofitCooldownConfiguration.cs",
+    "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs",
     "Assets/BIOFIT/GeomeTry/BiofitSettingsButtonFeedback.cs",
     "Assets/BIOFIT/GeomeTry/BiofitUiArtwork.cs",
     "Assets/BIOFIT/GeomeTry/Editor/BiofitGeometryUxPreflight.cs",
