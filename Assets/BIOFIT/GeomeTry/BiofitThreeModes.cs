@@ -142,7 +142,7 @@ namespace Biofit.GeomeTryOriginal
         public void SetMode(BiofitMode newMode)
         {
             Initialize();
-            if (!initialized || !cube.isAlive || (newMode == Mode && newMode != BiofitMode.Cube)) return;
+            if (!initialized || !cube.isAlive || newMode == Mode) return;
             Mode = newMode;
             flipped = false;
             body.linearVelocity = new Vector2(body.linearVelocity.x, 0f);
@@ -279,7 +279,8 @@ namespace Biofit.GeomeTryOriginal
             line.startWidth = .18f;
             line.endWidth = .18f;
             line.numCapVertices = 4;
-            Shader shader = Shader.Find("Sprites/Default");
+            Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
             if (shader != null) line.material = new Material(shader);
             line.sortingOrder = 20;
             GameObject flash = new GameObject("BIOFIT_SPIDER_ARRIVAL_FLASH");
