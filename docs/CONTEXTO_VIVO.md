@@ -37,8 +37,9 @@ El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y coold
 
 ## 2. Evidencia y límites de lo que está validado
 
-- **Documentado como probado:** menús y mecánicas principales de Tres Modos en Unity Editor.
-- **No validado aún para Tres Modos:** APK Android con los dos ESP32, fiabilidad de activaciones físicas, respawn, colliders/techo, transiciones y FPS reales.
+- **Probado en Unity Editor (comunicado por el usuario, 2026-11-23):** el proyecto de cinco niveles abre, compila y funciona en Play.
+- **Probado en Android con ambos sensores físicos (comunicado por el usuario, 2026-11-23):** APK generada e instalada; los movimientos corporales controlan satisfactoriamente el juego con BLE BILATERAL LEGACY. El usuario decidió adoptar esta versión como referencia estable y fusionarla en `main`.
+- **No medido cuantitativamente:** tasa de falsos positivos/negativos, latencia real, FPS, prueba formal prolongada de transiciones, colisiones y respawn. Que funcione bien en una prueba no demuestra todas estas métricas.
 - **Pruebas automatizadas:** verificaciones estáticas y host en GitHub Actions; **no** sustituyen un ensayo Unity/Android real.
 - **Firmware:** repositorio independiente: https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-Firmware. La versión realmente instalada en los ESP32 no está verificada por esta documentación.
 - **Prohibido asumir como hecho:** que el detector entrega 900 ms de latencia; que los 60 FPS estén medidos; que una verificación CI en verde demuestre que el gameplay físico es fiable.
@@ -67,29 +68,24 @@ El control vigente mantiene **umbral UP 0,12 g, ventana bilateral 180 ms y coold
 
 ## 5. Estado de la etapa actual
 
-**Objetivo activo:** mejorar progresivamente el aspecto y diseño de los cinco niveles existentes, comenzando por un nivel de referencia (Cube / BackOnTrack), sin romper la recepción BLE ni la jugabilidad.
+**Versión estable de referencia:** cinco niveles más exigentes `Nivel 1` a `Nivel 5`, seleccionables de izquierda a derecha, con Cube, Ball, Spider y secuencias de portales. **PR #28 fusionado en `main` el 2026-11-23**, commit de integración [`017eb093a670703591479228307817db51c8197b`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/017eb093a670703591479228307817db51c8197b).
 
-**Lo que ya quedó completado:**
-- Selección de Cube, Ball y Spider como modos activos y cinco niveles de ~60 s en `main`.
-- Recolección, clasificación y catálogo visual local de recursos gráficos.
-- Incorporación a GitHub de herramientas de descarga/catalogación y documentación (PR #26).
+**Prueba funcional confirmada por el usuario:** ejecutó la versión en Unity Editor, construyó la APK e informó que en Android los movimientos físicos funcionan bien con los ESP32. Esta es la línea de base que **no se debe romper**. No se dispone de informe cuantitativo de falsas activaciones, latencia ni FPS.
 
-**Lo que sigue pendiente:**
-1. Elegir un conjunto reducido de assets para el primer nivel; inspeccionar rutas, formatos, atlas/capas y procedencia.
-2. Diseñar un **importador local y reversible** de recursos seleccionados sin copiar los 194.750 archivos a `Assets/`.
-3. Conectar sprites, prefabs, efectos y UI al nivel de referencia; validar primero en Unity Editor.
-4. Verificar la APK y el control físico con ambos trackers antes de afirmar estabilidad real.
+**Restricciones:** mantener código de BLE BILATERAL LEGACY, umbral 0,12 g, ventana 180 ms, cooldown 900 ms, física original Cube y firmware intactos. La posibilidad de 600 ms es únicamente hipótesis futura para test A/B, no una configuración estable.
 
-**Próxima acción propuesta:** auditar el nivel BackOnTrack y definir la primera selección de sprites a incorporar, conservando una copia estable y sin modificar física, firmware o umbrales BLE.
+**Arte pendiente:** los iconos de Ball y Spider y los gráficos de sus portales **siguen siendo provisionales**; NO se importaron los sprites originales desde la biblioteca de Windows. El repositorio contiene soporte para importar PNG individuales en `Assets/BIOFIT/Resources/BiofitThreeModes/Artwork/`, pero no incluye esos PNG. La biblioteca `BIOFIT-RECURSOS-GD` de unos 5,90 GB (~195.691 archivos) es local; el usuario contempla compartirla por Google Drive para seleccionar recursos. Comprobar licencia antes de publicar.
+
+**Acción siguiente:** seleccionar y preparar arte (Ball, Spider y portales), idealmente desde un subconjunto accesible de Google Drive, en **rama separada**, verificar en Editor y Android, mantener `main` funcional. Nunca ejecutar reset o limpieza destructiva en `BIOFIT-DASH-PRINCIPAL` ni sobrescribir `BIOFIT-DASH-NUEVOS-NIVELES` sin verificar diferencias y respaldos. La APK compilada y los recursos locales excluidos no se guardan automáticamente en GitHub.
 
 ## 6. Registro cronológico resumido
 
 | Fecha | Cambio verificado | Estado / evidencia |
 | --- | --- | --- |
-| 2026-11-22/23 | Consolidación de Tres Modos, cinco niveles y BILATERAL LEGACY en `main` | Documentado en `docs/CONTEXTO_ACTUAL.md`; Editor probado, Android físico pendiente |
+| 2026-11-22/23 | Base de Tres Modos y BLE BILATERAL LEGACY | Consolidación inicial; posteriormente se validaron los cinco niveles rediseñados |
 | 2026-11-23 | Biblioteca de recursos local inventariada y catálogo HTML generado | El usuario confirmó catálogo funcional; recuento comunicado: 194.750 registros |
 | 2026-11-23 | Scripts y documentación de recursos integrados | PR #26 fusionado, commit `17c92fcbdeb0c7d65b5610fcf649e089d7c9aced` |
-| 2026-11-23 | Se propone adoptar este archivo para relevos entre conversaciones | Cambio documental; no supone una nueva prueba funcional del juego |
+| 2026-11-23 | Cinco niveles más exigentes y selector español: Android con sensores físicos | El usuario confirmó que la APK y los movimientos corporales funcionan; PR #28 fusionado, commit `017eb093a670703591479228307817db51c8197b` |
 
 **Regla:** agregar una entrada SOLO cuando un cambio esté implementado o un ensayo se haya realizado. Distinguir `propuesto`, `en desarrollo`, `CI aprobado`, `probado en Editor` y `probado en Android con sensores`. Añadir enlaces a PR/commit o evidencia de prueba. Para mantener legibilidad, resumir aquí los últimos 10–15 hitos y dejar el historial profundo en Git.
 
@@ -116,13 +112,13 @@ Y escribir:
 
 **Importante:** abrir un nuevo chat no garantiza que ChatGPT lea este archivo automáticamente. El usuario debe enlazarlo o solicitar su lectura; si aún hay un PR sin fusionar, utilizar el enlace de esa rama hasta que llegue a `main`.
 
-## 9. Candidata de diseño de niveles más exigentes (NO validada físicamente)
+## 9. Cinco niveles progresivos — versión estable validada funcionalmente
 
-- **Rama de trabajo:** `feat/five-level-progression-1500ms-v1`; [PR #28 (borrador)](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/28).
-- Se rediseñaron los cinco mapas de ~60 segundos como `Nivel 1` a `Nivel 5`, con música original, progresión Cube / Ball / Spider / combinaciones, separación mínima >=15 u (>=1,538 s nominales entre pinchos) y validación estática ampliada.
-- Selector reconstruido con tarjetas vivas y etiquetas españolas, de izquierda a derecha; botones con feedback táctil.
-- Íconos y portales: fallbacks originales + carga preferente desde `Assets/BIOFIT/Resources/BiofitThreeModes/Artwork/` mediante importador local opt-in. El arte de la biblioteca de Windows no se incorporó en el repositorio público.
-- **GitHub Actions:** [ejecución #498](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45253573276) con cinco jobs exitosos, incluyendo regresiones estáticas, sintaxis C# y compatibilidad Windows. **No representa una prueba en Unity ni Android físico**.
-- **Estado:** pendiente verificar que Unity compila, que los cinco niveles son jugables en Editor y que las entradas BLE funcionan en Android real; no fusionar a main hasta confirmar esos puntos.
-- **Guía de diseño e instalación:** [NIVELES_PROGRESIVOS_1500MS.md](NIVELES_PROGRESIVOS_1500MS.md).
-- **Restricciones conservadas:** sin cambios a Cube original, BILATERAL LEGACY, firmware, tiempos de cooldown, sincronización ni UUIDs.
+- **Origen:** [PR #28 fusionado](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/28), desde `feat/five-level-progression-1500ms-v1` a `main` el 2026-11-23. Commit de integración: `017eb093a670703591479228307817db51c8197b`.
+- **Contenido:** cinco mapas de ~60 segundos rotulados `Nivel 1` a `Nivel 5`, música original, progresión Cube/Ball/Spider y modos mixtos, obstáculos >=15 unidades entre centros, selector de izquierda a derecha y respuesta visual de botones.
+- **Resultado comunicado por usuario:** Unity Editor funciona; APK Android compilada e instalada; entradas de salto/movimiento físico con ambos ESP32 funcionan correctamente; versión aceptada como estable hasta próximo cambio.
+- **CI:** [GitHub Actions](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45253847730) completó pruebas estáticas/host. El CI no ejecuta una APK ni sustituye las pruebas físicas.
+- **Arte aún provisional:** Ball, Spider y portales usan sprites fallback programáticos porque los gráficos de `BIOFIT-RECURSOS-GD` todavía no fueron seleccionados/importados. Conservar esa integración como próximo trabajo separado.
+- **No afirmar sin datos:** FPS de 60 medidos, latencia exacta, validación de todos los eventos, cero falsos positivos o fiabilidad estadística.
+- **Restricciones intocadas:** física Cube original, detector BLE BILATERAL LEGACY, firmware, umbral 0,12 g, ventana 180 ms, cooldown 900 ms, sincronización y UUID.
+- **Detalles:** [NIVELES_PROGRESIVOS_1500MS.md](NIVELES_PROGRESIVOS_1500MS.md).
