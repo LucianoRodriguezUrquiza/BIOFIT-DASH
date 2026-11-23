@@ -69,4 +69,9 @@ for filename, expected_sha in png_overlays.items():
     assert sha == expected_sha, "Integrity failure in compatibility PNG: " + filename
 assert (root / "tools/apply_geometry_compat.ps1").is_file()
 assert 'apply_geometry_compat.ps1' in (root / "tools/prepare_geometry_original.ps1").read_text()
+compat = (root / "tools/apply_geometry_compat.ps1").read_text()
+assert "BIOFIT_BACKGROUND_RESOURCE_FIX" in compat
+assert "BIOFIT_CANVAS_LOAD_RACE_FIX" in compat
+assert "DevUtils.cs importado tiene cambios inesperados" in compat
+assert "UIManager.cs importado tiene cambios inesperados" in compat
 print("PASS: Original repo isolated outside Unity Assets; maps intact; BIOFIT legacy receiver/physics preserved.")
