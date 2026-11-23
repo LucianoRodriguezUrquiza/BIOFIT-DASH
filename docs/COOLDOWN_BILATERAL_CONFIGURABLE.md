@@ -2,9 +2,15 @@
 
 **Fecha:** 2026-11-23. **Rama:** `feat/configurable-bilateral-cooldown-400-900ms`. **Base estable:** PR #28, integración `017eb093a670703591479228307817db51c8197b`.
 
+## Actualización de estado y aprobación para main (2026-11-23)
+
+El usuario informó **prueba física satisfactoria** del juego Android con los dos ESP32 utilizando **cooldown de 400 ms**, calificó su funcionamiento como muy bueno y autorizó explícitamente integrar el PR #29 a `main` como nueva base principal. **Se conserva el selector íntegro de seis valores** 900/800/700/600/500/400 ms; 400 ms es **su elección preferida** por ahora, **no un valor fijo en el código**. El default para instalaciones sin preferencia previa continúa siendo **900 ms**, y la selección de 400 ms se guarda por `PlayerPrefs`.
+
+Resultados confirmados: [CI #45276650454](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45276650454) **5/5 jobs aprobados**; `tests/CooldownRegression` **251 comprobaciones**. **Limitaciones:** el reporte físico es cualitativo; no constan estadísticas formales de falsos positivos, duplicados, pérdidas, FPS ni latencia, ni validación física independiente de cada valor intermedio. Conservar el botón para volver a 900 ms como control de comparación. PR #29 autorizado para integrar; el estado real de fusión se confirma por GitHub.
+
 ## Alcance y estado
 
-Se implementó un selector táctil en **Configuración → COOLDOWN** con seis valores exactos: **900, 800, 700, 600, 500, 400 ms**. El valor predeterminado es **900 ms**; solo 900 ms cuenta con validación física comunicada por el usuario **antes** de esta modificación. Los otros cinco son experimentales. El nuevo código requiere verificación en Unity Editor y prueba Android con ambos trackers antes de cualquier integración a `main`.
+Se implementó un selector táctil en **Configuración → COOLDOWN** con seis valores exactos: **900, 800, 700, 600, 500, 400 ms**. El valor predeterminado es **900 ms**. El usuario también ha probado físicamente **400 ms** y reportó un funcionamiento satisfactorio en Android con ambos trackers, por lo que aprobó su uso en la versión principal. Los demás valores siguen disponibles para comparación y no se atribuye validación física individual a cada uno.
 
 No se cambiaron firmware ESP32, UUID, conectividad BLE, estimación de relojes, umbral UP **0,12 g**, ventana bilateral **180 ms**, refractario de tobillo **320 ms**, física Cube, modos Ball/Spider, geometría de niveles ni música. `PhaseFastPairs` y `LiftCycleMode` permanecen desactivados en el puente del videojuego.
 
@@ -28,7 +34,7 @@ No se cambiaron firmware ESP32, UUID, conectividad BLE, estimación de relojes, 
 
 ### Advertencia biomecánica
 
-El cooldown es una condición temporal entre **pares de eventos UP aceptados**, no latencia BLE ni confirmación fisiológica de un salto. Con 400 ms, dos pares UP biomecánicamente generados por **un único salto** y separados más de 400 ms pueden resultar aceptados. El algoritmo no incluye evidencia biomecánica suficiente para garantizar lo contrario, y aquí no se alteran otros filtros. Por eso 400 ms requiere ensayo físico, registro de duplicados y contraste con 900 ms.
+El cooldown es una condición temporal entre **pares de eventos UP aceptados**, no latencia BLE ni confirmación fisiológica de un salto. Con 400 ms, dos pares UP biomecánicamente generados por **un único salto** y separados más de 400 ms pueden resultar aceptados. El algoritmo no incluye evidencia biomecánica suficiente para garantizar lo contrario, y aquí no se alteran otros filtros. La experiencia física inicial con 400 ms fue satisfactoria según el usuario, pero siguen pendientes ensayos cuantitativos de duplicados y contraste instrumentado con 900 ms.
 
 ## Pruebas de regresión
 
@@ -51,8 +57,8 @@ Para cobertura complementaria siguen presentes las suites previas de `JumpContro
 5. Cambiar plataforma a Android en `File → Build Profiles` y ejecutar `BIOFIT → GeomeTry ORIGINAL → 9. Compilar BIOFIT 3 MODOS (BLE LEGACY)`. La APK queda bajo `Builds/`. Antes de instalar, conservar una copia de la APK estable.
 6. Probar físicamente el selector con ambos trackers y cada valor entre partidas. Verificar UI, HUD, emparejamientos aceptados, duplicados, falsos positivos y registro CSV `COOLDOWN_MS`. Cerrar y reabrir para confirmar persistencia. Al probar 900 ms debe comportarse como la versión base.
 
-**Estado de entrega:** PR [#29 (borrador)](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), rama experimental; CI completo verificado en verde (run #45276413840), pero Unity Editor, compilación APK y validación física siguen pendientes hasta prueba explícita.
+**Estado de entrega:** [PR #29](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29) aprobado para fusionarse en `main` por el usuario; CI completo verificado en verde (run #45276650454), y prueba física cualitativa con 400 ms reportada satisfactoria. Persisten pendientes las mediciones cuantitativas y los ensayos independientes de otros valores.
 
 ## Política de cierre
 
-No fusionar a `main` sin confirmación expresa del usuario y sin conservar evidencia de pruebas. Actualizar `docs/CONTEXTO_VIVO.md` en esta rama con resultados efectivos y número de PR. No tratar este módulo experimental como parte del baseline estable antes del merge.
+La confirmación expresa para integrar a `main` fue recibida el 2026-11-23. Registrar el commit de integración y continuar actualizando `docs/CONTEXTO_VIVO.md` en `main` después del merge. Conservar el selector completo, el historial de PR #29 y las limitaciones de validación.
