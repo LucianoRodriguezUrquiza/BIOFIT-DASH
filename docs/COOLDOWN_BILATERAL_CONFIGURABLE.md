@@ -34,7 +34,7 @@ El cooldown es una condición temporal entre **pares de eventos UP aceptados**, 
 
 Suite host: `dotnet run --project tests/CooldownRegression`. Cubre seis valores, cinco casos de frontera por valor (-100 ms, -1 ms, 0, +1 ms, +100 ms), rechazo/aceptación, cambios durante bloqueo activo en ambas direcciones, mantenimiento del bloqueo tras cambiar de pantalla, rebotes, entradas débiles, sensores inválidos, pares incompletos, ventana de 180 ms, almacenamiento y relanzamiento simulado, recuperación de preferencias inválidas, botón de restablecer, y presencia de la cadena selector → monitor → detector → puente legacy. Se incorpora a `.github/workflows/latency-regression.yml`.
 
-Para cobertura complementaria siguen presentes las suites previas de `JumpControl`, `LatencyRegression`, `ReceiverRegression`, `DashUiRegression`, las verificaciones de geometría y la prueba de sintaxis C# con Roslyn. **La ejecución de CI no equivale a ejecutar Unity ni a validar los sensores reales.** Los resultados concretos deben anotarse después de consultar la ejecución.
+Para cobertura complementaria siguen presentes las suites previas de `JumpControl`, `LatencyRegression`, `ReceiverRegression`, `DashUiRegression`, las verificaciones de geometría y la prueba de sintaxis C# con Roslyn. **La ejecución de CI no equivale a ejecutar Unity ni a validar los sensores reales.** **Resultado comprobado:** [GitHub Actions #45276413840](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45276413840): 5/5 tareas aprobadas, incluyendo **251 verificaciones** de `tests/CooldownRegression`. El ensayo de 400 ms utiliza 350 ms como evento claramente anterior al límite, porque 300 ms caería dentro del refractario independiente por tobillo de 320 ms.
 
 ## Instalación experimental sin tocar la copia validada
 
@@ -51,7 +51,7 @@ Para cobertura complementaria siguen presentes las suites previas de `JumpContro
 5. Cambiar plataforma a Android en `File → Build Profiles` y ejecutar `BIOFIT → GeomeTry ORIGINAL → 9. Compilar BIOFIT 3 MODOS (BLE LEGACY)`. La APK queda bajo `Builds/`. Antes de instalar, conservar una copia de la APK estable.
 6. Probar físicamente el selector con ambos trackers y cada valor entre partidas. Verificar UI, HUD, emparejamientos aceptados, duplicados, falsos positivos y registro CSV `COOLDOWN_MS`. Cerrar y reabrir para confirmar persistencia. Al probar 900 ms debe comportarse como la versión base.
 
-**Estado de entrega:** implementación en rama experimental; Unity Editor, compilación APK y validación física siguen pendientes hasta prueba explícita.
+**Estado de entrega:** PR [#29 (borrador)](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), rama experimental; CI completo verificado en verde (run #45276413840), pero Unity Editor, compilación APK y validación física siguen pendientes hasta prueba explícita.
 
 ## Política de cierre
 
