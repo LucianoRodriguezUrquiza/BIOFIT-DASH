@@ -29,8 +29,8 @@ namespace Biofit.GeomeTryOriginal
             "StereoMadness", "WaveVibe"
         };
         private static readonly string[] MapTitles = {
-            "BACK ON TRACK", "JUMPY NIGHTMARE", "POLARGEIST",
-            "STEREO MADNESS", "WAVE VIBE"
+            "NIVEL 1 · CUBO", "NIVEL 2 · BOLA", "NIVEL 3 · SPIDER",
+            "NIVEL 4 · TRES MODOS", "NIVEL 5 · TRES MODOS +"
         };
         private static BiofitGeometryUX instance;
         private static readonly FieldInfo CharacterSpriteField =
@@ -200,6 +200,8 @@ namespace Biofit.GeomeTryOriginal
             // Sprite-only skin. Neither Rigidbody2D nor Character fields change.
             if (currentScene != LevelScene || cubeRenderer == null || activeCube == null ||
                 atlas == null || !activeCube.isAlive) return;
+            BiofitModeMotor currentMotor = activeCube.GetComponent<BiofitModeMotor>();
+            if (currentMotor != null && currentMotor.Mode != BiofitMode.Cube) return;
             Sprite selected = GetSkin(skinIndex);
             if (selected != null && cubeRenderer.sprite != selected)
             {
@@ -596,7 +598,9 @@ namespace Biofit.GeomeTryOriginal
         private void StartLevel(int i)
         {
             if (i < 0 || i >= MapKeys.Length) return;
-            TextAsset map = Resources.Load<TextAsset>("maps/BASE/" + MapKeys[i]);
+            TextAsset map = BiofitThreeModesBootstrap.Active
+                ? Resources.Load<TextAsset>("BiofitThreeModes/" + MapKeys[i])
+                : Resources.Load<TextAsset>("maps/BASE/" + MapKeys[i]);
             if (map == null || GameManager.Instance == null)
             {
                 Debug.LogError("BIOFIT UI: mapa/GameManager faltante: " + MapKeys[i]);
