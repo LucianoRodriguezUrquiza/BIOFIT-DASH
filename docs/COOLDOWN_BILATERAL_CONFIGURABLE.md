@@ -1,4 +1,4 @@
-# BIOFIT DASH — Cooldown bilateral configurable (rama experimental)
+# BIOFIT DASH — Cooldown bilateral configurable (integrado en `main`)
 
 **Fecha:** 2026-11-23. **Rama:** `feat/configurable-bilateral-cooldown-400-900ms`. **Base estable:** PR #28, integración `017eb093a670703591479228307817db51c8197b`.
 
@@ -6,7 +6,7 @@
 
 El usuario informó **prueba física satisfactoria** del juego Android con los dos ESP32 utilizando **cooldown de 400 ms**, calificó su funcionamiento como muy bueno y autorizó explícitamente integrar el PR #29 a `main` como nueva base principal. **Se conserva el selector íntegro de seis valores** 900/800/700/600/500/400 ms; 400 ms es **su elección preferida** por ahora, **no un valor fijo en el código**. El default para instalaciones sin preferencia previa continúa siendo **900 ms**, y la selección de 400 ms se guarda por `PlayerPrefs`.
 
-Resultados confirmados: [CI #45276650454](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45276650454) **5/5 jobs aprobados**; `tests/CooldownRegression` **251 comprobaciones**. **Limitaciones:** el reporte físico es cualitativo; no constan estadísticas formales de falsos positivos, duplicados, pérdidas, FPS ni latencia, ni validación física independiente de cada valor intermedio. Conservar el botón para volver a 900 ms como control de comparación. PR #29 autorizado para integrar; el estado real de fusión se confirma por GitHub.
+Resultados confirmados: [CI #45276650454](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45276650454) **5/5 jobs aprobados**; `tests/CooldownRegression` **251 comprobaciones**. **Limitaciones:** el reporte físico es cualitativo; no constan estadísticas formales de falsos positivos, duplicados, pérdidas, FPS ni latencia, ni validación física independiente de cada valor intermedio. Conservar el botón para volver a 900 ms como control de comparación. [PR #29 fusionado](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), merge [`e9356570d97b7ceba081a2bed540bf68ed1ff6dc`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/e9356570d97b7ceba081a2bed540bf68ed1ff6dc); nueva base principal en `main`.
 
 ## Alcance y estado
 
@@ -57,8 +57,8 @@ Para cobertura complementaria siguen presentes las suites previas de `JumpContro
 5. Cambiar plataforma a Android en `File → Build Profiles` y ejecutar `BIOFIT → GeomeTry ORIGINAL → 9. Compilar BIOFIT 3 MODOS (BLE LEGACY)`. La APK queda bajo `Builds/`. Antes de instalar, conservar una copia de la APK estable.
 6. Probar físicamente el selector con ambos trackers y cada valor entre partidas. Verificar UI, HUD, emparejamientos aceptados, duplicados, falsos positivos y registro CSV `COOLDOWN_MS`. Cerrar y reabrir para confirmar persistencia. Al probar 900 ms debe comportarse como la versión base.
 
-**Estado de entrega:** [PR #29](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29) aprobado para fusionarse en `main` por el usuario; CI completo verificado en verde (run #45276650454), y prueba física cualitativa con 400 ms reportada satisfactoria. Persisten pendientes las mediciones cuantitativas y los ensayos independientes de otros valores.
+**Estado de entrega:** [PR #29](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29) fusionado a `main` el 2026-11-23 (merge `e9356570`), con aprobación expresa del usuario; CI completo verificado en verde (run #45276650454), y prueba física cualitativa con 400 ms reportada satisfactoria. Persisten pendientes las mediciones cuantitativas y los ensayos independientes de otros valores.
 
 ## Política de cierre
 
-La confirmación expresa para integrar a `main` fue recibida el 2026-11-23. Registrar el commit de integración y continuar actualizando `docs/CONTEXTO_VIVO.md` en `main` después del merge. Conservar el selector completo, el historial de PR #29 y las limitaciones de validación.
+La confirmación expresa para integrar a `main` fue recibida el 2026-11-23 y se ejecutó el merge `e9356570`. Continuar actualizando `docs/CONTEXTO_VIVO.md` directamente en la rama de trabajo correspondiente a cada nueva tarea y fusionar únicamente cambios aprobados. Conservar el selector completo, el historial de PR #29 y las limitaciones de validación.
