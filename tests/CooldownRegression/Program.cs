@@ -25,7 +25,10 @@ static class Program
         {
             Check(BiofitBilateralJumpDetector.IsSupportedPairCooldownMilliseconds(ms),
                 "Every listed option must be allowed");
-            foreach (int relative in new[] { -100, -1, 0, 1, 100 })
+            // For 400ms, -100ms falls inside the independent 320ms
+            // same-ankle refractory, not the pair cooldown. Use -50ms
+            // to isolate the bilateral timer without altering that filter.
+            foreach (int relative in new[] { ms == 400 ? -50 : -100, -1, 0, 1, 100 })
             {
                 var detector = new BiofitBilateralJumpDetector();
                 detector.SetPairCooldownMilliseconds(ms);
