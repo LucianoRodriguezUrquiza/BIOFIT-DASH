@@ -29,6 +29,10 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     }
 
     public int PairCooldownMilliseconds => jumpDetector.PairCooldownMilliseconds;
+    public bool CooldownPreferenceMatchesDetector =>
+        PlayerPrefs.GetInt(PairCooldownPreference,
+            BiofitBilateralJumpDetector.DefaultPairCooldownMilliseconds) ==
+        jumpDetector.PairCooldownMilliseconds;
 
     public bool SetPairCooldownMilliseconds(int milliseconds)
     {
