@@ -163,6 +163,13 @@ namespace Biofit.GeomeTryOriginal
                 icon.flipY = false;
                 icon.transform.localRotation = Quaternion.identity;
             }
+            // Avoid a Cube-only ground particle stream while Ball rolls or Spider teleports.
+            ParticleSystem particles = GetComponentInChildren<ParticleSystem>(true);
+            if (particles != null)
+            {
+                if (newMode == BiofitMode.Cube) particles.Play();
+                else particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
             BiofitBLEMonitor monitor = FindFirstObjectByType<BiofitBLEMonitor>();
             if (monitor != null && monitor.GameCaptureActive)
                 monitor.RecordControlDiagnostic("GEOMETRY_MODE_CHANGE mode=" + newMode +
