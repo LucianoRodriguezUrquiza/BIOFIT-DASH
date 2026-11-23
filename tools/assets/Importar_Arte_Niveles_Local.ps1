@@ -51,7 +51,8 @@ $approved = @($rows | Where-Object { $_.Aprobado -eq "SI" -and
     ![string]::IsNullOrWhiteSpace($_.RutaRelativa) })
 if ($approved.Count -eq 0) { throw "No hay archivos aprobados en el manifiesto." }
 New-Item -ItemType Directory -Path $destFolder -Force | Out-Null
-$sourcePrefix = [IO.Path]::GetFullPath($sourceRoot).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
+$sourcePrefix = [IO.Path]::GetFullPath($sourceRoot)
+$sourcePrefix = $sourcePrefix.TrimEnd([char[]]@('\','/')) + [IO.Path]::DirectorySeparatorChar
 foreach ($item in $approved) {
     if ($targets -notcontains [IO.Path]::GetFileNameWithoutExtension($item.Destino) -or
         [IO.Path]::GetExtension($item.Destino).ToLowerInvariant() -ne ".png") {
