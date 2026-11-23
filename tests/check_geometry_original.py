@@ -15,10 +15,30 @@ assert "Time.timeScale = 1.5" not in bridge
 assert (root / "tools/prepare_geometry_original.ps1").is_file()
 assert "Assets/GeomeTryOriginal/Assets/" in (root / ".gitignore").read_text()
 assert not (root / "Assets/GeomeTryOriginal/ProjectSettings").exists(), "Nested ProjectSettings must never be imported as Unity Assets"
-for path in ("ProjectSettings/Physics2DSettings.asset", "ProjectSettings/TimeManager.asset",
-             "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs", "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs"):
+# The original physics/timescale settings remain byte-identical.
+# Detector and BLE monitor are deliberately modified ONLY to support runtime
+# LEGACY cooldown selection in this experimental branch; guard their core
+# synchronization and pairing invariants instead of rejecting all changes.
+for path in ("ProjectSettings/Physics2DSettings.asset", "ProjectSettings/TimeManager.asset"):
     baseline = subprocess.check_output(["git", "show", "5616fc4571193d4a2d076550a909089344144384:" + path], cwd=root)
     assert (root / path).read_bytes() == baseline, path + " was modified"
+monitor = (root / "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs").read_text()
+detector = (root / "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs").read_text()
+for uuid in ("f9710000-6d68-4b7d-a742-6fae7b5f0001",
+             "f9710000-6d68-4b7d-a742-6fae7b5f0002",
+             "f9710000-6d68-4b7d-a742-6fae7b5f0003"):
+    assert uuid in monitor, "Missing original BLE UUID " + uuid
+for token in ("new BiofitClockAligner()", "timeAligner.TryMapEvent",
+              "jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG",
+              "BilateralJumpCandidate?.Invoke", "eventType == 3"):
+    assert token in monitor, "Receiver compatibility invariant: " + token
+for token in ("MinimumVerticalG = 0.12f", "MaxPairGapSeconds = 0.18f",
+              "SameAnkleRefractorySeconds = 0.32f",
+              "PairCooldownSeconds = 0.90f",
+              "PairCooldownMilliseconds / 1000d",
+              "pairTime = Math.Max(eventSeconds, otherTime)",
+              "MaxPairGapWindowSeconds", "lastPairSeconds = pairTime"):
+    assert token in detector, "LEGACY pairing invariant: " + token
 cfg = (root / "ProjectSettings/ProjectSettings.asset").read_text()
 # GeomeTry needs the old Input Manager for Cube/Ship/Wave on Android.
 # The prior branch used Both (unsupported on Android); this dedicated UI
