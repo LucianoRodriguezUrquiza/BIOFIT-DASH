@@ -1,6 +1,26 @@
 # BIOFIT DASH — CONTEXTO VIVO / RELEVO ENTRE CONVERSACIONES
 
 > **Leer primero al iniciar un chat nuevo.** Este documento es el punto de entrada operativo y se actualiza con cada cambio **confirmado** del proyecto. No sustituye al código fuente ni a las pruebas físicas.
+
+> **ADVERTENCIA: ESTE ARCHIVO EN LA RAMA `feat/configurable-bilateral-cooldown-400-900ms` CONTIENE TRABAJO EXPERIMENTAL.** El `main` estable sigue siendo el PR #28 con 900 ms; todavía no se ha fusionado ningún cooldown configurable.
+
+## Experimento activo — cooldown BILATERAL LEGACY desde Configuración (2026-11-23)
+
+- **Objetivo:** permitir `900 / 800 / 700 / 600 / 500 / 400 ms` desde Configuración → Cooldown, con botones animados, un solo valor seleccionado, botón de restablecer, indicador `CD: NNN ms` durante los niveles y persistencia entre cierres de APK. **Predeterminado: 900 ms; los demás, experimentales.**
+- **Estado inicial:** PR #28 estable, 900 ms fijo en `BiofitBilateralJumpDetector.PairCooldownSeconds`; detector usa `pairTime = Max(tizq,tder)` sobre reloj compartido y rechaza cuando intervalo entre pares aceptados es menor que el cooldown. El puente `BiofitGeomeTryLegacyBridge` recibe `BilateralJumpCandidate`; UI `BiofitGeometryUX` ya contiene botón animado y almacenamiento `PlayerPrefs` para skins.
+- **Código examinado:** `BiofitBilateralJumpDetector.cs`, `BiofitClockAligner.cs`, `BiofitBLEMonitor.cs`, `BiofitGeomeTryLegacyBridge.cs`, `BiofitThreeModes.cs`, `BiofitGeometryUX.cs`, `BiofitSettingsButtonFeedback.cs`, `BiofitEventCapture.cs`, proyectos host y workflow CI.
+- **Archivos funcionales modificados:** `Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs`, `BiofitBLEMonitor.cs`, `Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs`. **Nuevo:** `Assets/BIOFIT/Scripts/BiofitCooldownConfiguration.cs` y su `.meta`.
+- **Decisión de arquitectura:** la propiedad `PairCooldownMilliseconds` del detector es la autoridad; `BiofitCooldownConfiguration` carga, valida y guarda una sola preferencia mediante `PlayerPrefs`. La UI lee y modifica el detector **a través de** `BiofitBLEMonitor`; no hay segundo temporizador, reconexión ni nueva escena. Ante un cambio de 900 a 400 ms durante un bloqueo, **no se acorta** el bloqueo iniciado; aumentar el valor sí puede extenderlo. El siguiente par aceptado adopta el valor elegido.
+- **Parámetros:** cooldown seleccionable 900/800/700/600/500/400 ms; 900 ms por defecto. Sin cambios en umbral 0,12 g, ventana 180 ms, refractario por tobillo 320 ms, firmware, BLE, fases experimentales, colisiones, física o música.
+- **Diagnósticos:** `COOLDOWN_MS=NNN` en inicio de captura, cambios de selección y decisiones bilaterales; `COOLDOWN_MS_FINAL` en resumen; se mantiene el formato CSV existente para evitar romper análisis/replay.
+- **Pruebas añadidas:** `tests/CooldownRegression` (fronteras de seis valores, cambios durante bloqueo, duplicados/rebotes, un solo tobillo, datos inválidos, persistencia simulada/restablecer); incorporada a `.github/workflows/latency-regression.yml`. Compatibilidad de los harness `ReceiverRegression` y `DashUiRegression` preparada con shim PlayerPrefs. **Estado a esta actualización: pruebas creadas, ejecución de CI por comprobar.**
+- **Pruebas todavía pendientes:** comprobar ejecución de CI y corregir fallos; Unity Editor, APK Android, seis ajustes físicos, visualización en diferentes resoluciones, persistencia real Android y diagnóstico de duplicados de un mismo salto a 400 ms.
+- **Regresión/riesgo conocido:** con un cooldown corto el detector puede aceptar un segundo par UP generado por el **mismo salto físico** pasados 400 ms. El detector temporal no distingue por sí solo una nueva acción humana; no se garantiza fiabilidad física sin ensayos.
+- **Rama de trabajo:** `feat/configurable-bilateral-cooldown-400-900ms` (partida del último `main` documental `8d4ec590...`). **No fusionar a `main` sin aprobación explícita.**
+- **Documento completo y procedimiento experimental:** [COOLDOWN_BILATERAL_CONFIGURABLE.md](COOLDOWN_BILATERAL_CONFIGURABLE.md).
+- **Próximo paso:** consultar CI, inspeccionar el diff, probar en un **clon independiente**; conservar intacto `C:\Users\Capo\Documents\BIOFIT-DASH-NUEVOS-NIVELES`.
+
+
 >
 > **Última actualización verificada:** 2026-11-23.
 > **Repositorio:** https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY
