@@ -11,41 +11,31 @@ using UnityEngine;
 /// </summary>
 public sealed class BiofitBLEMonitor : MonoBehaviour
 {
-    private const string PairCooldownPreference = "BIOFIT_BILATERAL_COOLDOWN_MS_V1";
+    private BiofitCooldownConfiguration cooldownConfiguration;
 
-    // The BLE receiver owns the authoritative runtime setting and persisted
-    // selection. No duplicate cooldown timer is created in the UI or bridge.
+    // BLE receiver is the authoritative owner; selections are committed only
+    // after the actual detector accepts them.
     private void Awake()
     {
-        int stored = PlayerPrefs.GetInt(PairCooldownPreference,
-            BiofitBilateralJumpDetector.DefaultPairCooldownMilliseconds);
-        if (!BiofitBilateralJumpDetector.IsSupportedPairCooldownMilliseconds(stored))
-        {
-            stored = BiofitBilateralJumpDetector.DefaultPairCooldownMilliseconds;
-            PlayerPrefs.SetInt(PairCooldownPreference, stored);
-            PlayerPrefs.Save();
-        }
-        jumpDetector.SetPairCooldownMilliseconds(stored);
+        cooldownConfiguration = new BiofitCooldownConfiguration(jumpDetector,
+            PlayerPrefs.GetInt, PlayerPrefs.SetInt, PlayerPrefs.Save);
+        cooldownConfiguration.Load();
     }
 
     public int PairCooldownMilliseconds => jumpDetector.PairCooldownMilliseconds;
     public bool CooldownPreferenceMatchesDetector =>
-        PlayerPrefs.GetInt(PairCooldownPreference,
-            BiofitBilateralJumpDetector.DefaultPairCooldownMilliseconds) ==
-        jumpDetector.PairCooldownMilliseconds;
+        cooldownConfiguration != null && cooldownConfiguration.IsConsistent;
 
     public bool SetPairCooldownMilliseconds(int milliseconds)
     {
-        if (!BiofitBilateralJumpDetector.IsSupportedPairCooldownMilliseconds(milliseconds))
-            return false;
-        jumpDetector.SetPairCooldownMilliseconds(milliseconds);
-        PlayerPrefs.SetInt(PairCooldownPreference, milliseconds);
-        PlayerPrefs.Save();
+        if (cooldownConfiguration == null ||
+            !cooldownConfiguration.Select(milliseconds)) return false;
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, 0,
             "COOLDOWN_MS=" + PairCooldownMilliseconds +
             " source=CONFIGURACION lock=CONSERVADOR");
         return true;
     }
+
     [Header("MAC de los trackers (verificadas con nRF Connect)")]
     [SerializeField] private string leftAddress = "80:45:6B:35:DE:61";
     [SerializeField] private string rightAddress = "28:84:85:55:6B:B9";
