@@ -22,7 +22,8 @@ namespace Biofit.GeomeTryOriginal.Editor
         };
         private static readonly string[] Supported = {
             "spike", "ground", "biofitRoof", "biofitBallPortal",
-            "biofitSpiderPortal", "biofitCubePortal"
+            "biofitSpiderPortal", "biofitCubePortal", "biofitDecoPulse",
+            "biofitDecoCrystal", "biofitDecoStar"
         };
 
         [MenuItem("BIOFIT/GeomeTry ORIGINAL/8. Verificar niveles 3 MODOS (60 s)")]
@@ -35,10 +36,13 @@ namespace Biofit.GeomeTryOriginal.Editor
                 if (asset == null)
                     throw new InvalidOperationException("Falta mapa BIOFIT: " + Names[i]);
                 Level map = new Level(asset);
-                if (map.Id != i + 1 || map.getLastMapItem().X != 575 ||
-                    map.Music == null)
+                if (map.Id != i + 1 || map.Name != "Nivel " + (i + 1) ||
+                    map.getLastMapItem().X != 575 || map.Music == null)
                     throw new InvalidOperationException("Id/longitud/musica invalidos: " + Names[i]);
                 int portals = 0, spikes = 0, previousSpikeX = -100;
+                int[] expectedPortalX = i == 3 ? new[] {185, 385, 515} :
+                    i == 4 ? new[] {117, 275, 405, 515} : new int[0];
+                int[] actualPortals = new int[expectedPortalX.Length];
                 bool roof = false, marker = false;
                 foreach (MapItem item in map.Map)
                 {
@@ -46,19 +50,27 @@ namespace Biofit.GeomeTryOriginal.Editor
                         throw new InvalidOperationException("Objeto no soportado: " + item.Type);
                     if (item.Type == "spike")
                     {
-                        if (item.X - previousSpikeX < 30 || item.X < 25)
+                        if (item.X - previousSpikeX < 15 || item.X < 25)
                             throw new InvalidOperationException("Pinchos demasiado cercanos: " + Names[i]);
                         previousSpikeX = item.X;
                         spikes++;
                     }
-                    if (item.Type.EndsWith("Portal", StringComparison.Ordinal)) portals++;
+                    if (item.Type.EndsWith("Portal", StringComparison.Ordinal))
+                    {
+                        if (portals >= expectedPortalX.Length ||
+                            item.X != expectedPortalX[portals])
+                            throw new InvalidOperationException("Portal fuera de secuencia: " + Names[i]);
+                        actualPortals[portals++] = item.X;
+                    }
                     if (item.Type == "biofitRoof") roof = true;
                     if (item.Type == "ground" && item.X == 575) marker = true;
                 }
                 if (!marker || roof != (i != 0) || portals != expectedPortals[i] || spikes < 8)
                     throw new InvalidOperationException("Estructura inesperada: " + Names[i]);
             }
-            Debug.Log("BIOFIT 3 MODOS: 5 mapas ~60 s, sin doble salto obligatorio y portales verificados estaticamente.");
+            Debug.Log("BIOFIT 3 MODOS: 5 mapas ~60 s, identidad Nivel 1-5, " +
+                "pinchos separados >=15u y portales verificados estaticamente. " +
+                "No sustituye pruebas de jugabilidad/Android/BLE.");
         }
 
         [MenuItem("BIOFIT/GeomeTry ORIGINAL/9. Compilar BIOFIT 3 MODOS (BLE LEGACY)")]
