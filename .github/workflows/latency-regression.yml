@@ -54,6 +54,19 @@ jobs:
         run: |
           .\tools\apply_geometry_compat.ps1
           if ($LASTEXITCODE -ne 0) { throw "Compatibility patch rerun failed" }
+      - name: Verify user-asset installer PowerShell syntax (no private PNGs in CI)
+        shell: powershell
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path (Get-Location) 'tools/install_biofit_ui.ps1'),
+            [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.ToString() }
+            throw 'The BIOFIT UI asset installer contains PowerShell syntax errors'
+          }
+          Write-Host 'PASS PowerShell syntax: user-provided PNG auto-install tool'
       - name: Check real Windows workspace after compatibility patches
         shell: powershell
         run: |
