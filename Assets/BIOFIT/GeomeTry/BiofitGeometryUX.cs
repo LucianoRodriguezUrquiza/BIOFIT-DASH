@@ -1229,9 +1229,10 @@ namespace Biofit.GeomeTryOriginal
                     string.Join("\n", joystickHistory.ToArray())) +
                 "\nEl clic táctil también puede aparecer como Mouse0.";
             joystickAxesLabel.text =
-                "EJES Horizontal: " + Input.GetAxisRaw("Horizontal").ToString("F2") +
-                "  |  Vertical: " + Input.GetAxisRaw("Vertical").ToString("F2") +
-                "  (valores de Input Manager)";
+                "STICK FÍSICO X: " + Input.GetAxisRaw("BIOFIT VR Stick X").ToString("F2") +
+                "  Y: " + Input.GetAxisRaw("BIOFIT VR Stick Y").ToString("F2") +
+                "  | TECLADO H: " + Input.GetAxisRaw("Horizontal").ToString("F2") +
+                " V: " + Input.GetAxisRaw("Vertical").ToString("F2");";
         }
 
         private void BuildCooldownSettings()
