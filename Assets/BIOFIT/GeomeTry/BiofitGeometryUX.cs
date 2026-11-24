@@ -33,7 +33,7 @@ namespace Biofit.GeomeTryOriginal
             "NIVEL 1", "NIVEL 2", "NIVEL 3", "NIVEL 4", "NIVEL 5"
         };
         private static readonly string[] MapModes = {
-            "CUBO", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"
+            "CUBO / NAVE", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"
         };
         private static BiofitGeometryUX instance;
         private static readonly FieldInfo CharacterSpriteField =
