@@ -2,6 +2,16 @@
 
 > **Leer primero al iniciar un chat nuevo.** Este documento es el punto de entrada operativo y se actualiza con cada cambio **confirmado** del proyecto. No sustituye al código fuente ni a las pruebas físicas.
 
+## En curso — joystick VR Bluetooth 3.0, diagnóstico Android (2026-11-23)
+
+- **Rama experimental:** `feat/vr-joystick-input-diagnostics`, creada desde `main` verificado (`e1db0a5c`) después del merge de cooldown PR #29. No cambiar `main` ni eliminar ninguna de las seis opciones (900/800/700/600/500/400 ms).
+- **Dispositivo proporcionado por el usuario:** DUAITEK/TodoMicro `JOYSTICK-VR`, Bluetooth clásico 3.0. Prueba fuera del juego: A/R1 clic, B larga/R2 Atrás, C volumen arriba, D volumen abajo, stick 360°. La equivalencia con `KeyCode` Unity **aún no se ha identificado**, y las teclas de volumen pueden ser del sistema.
+- **Investigación:** el manual de hardware semejante VR-PARK Y1 documenta `@+B` para modo gamepad horizontal y `@+D` para mouse; no asegurar que idéntico protocolo HID aplique al hardware comercial exacto. Fuentes oficiales Android distinguen eventos de teclado/gamepad, axes y sistema.
+- **Auditoría:** Unity `activeInputHandler: 0` usa Legacy Input Manager; `com.unity.inputsystem` está instalado pero no activado. Cube y Ball/Spider tienen rutas de touch/Space; un evento mouse de A podría funcionar sin crear pulsos extra. **Mantener BILATERAL LEGACY y las físicas**.
+- **Implementado solamente como diagnóstico:** botón `JOYSTICK` en Configuración abre pantalla para mostrar nombres `Input.GetJoystickNames`, últimos `KeyCode`, ejes `Horizontal/Vertical`, contador, limpiar y volver; registra eventos en Console. No altera el gameplay, ni incluye remapeo todavía. La pantalla nueva precisa **ensayo en APK Android real**; la CI no sustituye hardware.
+- **Documentación y guía:** [JOYSTICK_VR_BLUETOOTH_DIAGNOSTICO.md](JOYSTICK_VR_BLUETOOTH_DIAGNOSTICO.md). Después de identificar códigos reales, diseñar mapeo por acción (confirmar/jugar/volver/pausa/reiniciar/navegación), preferencias persistentes y prevención de doble salto por clic emulado.
+- **Estado:** código de diagnóstico en rama para pruebas. **No fusionado a `main`**; preserve la versión estable PR #29 para jugar físicamente. Próximo: compilar APK experimental, probar @+B y @+D, registrar teclas de A/B/C/D/R1/R2/stick, validar UI en 16:9 y luego implementar bindings fiables.
+
 ## Nueva base funcional aprobada — Cooldown configurable (2026-11-23)
 
 **Decisión del usuario:** después de probar físicamente BIOFIT DASH en su teléfono Android con los dos trackers ESP32 en los tobillos, informó que el juego **funciona muy bien con 400 ms** y autorizó expresamente integrar la funcionalidad del PR #29 en `main` como **nueva versión principal**. Su valor **preferido por ahora es 400 ms**, pero deben **conservarse las seis opciones**: 900, 800, 700, 600, 500 y 400 ms. No bloquear el cooldown en 400 ni eliminar el selector.
