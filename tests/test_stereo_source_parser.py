@@ -1,5 +1,6 @@
 """Offline source parser regression: no network dependency in CI."""
 import base64
+import binascii
 import gzip
 import importlib.util
 from pathlib import Path
@@ -36,7 +37,7 @@ assert "1" in module.decode_inner_level(inner)
 try:
     module.decode_inner_level("!!!!")
     assert False, "Invalid base64 must fail"
-except (ValueError, Exception):
+except (ValueError, binascii.Error):
     pass
 assert 'MAX_DECOMPRESSED_BYTES' in dir(module)
 
