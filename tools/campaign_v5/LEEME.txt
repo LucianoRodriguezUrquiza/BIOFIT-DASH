@@ -1,0 +1,9 @@
+BIOFIT DASH V5 — CONSOLIDACION REVISION 5.1 (solo publicacion, no gameplay)
+1. Cerrar Unity. No volver a instalar V5. GitHub puede permanecer publico.
+2. Desde la carpeta extraida ejecutar:
+   py -3 consolidar_v5.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL"
+3. Si sale OK PREVUELO V5.1, ejecutar el mismo comando con --publicar.
+4. Se conservan los archivos de configuracion Unity identificados en BIOFIT_REVISION_V5.txt y los metadatos C# asociados. Se publica solo codigo, configuracion, documentacion e instaladores. No se cambia .gitignore ni .git/info/exclude, ni se borran ni se modifican recursos. La decision sobre publicacion de recursos de terceros queda pendiente.
+5. Se guardan respaldos locales de codigo/configuracion/recursos y bundles Git. main se publica sin force; las ramas remotas anteriores se eliminan solo tras verificar main y tags de archivo. Si falla, enviar la salida y no repetir a ciegas.
+6. Verificar git status, git branch --show-current, git ls-remote --heads origin, git log -1 --oneline. Pueden quedar recursos locales no versionados; no eliminarlos.
+7. Para reconstruccion consultar CONTEXTO_ACTUAL.md y restaurar_local_v5.py. Los parches historicos requieren la base historica.

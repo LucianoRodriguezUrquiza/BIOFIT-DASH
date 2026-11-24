@@ -1,0 +1,17 @@
+BIOFIT DASH — Stereo Madness / integración local v1
+
+Base: PR #31, commit 73cd148b9f3747b736eb4972c88ddee5a4fbe517.
+Requiere Unity 6000.3.28f1 (versión utilizada por el proyecto), Python 3.10+ con Pillow, Git y el ZIP original de recursos del usuario.
+
+1. Con Unity cerrado, crear un clon NUEVO de la rama experimental, fijar el commit y ejecutar tools/prepare_geometry_original.ps1.
+2. Ejecutar py -3 -m pip install Pillow si no está instalado.
+3. Ejecutar desde la carpeta extraída de este paquete:
+   py -3 instalar_stereo.py --proyecto "C:\ruta\clon" --recursos "C:\ruta\STEREO_MADNESS_RECURSOS_20261124_095228.zip"
+4. Abrir el clon nuevo en Unity Hub. Esperar importación. En BIOFIT > GeomeTry ORIGINAL > 8. Verificar niveles 3 MODOS (60 s), comprobar mensaje Stereo local: 2291 registros. Abrir Main Menu.unity, Play, Nivel 1.
+5. Antes del APK, probar controles, geometría, primera transición Ship, retorno Cube, tres monedas y ruta secreta. Luego usar el menú 9 de compilación original, Android activo. El application ID sigue siendo el experimental anterior: guardar APK previa y tener presente que Android puede sustituir la instalación.
+
+Cambios: dos archivos C# nuevos, modificación mínima en BiofitGeometryUX.cs (selección de manifiesto local solamente para Nivel 1) y BiofitThreeModesBuild.cs (validador local, niveles 2-5 intactos). El mapa histórico de video no se modifica. Los datos y texturas originales se generan en Resources/BiofitStereoLocal; se excluyen localmente de Git. No ejecutar git add -f, commit/push de archivos propietarios ni publicar APK con recursos sin autorización. No se modifica el submódulo original, firmware, BLE, joystick, física de Cube o los demás niveles. El programa se niega a instalar sobre un commit diferente o un árbol con archivos versionados modificados; no sobrescribe una instalación previa.
+
+Verificado fuera de Unity: ejecución del preimportador sobre ZIP aportado, hash del nivel, 2291 objetos / 31 IDs / 30 texturas, igualdad de ID/coordenadas/rotaciones/inversiones, clasificación, guardas de parche. No se ejecutó el Editor Unity, PowerShell/Windows ni compilación C# o Android. El instalador se debe validar en PC.
+
+Límites: 2272 objetos visibles, 14 triggers de color implementados por posición, 5 efectos de entrada conservados como datos pero no implementados visualmente. Los hitboxes de bloques/pinchos usan prefabs originales de GeomeTry escalados; el pit tiene hitbox provisional; portales y techo Ship y meta tienen dimensiones/posiciones de prueba. La cámara original sigue intacta; el fondo usa parallax aproximado. El portal secreto conserva rotación y posición; el motor ya en Ship no cambia de modo al atravesarlo, falta validar que la ruta sea accesible y cámara correcta. No se acredita fidelidad dinámica 1:1. Se conserva la escala isotrópica 30 GD = 1 Unity, velocidad efectiva de referencia 9.75 unidades/s, por lo que el tempo espacial puede diferir del video (~6 %). No cambiar físicas preventivamente; verificar el nivel con teclado antes de calibrar sincronización musical. No se afirma 60 FPS ni completabilidad. Prueba privada con tus archivos locales; para publicación requiere recursos y diseños autorizados.

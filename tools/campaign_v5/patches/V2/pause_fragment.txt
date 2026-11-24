@@ -1,0 +1,21 @@
+        private void BuildPauseScreen()
+        {
+            RectTransform veil=Fill("pause dimmer",canvasRoot,new Color(0f,0f,0f,.83f));
+            Text("pause title",veil,"PAUSA",new Vector2(.5f,.82f),new Vector2(560,85),Vector2.zero,62,Color.white);
+            ImageButton("RESUME",veil,BiofitV2BitmapText.Art("play"),"PLAY",new Vector2(.5f,.57f),new Vector2(150,150),Vector2.zero,()=>{RestorePause();BuildScreen(LevelScene);});
+            ImageButton("RESTART",veil,BiofitV2BitmapText.Art("restart"),"RETRY",new Vector2(.34f,.57f),new Vector2(115,115),Vector2.zero,RestartLevel);
+            ImageButton("BACK SELECT",veil,BiofitV2BitmapText.Art("menu"),"MENU",new Vector2(.66f,.57f),new Vector2(115,115),Vector2.zero,()=>Navigate(Select));
+            Text("resume caption",veil,"CONTINUAR",new Vector2(.5f,.43f),new Vector2(230,50),Vector2.zero,28,Color.white);
+            Text("restart caption",veil,"REINICIAR",new Vector2(.34f,.43f),new Vector2(230,50),Vector2.zero,26,Color.white);
+            Text("menu caption",veil,"NIVELES",new Vector2(.66f,.43f),new Vector2(230,50),Vector2.zero,26,Color.white);
+            if(BiofitStereoPractice.Available)
+            {
+                bool practice=BiofitStereoPractice.Enabled;
+                ImageButton("Cambiar modo",veil,BiofitV2BitmapText.Art(practice?"normal":"practice"),"MODO",new Vector2(.39f,.25f),new Vector2(98,98),Vector2.zero,()=>{BiofitStereoPractice.ToggleMode();RestartLevel();});
+                Text("mode caption",veil,practice?"MODO NORMAL":"MODO PRACTICA",new Vector2(.55f,.25f),new Vector2(350,48),Vector2.zero,31,Color.white);
+                if(practice)
+                    Button("Auto checkpoint",veil,"AUTO CHECKPOINT: "+(BiofitStereoPractice.Auto?"SI":"NO"),new Vector2(.5f,.105f),new Vector2(450,64),Vector2.zero,()=>{BiofitStereoPractice.ToggleAuto();BuildScreen(LevelScene);BuildPauseScreen();},Ice,25);
+            }
+            BuildBackButton(LevelScene);
+        }
+

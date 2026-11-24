@@ -1,0 +1,16 @@
+BIOFIT DASH — STEREO V4 (experimental, DIPL)
+Requiere V3 local validada, Python 3.10+ y Pillow ya instalado. Cerrar Unity.
+No requiere clonar ni descargar el RAR; usa los archivos originales de la PC.
+
+PowerShell (ajustar rutas si se movieron):
+cd "C:\Users\Capo\Desktop\BIOFIT_STEREO_V4"
+py -3 instalar_v4.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --gd "C:\Users\Capo\Desktop\Geometry.Dash.v2.207\Resources" --recursos "C:\Users\Capo\Desktop\STEREO_MADNESS_RECURSOS_20261124_095228.zip" --verificar
+Repetir sin --verificar para aplicar.
+
+El instalador valida las firmas V3, los SHA-256 de los dos donantes, los datos y las filas seleccionadas. Genera HybridV4.json localmente; Objects.json queda intacto. Extrae cuatro texturas de portal del ZIP anterior. No distribuye las texturas ni mapas de RobTop en el paquete, no escribe a GitHub. Se actualizan diez archivos y se guarda una copia en Builds/StereoV4_backup_*. El archivo HybridV4.json y las nuevas texturas se encuentran bajo la carpeta local excluida de Git por V1.
+
+Diseño: entrada Ball X=7995, vuelta Cube X=12555; entrada Spider X=22995 (60 GD después de la original, para conservar apoyo de entrada); meta original. Se mantienen las dos secciones Cube, eventos de color y la posición X de la tercera moneda, reubicada en Y=255. No es un trasplante literal: se extraen filas de pinchos de Cycles y Fingerdash y se organizan en dos corredores de techo/suelo continuos. No se añaden orbes ni triggers no soportados. El paso de gravedad se hace con el motor Ball/Spider existente; solo Nivel 1 admite capa 6 en su búsqueda de superficies. Se preserva el momentum de entrada en Ball/Spider local. El modo práctica guarda el estado invertido y lo restaura junto a posición y velocidad. No se cambia firmware, puente BLE, cooldown, físicas Cube, mapas de niveles 2–5 o UI V3, salvo rótulo de Nivel 1.
+
+Validación: extracción real del RAR con libarchive, 27 niveles decodificados; filas originales verificadas, 2928 registros activos, un portal Ball, uno Cube, uno Spider, tres monedas, cero Ship. Verificación de secciones Cube sin cambios. Intervalos modelo 600 GD = 20 bloques = 2.05 s entre acciones nominales; no sustituye pruebas físicas. Tres pruebas unitarias y una instalación en estructura simulada (datos y recursos reales, firmas de motor/UI representativas). Unity y Android NO compilados en este entorno.
+
+Prueba: menú BIOFIT > GeomeTry ORIGINAL > 8. Verificar niveles 3 MODOS (60 s). Main Menu > Nivel 1. Modo práctica, validar transición Ball, cambio de gravedad por BLE, vuelta Cube, Spider, monedas, muerte/respawn y checkpoints invertidos. Probar cooldown 900 ms y 400 ms. Comprobar los otros niveles. No compilar APK hasta que Play Mode funcione. Si falla, adjuntar consola y porcentaje; el diagnóstico V3 continúa activo.

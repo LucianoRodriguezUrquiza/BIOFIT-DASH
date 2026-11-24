@@ -1,0 +1,25 @@
+        private void BuildLevelHud()
+        {
+            var hud=canvasRoot.gameObject.AddComponent<BiofitV2Hud>();
+            hud.bar=Rect("BIOFIT V2 progress",canvasRoot,new Vector2(.5f,.945f),new Vector2(660,32),Vector2.zero);
+            hud.percentage=Text("BIOFIT V2 percent",canvasRoot,"0%",new Vector2(.755f,.945f),new Vector2(125,50),Vector2.zero,38,Color.white);
+            cooldownHudLabel=Text("Cooldown BLE activo HUD",canvasRoot,"",new Vector2(.86f,.855f),new Vector2(235,44),Vector2.zero,28,Color.white);
+            RefreshCooldownHud();
+            ImageButton("Pause game",canvasRoot,pauseIcon,"II",new Vector2(.945f,.93f),new Vector2(88,88),Vector2.zero,TogglePause);
+            if(GameManager.Instance!=null && GameManager.Instance.SelectedLevel!=null && GameManager.Instance.SelectedLevel.Id==1)
+            {
+                hud.coins=new RawImage[3];
+                for(int i=0;i<3;i++)
+                {
+                    var coin=Rect("BIOFIT coin "+i,canvasRoot,new Vector2(.14f+i*.037f,.945f),new Vector2(45,45),Vector2.zero).gameObject.AddComponent<RawImage>();
+                    coin.raycastTarget=false;hud.coins[i]=coin;
+                }
+            }
+            if(BiofitStereoPractice.Enabled)
+            {
+                hud.practiceStatus=Text("Practice status",canvasRoot,"PRACTICA",new Vector2(.5f,.865f),new Vector2(680,42),Vector2.zero,28,Color.white);
+                ImageButton("Colocar checkpoint",canvasRoot,BiofitV2BitmapText.Art("add_checkpoint"),"+",new Vector2(.44f,.085f),new Vector2(150,86),Vector2.zero,BiofitStereoPractice.Place);
+                ImageButton("Eliminar checkpoint",canvasRoot,BiofitV2BitmapText.Art("remove_checkpoint"),"-",new Vector2(.56f,.085f),new Vector2(150,86),Vector2.zero,BiofitStereoPractice.Remove);
+            }
+        }
+

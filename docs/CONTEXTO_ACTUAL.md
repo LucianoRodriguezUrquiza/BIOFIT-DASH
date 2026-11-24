@@ -1,81 +1,43 @@
-# BIOFIT DASH — CONTEXTO ACTUAL (rama principal)
+# BIOFIT DASH — Campaña Clásica V5 (principal provisional)
+Actualización: 2026-11-24. El usuario informó que probó físicamente la V5 y funciona bien, y autorizó su consolidación en main. No se dispone de una matriz de pruebas por nivel ni de registros nuevos de BLE/APK; no afirmar que se certificó todo el recorrido, la latencia o Android.
 
-**Referencia funcional:** Cube / Ball / Spider; cinco mapas propios de ~60 s; dos trackers tobillo ESP32-S3 QMI8658; Android Unity 6000.3.28f1; entrada BLE **BILATERAL LEGACY**. Fecha de consolidación: 22-23/11/2026.
+## Inicio de una conversación nueva
+Leer este archivo, `docs/CONTEXTO_VIVO.md`, `docs/ASSET_SOURCES.md`, y `tools/campaign_v5/patches/V5/VALIDACION_V5.json`. Consultar el código real de main antes de modificar. El proyecto Unity local validado es `C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL` (Unity 6000.3.28f1).
+Repositorio Unity: https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY
+Firmware: https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-Firmware
+Base de los instaladores históricos: 73cd148b9f3747b736eb4972c88ddee5a4fbe517.
+Submódulo: https://github.com/Christ0u/GeomeTry, ThirdParty/GeomeTryOriginal, d922caddb4d21ecb791a266143e279bdb969d42c.
 
-> Este es el documento canónico de la versión principal; la auditoría histórica detallada queda en el historial Git. No utilizar MOV HOLD ni CICLO EXP como control principal.
+## ICC — Invariabilidad del control corporal (prioridad absoluta)
+Conservar el firmware ESP32-S3/QMI8658, adquisición y procesamiento, BLE BILATERAL LEGACY, detector bilateral UP_IMPULSE (umbral 0,12 g y ventana 180 ms de referencia), sincronización/requisitos de conexión, y cooldown configurable desde el menú: 400, 500, 600, 700, 800 y 900 ms. Consultar los parámetros reales en código. No modificar, reemplazar o desactivar sin autorización explícita. Una pareja BLE aceptada equivale a una acción del personaje, no una entrada sostenida nueva. El teclado, joystick Bluetooth y táctil son secundarios. Mantener físicas del Cube normal (velocidad, gravedad, fuerza de salto). El adaptador de Cube invertido, Ball y Spider debe consumir los eventos existentes; no cambiar el detector para resolver problemas de nivel. Validar con sensores físicos y registrar resultados.
 
-## 1. Arquitectura y elección de control
+## DIPL — Desarrollo Incremental mediante Parches Locales
+Una sola carpeta Unity; ZIP con cambios mínimos e instalador Python/PowerShell. Comprobar versión y hashes, realizar copia de seguridad, aplicar cambios de forma transaccional, documentar, permitir reversión y validar antes de commit. No volver a clonar para cada actualización. Git local para control de versiones; main para las versiones aprobadas; no fusionar sin autorización. Orden del usuario 24/11/2026: mantener el repositorio público durante el desarrollo y no modificar todavía las reglas de exclusión ni eliminar recursos originales. La publicación de recursos de terceros queda pendiente de decisión y permisos; esta consolidación comprende código, configuración y documentación. Conservar el RAR local y los respaldos. Los parches históricos son código de referencia; sus comprobaciones de HEAD requieren la base histórica, NO se ejecutan encima de main V5.
 
-- Dos dispositivos Waveshare ESP32-S3-LCD-1.47B, con IMU QMI8658, en tobillos, transmiten eventos de movimiento por BLE a Android.
-- Receptor general: `Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs`. Emparejamiento de impulsos: `BiofitBilateralJumpDetector.cs`, alineación de relojes: `BiofitClockAligner.cs`.
-- En GeomeTry el puente `Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs` escucha `BilateralJumpCandidate`. Cuando dos impulsos UP válidos llegan en una ventana de hasta 180 ms y pasan el cooldown **seleccionado por el usuario (900/800/700/600/500/400 ms)**, emite **una acción de juego**.
-- Umbral UP de Unity: 0,12 g; ventana bilateral 180 ms; refractario individual 320 ms; cooldown entre pares **configurable desde el juego: 900/800/700/600/500/400 ms**. **900 ms sigue siendo predeterminado** y la preferencia queda en PlayerPrefs. El usuario comunicó evaluación física satisfactoria de **400 ms** con ambos ESP32 en Android y lo prefiere actualmente (2026-11-23). Cooldown NO significa latencia BLE.
-- En Cube se ejecuta el `Cube.onClick()` original. En Ball, `BiofitModeMotor.TryPulse()` invierte la gravedad desde una superficie; en Spider teletransporta a la superficie contraria y agrega línea/flash breve. Mismo evento BLE, distinta acción según modo.
-- Movimiento horizontal original `DefaultSpeed=6.5`, `Time.timeScale=1.5` => ~9,75 unidades de mundo por segundo real; física y `jumpForce=13.5` del Cube original NO cambiados. Cada nivel termina en marcador x=575 (~60,1s nominales sin morir).
-- En Android se solicita un objetivo de 60 FPS. No confundir FPS solicitados con FPS medidos.
+## Campaña validada provisionalmente
+| Slot | Nivel original | Archivo fuente | Originales | Activos | Vehículos |
+|---|---|---|---:|---:|---|
+|1|Stereo Madness|levels/1.txt|2291|2785|Cube/Ball/Cube/Spider|
+|2|Back on Track|levels/2.txt|1545|1734|Cube/Ball/Cube|
+|3|Polargeist|levels/3.txt|1531|2111|Cube/Spider/Cube|
+|4|Can't Let Go|levels/6.txt|1704|1871|Cube/Ball/Cube|
+|5|Jumper|levels/7.txt|2813|3351|Cube/Ball/Cube/Spider/Cube|
+Total 9884 registros de fuente, 11852 activos; 7 corredores Ship adaptados, 15 monedas. Ship sigue en el código. Los sectores Cube se conservan salvo transiciones y adaptación de mecánicas; los corredores se basan en patrones de Cycles (9) y Fingerdash (21), no son copias literales. La V5 añade gravedad invertida, pads, orbes y modo práctica en los cinco niveles. Intervalos nominales entre acciones 2,26–3,28 s según informe; no son medidas BLE.
+V1: importación exacta de los datos de Stereo Madness; V2: colisiones, fuentes bitmap, HUD, práctica; V3: transición Ship y checkpoints manuales Z/X/táctil, relación de aspecto y separación de pulsación/salto, validación del usuario; V4: sustitución de Ship en nivel 1 (experimental, no probada por separado); V5: campaña acumulativa, aprobada provisionalmente por el usuario. 5/5 pruebas host reportadas en VALIDACION_V5.json; no certificación de Unity/Android por esas pruebas.
+Conservar fuentes originales, botones, barra de progreso, CD visible sin solapamiento, modo práctica, monedas y portales. Validar toda la campaña, colisiones, checkpoints, pads/orbes, música, BLE, menú cooldown, Android a 60 FPS objetivo (no garantizado). No afirmar resultados que no consten.
 
-## 2. Los cinco niveles vigentes
+## RFD — Repositorios y fuentes de desarrollo
+- GD Assets: https://github.com/kenzieshane/Assets (ref 1.0).
+- GD Textures: https://github.com/Weebifying/gd-textures.
+- Kenney: https://github.com/shorepine/kenney y https://kenney.nl/assets (verificar CC0 por pack).
+- Catálogo técnico de objetos: https://github.com/TalhaMudo/GDBuilderAI (mcp/src/data/objects.json).
+- Referencias adicionales por verificar antes de usar: https://github.com/AngusA13/geometry-dash-full y https://github.com/Aadem-Isai/Final-Geometry-Dash-main.
+- Instalación local Geometry Dash 2.207: `C:\Users\Capo\Desktop\Geometry.Dash.v2.207\Resources`. RAR de consulta en el proyecto ChatGPT si se encuentra disponible; no asumir acceso desde otra conversación. Los datos, fuentes, sprites y música originales se conservan en la PC y respaldo local; no se cambia su tratamiento en Git en esta consolidación.
+- Catálogo: docs/ASSET_SOURCES.md; herramientas de recursos: tools/assets/Preparar_Biblioteca_BIOFIT.ps1.
 
-| Orden de interfaz | JSON nuevo | Modo de juego | Portales automáticos |
-|---|---|---|---|
-| 1 | BackOnTrack.json | Cube | ninguno |
-| 2 | JumpyNightmare.json | Ball | ninguno |
-| 3 | Polargeist.json | Spider | ninguno |
-| 4 | StereoMadness.json | Cube → Ball → Spider → Cube | x180, x380, x515 |
-| 5 | WaveVibe.json | Cube → Ball → Spider → Cube → Ball | x110, x276, x404, x515 |
-
-Los cinco JSON están en `Assets/BIOFIT/Resources/BiofitThreeModes/`; el archivo `ground` x=575 es marcador de fin. En Cube se requiere un único salto por pincho, sin encadenar saltos subsegundo. En Ball y Spider, los niveles contienen suelo/techo y amenazas alternadas. Las distancias nominales entre pinchos son al menos 38u (~3,9s), 52u (~5,3s), 46u (~4,7s), 45u (~4,6s) y 38u (~3,9s) respectivamente.
-
-No se afirma que el cálculo de la distancia entre pinchos certifique cada ventana de entrada, choque o cambio de portal. La prueba real de jugabilidad sigue siendo necesaria.
-
-## 3. Estructura del proyecto y los recursos gráficos
-
-- Repositorio Git principal: `BIOFIT-GAME-UNITY`, rama `main`.
-- Fuente tercera: submódulo Git `ThirdParty/GeomeTryOriginal` apuntando al commit **d922caddb4d21ecb791a266143e279bdb969d42c** de `Christ0u/GeomeTry`.
-- `tools/prepare_geometry_original.ps1` copia sus Assets a `Assets/GeomeTryOriginal/Assets/` y aplica compatibilidad Unity 6: arregla tres archivos PNG codificados originalmente como WEBP y referencias a la cámara. El submódulo permanece sin modificar. Esa copia generada es ignorada por Git y debe recrearse en un clon nuevo.
-- Recursos heredados: `Assets/GeomeTryOriginal/Assets/Resources/Sprites/`, `Resources/Prefabs/`, `Resources/UI/`, `Resources/Songs/`. GeomeTry aporta Cube, Ship, Wave, suelo, techo, pinchos, menús y música. Ship y Wave no son modos activos de los cinco niveles nuevos.
-- UI BIOFIT: `Assets/BIOFIT/Resources/BiofitUi/` necesita `LevelSelect.png`, `Skins.png`, `Back.png`, `Pause.png`. Esta carpeta se excluye de Git por ser un pack gráfico externo/local de derechos de redistribución no aclarados. **Una descarga nueva en otra máquina NO lo incluye.** El preparador ejecuta `tools/restore_local_biofit_ui.ps1` para copiar los archivos automáticamente desde un proyecto anterior en la misma carpeta padre, si existe. Si no existen, informa cómo aportarlos.
-- Ball, Spider y portales usan sprites propios generados en tiempo de ejecución por `BiofitThreeModeArt`. Se pueden sustituir por PNG importados como Sprite en `Assets/BIOFIT/Resources/BiofitThreeModes/Artwork/`, nombrados `IconBall.png`, `IconSpider.png`, `PortalBall.png`, `PortalSpider.png`, `PortalCube.png`, siempre que se tengan derechos de uso. Los PNG originales de Geometry Dash no se incluyen.
-- UI principal: `Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs`; adaptador de modos: `Assets/BIOFIT/GeomeTry/BiofitThreeModes.cs`.
-- Registración CSV, exportación Android y diagnósticos siguen disponibles. Firmware **no incluido** en este repositorio: `LucianoRodriguezUrquiza/BIOFIT-GAME-Firmware` es otro proyecto y no se modifica por estos cambios.
-
-## 4. Preparar un clon nuevo y compilar
-
-**NO ejecutar prepare_geometry_original.ps1 sobre un proyecto ya preparado:** verifica y rechaza esa condición; no es un instalador incremental.
-
-```powershell
-cd "C:\Users\Capo\Documents"
-git clone --recurse-submodules https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY.git BIOFIT-DASH-PRINCIPAL
-cd ".\BIOFIT-DASH-PRINCIPAL"
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\prepare_geometry_original.ps1"
-```
-
-Con Unity 6.3 LTS 6000.3.28f1, abrir **esa carpeta** en Unity Hub. Ejecutar:
-1. `BIOFIT > GeomeTry UX > 1. Configurar modulo tactil Android`.
-2. `BIOFIT > GeomeTry UX > 2. Verificar UX y recursos`.
-3. `BIOFIT > GeomeTry ORIGINAL > 8. Verificar niveles 3 MODOS (60 s)`.
-4. `BIOFIT > GeomeTry ORIGINAL > 4. Activar URP original para probar en Play`; abrir menú opción 2 y probar niveles con mouse/tecla Espacio.
-5. Para Android: activar Android en Build Profiles y seleccionar `BIOFIT > GeomeTry ORIGINAL > 9. Compilar BIOFIT 3 MODOS (BLE LEGACY)`.
-
-APK separada: package `com.biofitgame.threemodeslab`, nombre `BIOFIT TRES MODOS`; resultado en `Builds/`. El menú 3 pertenece a la compilación original de GeomeTry, no a la versión principal Tres Modos.
-
-## 5. Validación y límites actuales
-
-- **Integración verificada:** [PR #29 fusionado a `main`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/29), commit [`e9356570d97b7ceba081a2bed540bf68ed1ff6dc`](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/commit/e9356570d97b7ceba081a2bed540bf68ed1ff6dc). Esta es la nueva base oficial para seguir ampliando Configuración sin perder las seis opciones.
-
-
-- **Nueva versión principal aprobada por el usuario (2026-11-23):** PR #29, selector de seis cooldowns. Usuario confirmó prueba física del juego y respuesta satisfactoria de 400 ms con ambos tobillos; aceptó explícitamente integrarlo en `main`. Los otros valores se conservan disponibles para experimentación. No extrapolar a validación cuantitativa ni a pruebas físicas individuales de los seis valores.
-- **CI:** GitHub Actions #45276650454 aprobó 5/5 jobs del commit de PR #29, con 251 comprobaciones deterministas del cooldown. No sustituye Unity/Android.
-- **Principales archivos de la nueva arquitectura:** `BiofitBilateralJumpDetector.cs`, `BiofitCooldownConfiguration.cs`, `BiofitBLEMonitor.cs`, `BiofitGeometryUX.cs`. Ver `docs/COOLDOWN_BILATERAL_CONFIGURABLE.md` y `docs/CONTEXTO_VIVO.md` para cadena de aplicación, política de bloqueo en curso y registro CSV.
-
-- Usuario confirmó funcionamiento de menús y mecánicas de Tres Modos **en Unity Editor**. No extrapolar a APK/Android BLE: quedan por validar sensores reales, sincronización, repetición tras muerte, fallas de teletransporte, techo/colliders y 60 FPS.
-- SPIKE LAB anterior se probó físicamente con los dos trackers y un CSV. Detectó la funcionalidad general de LEGACY y permitió analizar rechazo por cooldown; NO se concluyó latencia BLE absoluta. El escenario SPIKE LAB ya no forma parte de la compilación principal.
-- Prueba estática de escenarios: `python tests/check_three_modes_60s.py`. Sintaxis C# y pruebas de módulos vía GitHub Actions; no equivalen a ejecutar Unity ni medir saltos físicos.
-- Optimización de latencia BLE pendiente y separada de la elección del cooldown. Se puede experimentar seleccionando uno de los seis valores ya implementados; no modificar otros umbrales/firmware/GATT sin un ensayo controlado. No se dispone de métricas cuantitativas de detecciones duplicadas.
-- Limpiar ramas remotas no elimina ni mejora los archivos de Unity. Las carpetas de trabajo existentes en Windows no deben borrarse por mantenimiento Git.
-
-## 6. Restricciones del proyecto
-
-**No modificar sin prueba explícita:** motor de salto Cube original, velocidad, gravedad, fuerza de salto, firma de eventos, parámetros de BILATERAL LEGACY, firmware ESP32/QMI8658, NVS, UUID BLE, configuración Android de captura y exportación. No activar MOV HOLD, FASE EXP o CICLO EXP en el juego.
-
-Prioridad: continuar ampliando el menú Configuración sobre la versión principal con selector 900–400 ms, sin alterar firmware, filtros ni física. Medir después efectos de cooldown y latencia BLE por separado. Mantener la rama `main` como referencia de trabajo.
+## Archivos técnicos y reconstrucción
+Los scripts activos están en Assets/BIOFIT/GeomeTry (BiofitStereoLocalRuntime, BiofitStereoSolidContact, BiofitStereoPractice, BiofitStereoPracticeButton, BiofitV2Hud, BiofitV2BitmapText, BiofitV5Interaction, BiofitThreeModes, BiofitGeometryUX, verificadores Editor). El puente BLE existente BiofitGeomeTryLegacyBridge y el detector se preservan.
+Los recursos generados existen localmente (se mantienen las reglas de Git ya existentes, sin introducir nuevas exclusiones): BiofitStereoLocal (CampaignV5/{1..5}/Original.json, Active.json, Level.json y sprites), BiofitStereoV2 (UI/fuentes), Songs/Musics/BiofitLocalV5, arte local BiofitUi y BiofitThreeModes/Artwork. El Character.cs copiado de GeomeTry tiene un ajuste de puntero de práctica de V3; el submódulo se conserva sin cambios. No perder ese ajuste al regenerar la copia.
+Para otro equipo: clonar main con submódulos, ejecutar tools/prepare_geometry_original.ps1 con Unity cerrado en el clon nuevo, y ejecutar tools/campaign_v5/restaurar_local_v5.py con el respaldo local privado generado por la consolidación. No distribuir ese respaldo. Si no se dispone del respaldo, reconstruir en una carpeta temporal en la base histórica, con los ZIP de recursos V1 y V2, el original GD 2.207 y la cadena de instaladores V1→V2→V3→V5 en tools/campaign_v5/patches. V4 no necesaria. Copiar solo los recursos locales y el Character.cs adaptado a la copia de main. Las rutas y comandos de cada instalador están en sus LEEME.txt. Abrir Main Menu.unity, verificar BIOFIT → GeomeTry ORIGINAL → 8. Verificar niveles 3 MODOS (60 s), y probar.
+Configuración Unity aprobada para consolidación tras revisar BIOFIT_REVISION_V5.txt: packages-lock.json (UniBLE v0.1.1, URP 17.3.0), GraphicsSettings, ProjectSettings, QualitySettings, EditorBuildSettings, ShaderGraphSettings y URPProjectSettings. No restaurar los valores anteriores indiscriminadamente.
+Los documentos previos se conservan en docs/history; el nombre histórico del verificador no implica duración de 60 s.

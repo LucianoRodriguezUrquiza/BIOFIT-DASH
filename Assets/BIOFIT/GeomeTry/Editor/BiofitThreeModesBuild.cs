@@ -33,6 +33,7 @@ namespace Biofit.GeomeTryOriginal.Editor
             int[] expectedPortals = {0, 0, 0, 3, 4};
             for (int i = 0; i < Names.Length; ++i)
             {
+                if (BiofitStereoLocalRuntime.ValidateInstalled(i)) continue;
                 TextAsset asset = Resources.Load<TextAsset>("BiofitThreeModes/" + Names[i]);
                 if (asset == null)
                     throw new InvalidOperationException("Falta mapa BIOFIT: " + Names[i]);
@@ -105,10 +106,7 @@ namespace Biofit.GeomeTryOriginal.Editor
                 if (!marker || roof != (i != 0) || portals != expectedPortals[i] || spikes < 8)
                     throw new InvalidOperationException("Estructura inesperada: " + Names[i]);
             }
-            Debug.Log("BIOFIT NIVEL 1 STEREO: video-map 825u, Ship+Cube+3 monedas " +
-                "y Niveles 2-5 legacy de 575u verificados por estructura. " +
-                "Solo validacion estatica: NO equivale a geometria original exacta " +
-                "ni a gameplay verificado en Unity/Android.");
+            Debug.Log("BIOFIT: Nivel 1 local (si instalado) o mapa historico y niveles 2-5 legacy verificados por estructura. No equivale a gameplay verificado.");
         }
 
         [MenuItem("BIOFIT/GeomeTry ORIGINAL/9. Compilar BIOFIT 3 MODOS (BLE LEGACY)")]

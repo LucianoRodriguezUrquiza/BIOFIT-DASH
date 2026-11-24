@@ -1,0 +1,48 @@
+BIOFIT DASH — Stereo Madness Original Import V3 (local)
+Requiere V2 instalada en el mismo clon. Cerrar Unity antes de instalar.
+No requiere volver a clonar, Pillow, ni los ZIP originales.
+
+PowerShell:
+cd "C:\Users\Capo\Desktop\BIOFIT_STEREO_V3"
+py -3 instalar_v3.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL"
+
+Opcional: agregar --verificar para solo comprobar compatibilidad V2 sin escribir.
+El instalador valida el commit base, los cuatro archivos V2, las firmas de UX y
+motor, y el Character.cs copiado frente al original del submodulo. Respalda 7
+archivos en Builds/StereoV3_backup_... antes de escribir 8 archivos. Si falla
+una escritura, restaura los anteriores. No ejecuta git push ni altera el
+submodulo, los 2291 registros, recursos graficos o fuentes.
+
+CAMBIOS
+- La transicion al primer Ship puede iniciarse mientras el personaje sigue
+  apoyado en GD_2_676, GD_2_677 o GD_3_678 (x 7935/7965/7995, y 105).
+  Se permite solo el contacto superior con esos bloques y el bloque de apoyo
+  equivalente de la segunda entrada Ship. No se quitan colliders ni se
+  desactivan pinchos, peligros, choques frontales o inferiores.
+- Los controles de practica preservan el aspecto de las texturas (146x96 y
+  93x96). Accion al presionar, con alternativa por coordenadas de pantalla y
+  deduplicacion por frame. Clic/touch sobre ellos no debe causar salto ni
+  empuje Ship. El cambio en Character.cs afecta solo la copia preparada y
+  condiciona exclusivamente la entrada mouse/touch en esos botones.
+- Checkpoints manuales (botones o Z/X) no requieren Cube apoyado: pueden
+  guardar en vuelo/salto si no hay solapamiento peligroso/portal, y restauran
+  estado como V2. Auto mantiene sus restricciones. Mensajes de confirmacion.
+- Nuevos logs: BIOFIT Stereo collision V3, BIOFIT Stereo hazard V3,
+  BIOFIT V3 portal, BIOFIT V3 checkpoint pointer, BIOFIT V3 practica.
+
+PRUEBAS
+1. Unity 6000.3.28f1, consola sin errores rojos, menu BIOFIT > GeomeTry ORIGINAL
+   > 8. Verificar niveles 3 MODOS (60 s). Abrir Main Menu, Play, Nivel 1.
+2. Modo practica, desactivar auto, pulsar boton colocar en tramo seguro,
+   comprobar CP sube una sola vez; quitar y comprobar CP baja. Repetir Z/X.
+3. Comprobar que pulsar boton no salta, y que salto con espacio/mouse fuera
+   del boton y joystick/BLE mantienen sus funciones. Morir tras checkpoint.
+4. Superar 16,80%; cruzar primer portal alrededor de 30% y probar Ship.
+   Si vuelve a morir, capturar consola desde BIOFIT V3 portal hasta el mensaje
+   collision/hazard V3 con coordenadas. No ajustar fisicas preventivamente.
+5. Validar tambien segunda entrada Ship y niveles restantes antes de APK.
+
+LIMITES: se probaron instalador sobre fixture local, datos, firmas, y pruebas
+estaticas; no se ejecuto ni compilo Unity. La causa del fallo es probable por
+codigo y geometria, no confirmada por log del dispositivo. La correccion
+requiere validacion jugando. No se incluyen recursos graficos propietarios.

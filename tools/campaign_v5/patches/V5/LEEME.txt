@@ -1,0 +1,37 @@
+BIOFIT DASH - V5 CAMPAÑA CLASICA - DIPL
+Base: V3 validada o V4 instalada (no es necesario instalar V4).
+Unity cerrado. Requiere Python 3.10+ / Pillow, Git y Resources de GD 2.207.
+No contiene sprites, música ni mapas propietarios. Los genera localmente con
+los archivos del usuario. Se comprueban los SHA256 de los cinco niveles y
+los dos donantes. No se publica nada en GitHub.
+
+PowerShell (carpeta del parche extraído):
+py -3 instalar_v5.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --gd "C:\Users\Capo\Desktop\Geometry.Dash.v2.207\Resources" --verificar
+Si se informa OK V5 PREVUELO, repetir sin --verificar.
+
+Unity: abrir el mismo proyecto. Console sin errores rojos. Ejecutar
+BIOFIT > GeomeTry ORIGINAL > 8. Verificar niveles 3 MODOS (60 s).
+Debe verificar los cinco manifiestos locales V5. Main Menu > Play > nivel.
+
+El instalador conserva Objects.json V1, los cinco mapas fuente en CampaignV5,
+UI V3 y todas las texturas existentes; añade los datos activos y nuevas texturas.
+Los archivos originales y derivados se excluyen de Git local. No usar git add -f.
+El modo Ship permanece en el motor, pero no en los cinco mapas locales.
+El bridge BLE, firmware, cooldown y Character/Cube no se escriben. Se añade
+un adaptador del Cube invertido, pads, orbes y gravedad para niveles importados.
+La campaña utiliza los cinco MP3 locales y el HUD existente.
+
+Rollback: cerrar Unity y usar la ruta Backup que imprime el instalador:
+py -3 restaurar_v5.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --backup "RUTA_COMPLETA_DEL_BACKUP"
+Se restaura la base previa V3 o V4. Se mantienen exclusiones Git preventivas.
+
+VALIDACION: 5 tests host pasados con datos reales del RAR y prueba de
+transacción/rollback en directorio temporal. Se cotejaron anclas principales
+con la fuente GitHub. No se ejecutó Unity ni se compiló APK. El verificador
+comprueba estructura; no certifica que el nivel se pueda terminar.
+Los datos Cube conservan propiedades fuente fuera de los corredores; los
+corredores son adaptaciones, no copias exactas. Los colores, hitboxes, efectos
+de entrada, fuerzas de pads/orbes, física invertida, transiciones y sincronía
+requieren validación en Unity. No se reproduce aún cada efecto visual original.
+El diseño de las filas usa un modelo nominal de velocidad y cooldown, no una
+simulación real de Unity, y no garantiza tiempos de detección BLE.

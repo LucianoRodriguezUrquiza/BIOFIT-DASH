@@ -1,3 +1,9 @@
+# BIOFIT DASH — Campana Clasica V5
+
+Version principal aprobada provisionalmente por el usuario el 24/11/2026. Leer primero [Contexto actual](docs/CONTEXTO_ACTUAL.md) y [relevo](docs/CONTEXTO_VIVO.md). Los recursos locales se conservan intactos. Esta consolidacion publica codigo y configuracion; las decisiones sobre publicacion de recursos de terceros quedan pendientes. El texto siguiente es el README historico.
+
+---
+
 # BIOFIT DASH — juego principal (Cube · Ball · Spider)
 
 Proyecto de exergaming en Unity para Android. Dos sensores Waveshare ESP32-S3/QMI8658 en los tobillos controlan **Cube, Ball y Spider** mediante el **mismo detector BLE BILATERAL LEGACY**.

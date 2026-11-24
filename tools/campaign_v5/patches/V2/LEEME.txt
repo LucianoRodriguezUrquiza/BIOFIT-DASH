@@ -1,0 +1,15 @@
+BIOFIT DASH - Stereo Madness Original Import V2 (experimental LOCAL)
+
+Requiere V1 instalada, Unity cerrado, Python 3.10+ y Pillow.
+No se incluyen recursos propietarios en este ZIP. El instalador lee los dos ZIP locales y opcionalmente el MP3 de practica que ya existe en la instalacion original. No publica nada ni modifica el submodulo original. No ejecutar git add -f ni push de los recursos locales. Backup de codigo V1 en Builds/StereoV2_backup_*. Los 2291 registros, texturas del mapa, fisicas Cube, BLE, cooldowns, joystick y mapas 2-5 no se modifican. El HUD y tipografia nuevos se aplican a pantallas BIOFIT; practica disponible solo en nivel 1 local. Los glifos ausentes (acentos, algunos simbolos, rich text) conservan fuente TMP existente para no perder legibilidad.
+
+Descomprimir en el escritorio y ejecutar en PowerShell:
+cd "$env:USERPROFILE\Desktop\BIOFIT_STEREO_V2"
+py -3 instalar_v2.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --recursos "C:\Users\Capo\Desktop\STEREO_MADNESS_RECURSOS_20261124_095228.zip" --interfaz "C:\Users\Capo\Desktop\GD_INTERFAZ_ORIGINAL_20261124_104652.zip" --musica-practica "C:\Users\Capo\Desktop\Geometry.Dash.v2.207\Resources\StayInsideMe.mp3"
+El MP3 es opcional. Si no existe, sigue usando la musica del nivel.
+
+Abrir Unity 6000.3.28f1, Console sin errores rojos. Menu BIOFIT > GeomeTry ORIGINAL > 8. Verificar niveles 3 MODOS (60 s). Abrir Main Menu.unity, Play, Nivel 1. Probar normal hasta 16.80% antes de activar practica. Registrar mensajes BIOFIT Stereo collision V2 y BIOFIT Stereo hazard V2 si muere inesperadamente. No compilar APK todavia.
+
+Modo practica: pausa, icono diamante verde, se reinicia el nivel en modo practica. Z o boton diamante para colocar; X o boton diamante tachado para eliminar ultimo. AUTO activado por defecto: intentos de checkpoint cada 3 segundos cuando Cube esta estable y lejos de triggers superpuestos. Se puede apagar en pausa. Al morir se usa el respawn original y se reposiciona el nuevo Cube al ultimo checkpoint, restaurando modo, velocidad vertical y monedas recogidas hasta ese punto; se conserva musica de practica continua si se importo el MP3. Si no hay checkpoints vuelve al inicio. Volver a modo normal desde pausa reinicia desde cero. Los checkpoints no persisten al salir del nivel o reiniciar voluntariamente. Manual Cube solo apoyado, Ship manual permitido: validacion pendiente. No se afirma reproduccion exacta del algoritmo original. El juego existente no concede un premio persistente nuevo por practica.
+
+Pruebas necesarias: 1) aterrizaje sobre ID6/7 rotados 2) chocar lateralmente con muro y pincho sigue matando 3) boton pausa/back y progreso sin solapamiento 4) fuentes en menus 5) Z/X, botones, auto, respawn y cambio modo 6) Ship, monedas y meta 7) niveles 2-5, joystick/BLE. Compilacion Unity y APK no ejecutadas en entorno de desarrollo; pruebas estaticas Python y extraccion realizadas. No se ha actualizado GitHub.

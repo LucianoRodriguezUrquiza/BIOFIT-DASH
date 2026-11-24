@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace Biofit.GeomeTryOriginal
 {
-    public enum BiofitMode { Cube, Ball, Spider, Ship }
+    public enum BiofitMode { Cube, Ball, Spider, Ship, InvertedCube }
 
     // Self-contained experimental modes. Nothing is modified inside the pinned GeomeTry submodule.
     // Maintains Character (Cube) on the original player for death, respawn, camera and progress.
@@ -114,6 +114,7 @@ namespace Biofit.GeomeTryOriginal
             installed = true;
             GameObject ceilingPrefab = Resources.Load<GameObject>("Prefabs/Decors/CeilPrefab");
             if (ceilingPrefab == null) { Debug.LogError("BIOFIT Three Modes: falta CeilPrefab."); yield break; }
+            if (BiofitStereoLocalRuntime.IsLocal(level)) yield break;
             if (level.Id == 1)
             {
                 // Stereo Madness: ship-only roof spans, not a ceiling over the
@@ -158,14 +159,21 @@ namespace Biofit.GeomeTryOriginal
             if (avatar.GetComponent<BiofitVrBoxController>() == null)
                 avatar.AddComponent<BiofitVrBoxController>();
             int id = GameManager.Instance?.SelectedLevel?.Id ?? 1;
-            if (id == 1) BiofitStereoCoinPickup.ResetRun();
-            motor.SetMode(id == 2 ? BiofitMode.Ball : id == 3 ? BiofitMode.Spider : BiofitMode.Cube);
+            if (BiofitStereoLocalRuntime.IsLocal(GameManager.Instance?.SelectedLevel)) { BiofitStereoCoinPickup.ResetRun(); motor.SetMode(BiofitMode.Cube); }
+            else { if(id==1) BiofitStereoCoinPickup.ResetRun(); motor.SetMode(id == 2 ? BiofitMode.Ball : id == 3 ? BiofitMode.Spider : BiofitMode.Cube); }
         }
     }
 
     public sealed class BiofitStereoCoinPickup : MonoBehaviour
     {
         public static int Collected { get; private set; }
+        public static void RestorePractice(BiofitStereoCoinPickup[] picked)
+        {
+            if(!BiofitStereoPractice.Enabled) return;
+            ResetRun();
+            foreach(var coin in picked)
+                if(coin!=null && coin.gameObject.activeSelf) {coin.gameObject.SetActive(false);Collected++;}
+        }
         public static void ResetRun()
         {
             Collected = 0;
@@ -187,7 +195,7 @@ namespace Biofit.GeomeTryOriginal
             if (cube == null || !cube.isAlive ||
                 GameManager.Instance == null ||
                 GameManager.Instance.SelectedLevel == null ||
-                GameManager.Instance.SelectedLevel.Id != 1) return;
+                !BiofitStereoLocalRuntime.IsLocal(GameManager.Instance.SelectedLevel) && GameManager.Instance.SelectedLevel.Id != 1) return;
             Collected++;
             Debug.Log("BIOFIT STEREO COIN " + Collected + "/3");
             gameObject.SetActive(false);
@@ -204,6 +212,8 @@ namespace Biofit.GeomeTryOriginal
             BiofitModeMotor motor = cube.GetComponent<BiofitModeMotor>();
             if (motor == null || motor.Mode == Target) return;
             motor.SetMode(Target);
+            if (BiofitStereoPractice.Available)
+                Debug.Log("BIOFIT V3 portal: " + Target + " playerX=" + cube.transform.position.x.ToString("F3") + " playerY=" + cube.transform.position.y.ToString("F3"));
             StartCoroutine(PortalFlash(transform.position));
         }
 
@@ -307,6 +317,15 @@ namespace Biofit.GeomeTryOriginal
         private const float ShipBleThrustSeconds = .40f;
         private const float SurfaceRay = .92f;
         private const int GroundMask = 1 << 3;
+        private int ActiveGroundMask => BiofitStereoPractice.Available ? GroundMask | (1 << 6) : GroundMask;
+        public bool StereoInverted => Mode==BiofitMode.InvertedCube || flipped;
+        public void RestoreStereoGravity(bool inverted)
+        {
+            if (!BiofitStereoPractice.Available || !initialized || (Mode != BiofitMode.Ball && Mode != BiofitMode.Spider)) return;
+            flipped = inverted;
+            body.gravityScale = flipped ? -BallSpiderGravity : BallSpiderGravity;
+            if (Mode == BiofitMode.Spider) icon.flipY = flipped;
+        }
         private Cube cube;
         private Rigidbody2D body;
         private Collider2D playerCollider;
@@ -340,7 +359,9 @@ namespace Biofit.GeomeTryOriginal
             Mode = newMode;
             flipped = false;
             shipBleHeldUntil = 0f;
-            body.linearVelocity = new Vector2(body.linearVelocity.x, 0f);
+            // Keep the incoming jump momentum at the local mode portal; do not edit Cube physics.
+            if (!(BiofitStereoPractice.Available && (newMode == BiofitMode.Ball || newMode == BiofitMode.Spider)))
+                body.linearVelocity = new Vector2(body.linearVelocity.x, 0f);
             body.gravityScale = newMode == BiofitMode.Ship ? ShipGravity : BallSpiderGravity;
             if (newMode == BiofitMode.Cube)
             {
@@ -349,6 +370,12 @@ namespace Biofit.GeomeTryOriginal
                 icon.color = originalTint;
                 icon.flipY = false;
                 icon.transform.localRotation = Quaternion.identity;
+            }
+            else if(newMode==BiofitMode.InvertedCube)
+            {
+                cube.enabled=false; flipped=true; body.gravityScale=-BallSpiderGravity;
+                icon.sprite=originalSprite; icon.color=originalTint; icon.flipY=true;
+                icon.transform.localRotation=Quaternion.identity;
             }
             else
             {
@@ -377,6 +404,7 @@ namespace Biofit.GeomeTryOriginal
             if (!initialized || Mode == BiofitMode.Cube || !cube.isAlive ||
                 GameManager.Instance == null || !GameManager.Instance.PlayMode) return;
             if (Mode == BiofitMode.Ship) return; // Ship responds to held input in FixedUpdate.
+            if(Mode==BiofitMode.InvertedCube) { if(Input.GetKey(KeyCode.Space) || (Input.GetMouseButton(0) && !BiofitStereoPracticeButton.BlocksGameplayPointer()) || BiofitVrBoxInput.AnyHeld) TryPulse(); return; }
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) ||
                 BiofitVrBoxInput.AnyDown) TryPulse();
         }
@@ -392,7 +420,7 @@ namespace Biofit.GeomeTryOriginal
                 // No synthetic key repeat: one continuous held state controls
                 // upward gravity just like the ORIGINAL Ship. Releasing falls.
                 bool held = Input.GetKey(KeyCode.Space) ||
-                            Input.GetMouseButton(0) ||
+                            (Input.GetMouseButton(0) && !Biofit.GeomeTryOriginal.BiofitStereoPracticeButton.BlocksGameplayPointer()) ||
                             BiofitVrBoxInput.AnyHeld ||
                             Time.unscaledTime < shipBleHeldUntil;
                 body.gravityScale = held ? -ShipGravity : ShipGravity;
@@ -404,6 +432,11 @@ namespace Biofit.GeomeTryOriginal
                     Mathf.Atan2(vy, 7f) * Mathf.Rad2Deg,
                     -ShipMaxAngle, ShipMaxAngle);
                 icon.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
+            }
+            if(Mode==BiofitMode.InvertedCube)
+            {
+                if(!SurfaceContact(Vector2.up)) icon.transform.Rotate(0,0,280f*Time.deltaTime);
+                else icon.transform.localRotation=Quaternion.Euler(0,0,Mathf.Round(icon.transform.localEulerAngles.z/90f)*90f);
             }
             if (Mode == BiofitMode.Ball)
             {
@@ -418,7 +451,7 @@ namespace Biofit.GeomeTryOriginal
             foreach (float x in new[] { -.28f, 0f, .28f })
             {
                 if (Physics2D.Raycast(center + new Vector2(x, 0f),
-                    direction, SurfaceRay, GroundMask).collider != null) return true;
+                    direction, SurfaceRay, ActiveGroundMask).collider != null) return true;
             }
             return false;
         }
@@ -438,6 +471,17 @@ namespace Biofit.GeomeTryOriginal
                 lastManualAction = Time.unscaledTime;
                 return true;
             }
+            if(Mode==BiofitMode.InvertedCube)
+            {
+                foreach(var hit in Physics2D.OverlapCircleAll(body.position,.8f))
+                {
+                    var interaction=hit.GetComponent<BiofitV5Interaction>();
+                    if(interaction!=null && interaction.TryInvertedOrb(cube)) { lastManualAction=Time.unscaledTime; return true; }
+                }
+                if(!SurfaceContact(Vector2.up)) return false;
+                body.linearVelocity=new Vector2(body.linearVelocity.x,-13.5f);
+                lastManualAction=Time.unscaledTime; return true;
+            }
             Vector2 support = flipped ? Vector2.up : Vector2.down;
             if (!SurfaceContact(support)) return false;
             if (Mode == BiofitMode.Ball)
@@ -452,7 +496,7 @@ namespace Biofit.GeomeTryOriginal
 
             Vector2 destinationDirection = -support;
             RaycastHit2D destinationHit = Physics2D.Raycast(
-                body.position, destinationDirection, 16f, GroundMask);
+                body.position, destinationDirection, 16f, ActiveGroundMask);
             if (destinationHit.collider == null) return false;
             float halfHeight = playerCollider == null ? .5f :
                 Mathf.Max(.2f, playerCollider.bounds.extents.y);

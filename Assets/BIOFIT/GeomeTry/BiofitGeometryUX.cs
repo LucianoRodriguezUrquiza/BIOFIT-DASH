@@ -30,10 +30,10 @@ namespace Biofit.GeomeTryOriginal
             "StereoMadness", "WaveVibe"
         };
         private static readonly string[] MapTitles = {
-            "NIVEL 1", "NIVEL 2", "NIVEL 3", "NIVEL 4", "NIVEL 5"
+            "STEREO MADNESS", "BACK ON TRACK", "POLARGEIST", "CAN'T LET GO", "JUMPER"
         };
         private static readonly string[] MapModes = {
-            "CUBO / NAVE", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"
+            "CUBO / BOLA / SPIDER", "CUBO / BOLA", "CUBO / SPIDER", "CUBO / BOLA", "CUBO / BOLA / SPIDER"
         };
         private static BiofitGeometryUX instance;
         private static readonly FieldInfo CharacterSpriteField =
@@ -131,8 +131,8 @@ namespace Biofit.GeomeTryOriginal
             skinIndex = Mathf.Clamp(PlayerPrefs.GetInt(PrefSkin, 0), 0, 69);
             atlas = Resources.Load<Texture2D>("BiofitUi/Skins");
             levelBackdrop = Resources.Load<Texture2D>("BiofitUi/LevelSelect");
-            backIcon = Resources.Load<Texture2D>("BiofitUi/Back");
-            pauseIcon = Resources.Load<Texture2D>("BiofitUi/Pause");
+            backIcon = BiofitV2BitmapText.Art("back") ?? Resources.Load<Texture2D>("BiofitUi/Back");
+            pauseIcon = BiofitV2BitmapText.Art("pause") ?? Resources.Load<Texture2D>("BiofitUi/Pause");
             fallbackFont = TMP_Settings.defaultFontAsset;
             SceneManager.sceneLoaded += OnSceneLoaded;
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -345,7 +345,7 @@ namespace Biofit.GeomeTryOriginal
             safeRoot = null;
             lastScreenWidth = -1;
             if (!IsGeomeTryScene(sceneName)) return;
-            if (sceneName == Menu) { ConfigureOriginalMenu(); return; }
+            if (sceneName == Menu) { ConfigureOriginalMenu(); AttachSceneFonts(); return; }
             EnsureUiEventSystem();
 
             GameObject host = new GameObject("BIOFIT overlay canvas",
@@ -388,6 +388,13 @@ namespace Biofit.GeomeTryOriginal
             else if (sceneName == LevelScene) BuildLevelHud();
             else BuildOtherScene(sceneName);
             if (sceneName != Menu) BuildBackButton(sceneName);
+            AttachSceneFonts();
+        }
+
+        private static void AttachSceneFonts()
+        {
+            foreach (var t in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (t is TextMeshProUGUI) BiofitV2BitmapText.Attach(t);
         }
 
 
@@ -522,6 +529,7 @@ namespace Biofit.GeomeTryOriginal
                 styled.outlineColor = new Color32(5, 9, 18, 255);
                 styled.outlineWidth = 0.25f;
             }
+            BiofitV2BitmapText.Attach(t, label.Length>95 ? "secondary" : "main");
             return t;
         }
 
@@ -654,7 +662,7 @@ namespace Biofit.GeomeTryOriginal
                 return;
             }
             ImageButton("VOLVER", canvasRoot, backIcon, "<",
-                new Vector2(.080f, .902f), new Vector2(88f, 94f),
+                scene == LevelScene ? new Vector2(.06f, .93f) : new Vector2(.080f, .902f), new Vector2(88f, 88f),
                 Vector2.zero, goBack);
         }
 
@@ -678,6 +686,7 @@ namespace Biofit.GeomeTryOriginal
             TextAsset map = BiofitThreeModesBootstrap.Active
                 ? Resources.Load<TextAsset>("BiofitThreeModes/" + MapKeys[i])
                 : Resources.Load<TextAsset>("maps/BASE/" + MapKeys[i]);
+            map = BiofitStereoLocalRuntime.SelectMap(i, map);
             if (map == null || GameManager.Instance == null)
             {
                 Debug.LogError("BIOFIT UI: mapa/GameManager faltante: " + MapKeys[i]);
@@ -847,25 +856,24 @@ namespace Biofit.GeomeTryOriginal
                 selectorHotspots[i] = btn;
                 separateCards[i] = btn.transform as RectTransform;
 
-                BiofitMode mode = i == 1 ? BiofitMode.Ball :
-                    i == 2 ? BiofitMode.Spider : BiofitMode.Cube;
+                BiofitMode mode = BiofitMode.Cube;
                 RectTransform iconBox = Rect("Icono " + MapTitles[i], btn.transform,
                     new Vector2(.5f, .68f), new Vector2(122f, 122f), Vector2.zero);
                 Image icon = iconBox.gameObject.AddComponent<Image>();
                 icon.sprite = BiofitThreeModeArt.Make(mode, false);
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
-                if (i >= 3)
+                if (i >= 0)
                 {
-                    // Mixed levels show all three vehicle icons.
+                    // All five levels begin with Cube and contain one or two other vehicles.
                     iconBox.sizeDelta = new Vector2(82f, 82f);
                     iconBox.anchoredPosition += new Vector2(-56f, 0f);
-                    foreach (BiofitMode other in new[] {BiofitMode.Ball, BiofitMode.Spider})
+                    foreach (BiofitMode other in (i==0 || i==4) ? new[] {BiofitMode.Ball,BiofitMode.Spider} : new[] {i==2?BiofitMode.Spider:BiofitMode.Ball})
                     {
                         RectTransform second = Rect("Modo mixto " + other,
                             btn.transform, new Vector2(.5f, .68f),
                             new Vector2(72f, 72f),
-                            new Vector2(other == BiofitMode.Ball ? 30f : 95f, 0f));
+                            new Vector2((i!=0 && i!=4) ? 48f : other == BiofitMode.Ball ? 20f : 85f, 0f));
                         Image image = second.gameObject.AddComponent<Image>();
                         image.sprite = BiofitThreeModeArt.Make(other, false);
                         image.preserveAspect = true;
@@ -874,11 +882,11 @@ namespace Biofit.GeomeTryOriginal
                 }
                 Text("Nombre " + MapTitles[i], btn.transform, MapTitles[i],
                     new Vector2(.5f, .31f), new Vector2(width - 12f, 64f),
-                    Vector2.zero, 35, Navy);
+                    Vector2.zero, 23, Navy);
                 Text("Modo " + MapTitles[i], btn.transform, MapModes[i],
                     new Vector2(.5f, .18f), new Vector2(width - 16f, 36f),
                     Vector2.zero, 19, Navy);
-                Text("Duración " + MapTitles[i], btn.transform, "≈ 60 s",
+                Text("Duración " + MapTitles[i], btn.transform, new[]{"~ 91 s","~ 86 s","~ 95 s","~ 85 s","~ 92 s"}[i],
                     new Vector2(.5f, .07f), new Vector2(width - 20f, 32f),
                     Vector2.zero, 18, Navy);
             }
@@ -1472,19 +1480,27 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildLevelHud()
         {
-            if (GameManager.Instance != null &&
-                GameManager.Instance.SelectedLevel != null &&
-                GameManager.Instance.SelectedLevel.Id == 1)
-                stereoCoinHudLabel = Text("Monedas Stereo HUD", canvasRoot,
-                    "MONEDAS 0 / 3", new Vector2(.20f, .946f),
-                    new Vector2(300f, 48f), Vector2.zero, 26, Lime);
-            cooldownHudLabel = Text("Cooldown BLE activo HUD", canvasRoot,
-                "", new Vector2(.780f, .946f), new Vector2(285f, 48f),
-                Vector2.zero, 26, Ice);
+            var hud=canvasRoot.gameObject.AddComponent<BiofitV2Hud>();
+            hud.bar=Rect("BIOFIT V2 progress",canvasRoot,new Vector2(.5f,.945f),new Vector2(660,32),Vector2.zero);
+            hud.percentage=Text("BIOFIT V2 percent",canvasRoot,"0%",new Vector2(.755f,.945f),new Vector2(125,50),Vector2.zero,38,Color.white);
+            cooldownHudLabel=Text("Cooldown BLE activo HUD",canvasRoot,"",new Vector2(.86f,.855f),new Vector2(235,44),Vector2.zero,28,Color.white);
             RefreshCooldownHud();
-            ImageButton("Pause game", canvasRoot, pauseIcon, "Ⅱ",
-                new Vector2(.948f, .884f), new Vector2(119, 123),
-                Vector2.zero, TogglePause);
+            ImageButton("Pause game",canvasRoot,pauseIcon,"II",new Vector2(.945f,.93f),new Vector2(88,88),Vector2.zero,TogglePause);
+            if(GameManager.Instance!=null && GameManager.Instance.SelectedLevel!=null && BiofitStereoLocalRuntime.IsLocal(GameManager.Instance.SelectedLevel))
+            {
+                hud.coins=new RawImage[3];
+                for(int i=0;i<3;i++)
+                {
+                    var coin=Rect("BIOFIT coin "+i,canvasRoot,new Vector2(.14f+i*.037f,.945f),new Vector2(45,45),Vector2.zero).gameObject.AddComponent<RawImage>();
+                    coin.raycastTarget=false;hud.coins[i]=coin;
+                }
+            }
+            if(BiofitStereoPractice.Enabled)
+            {
+                hud.practiceStatus=Text("Practice status",canvasRoot,"PRACTICA",new Vector2(.5f,.865f),new Vector2(680,42),Vector2.zero,28,Color.white);
+                BiofitStereoPracticeButton.Create(canvasRoot,new Vector2(.44f,.085f),new Vector2(150,86),BiofitV2BitmapText.Art("add_checkpoint"),true);
+                BiofitStereoPracticeButton.Create(canvasRoot,new Vector2(.56f,.085f),new Vector2(150,86),BiofitV2BitmapText.Art("remove_checkpoint"),false);
+            }
         }
 
         private void TogglePause()
@@ -1517,24 +1533,22 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildPauseScreen()
         {
-            // Unlike the original project's PauseManager, this overlay does not
-            // rewrite the 1.5x gameplay speed. It restores the exact prior value.
-            RectTransform veil = Fill("pause dimmer", canvasRoot,
-                new Color(0f, 0f, 0f, .77f));
-            Button("RESUME", veil, "CONTINUAR",
-                new Vector2(.5f, .63f), new Vector2(390, 84),
-                Vector2.zero, () => { RestorePause(); BuildScreen(LevelScene); },
-                Lime, 36);
-            Button("RESTART", veil, "REINICIAR NIVEL",
-                new Vector2(.5f, .47f), new Vector2(390, 84),
-                Vector2.zero, RestartLevel, Ice, 31);
-            Button("BACK SELECT", veil, "SELECCION DE NIVELES",
-                new Vector2(.5f, .31f), new Vector2(500, 84),
-                Vector2.zero, () => Navigate(Select), Ice, 29);
-            Text("pause title", veil, "PAUSA",
-                new Vector2(.5f, .80f), new Vector2(560, 85),
-                Vector2.zero, 60, Lime);
-            // Back remains visible and functional even over the pause dimmer.
+            RectTransform veil=Fill("pause dimmer",canvasRoot,new Color(0f,0f,0f,.83f));
+            Text("pause title",veil,"PAUSA",new Vector2(.5f,.82f),new Vector2(560,85),Vector2.zero,62,Color.white);
+            ImageButton("RESUME",veil,BiofitV2BitmapText.Art("play"),"PLAY",new Vector2(.5f,.57f),new Vector2(150,150),Vector2.zero,()=>{RestorePause();BuildScreen(LevelScene);});
+            ImageButton("RESTART",veil,BiofitV2BitmapText.Art("restart"),"RETRY",new Vector2(.34f,.57f),new Vector2(115,115),Vector2.zero,RestartLevel);
+            ImageButton("BACK SELECT",veil,BiofitV2BitmapText.Art("menu"),"MENU",new Vector2(.66f,.57f),new Vector2(115,115),Vector2.zero,()=>Navigate(Select));
+            Text("resume caption",veil,"CONTINUAR",new Vector2(.5f,.43f),new Vector2(230,50),Vector2.zero,28,Color.white);
+            Text("restart caption",veil,"REINICIAR",new Vector2(.34f,.43f),new Vector2(230,50),Vector2.zero,26,Color.white);
+            Text("menu caption",veil,"NIVELES",new Vector2(.66f,.43f),new Vector2(230,50),Vector2.zero,26,Color.white);
+            if(BiofitStereoPractice.Available)
+            {
+                bool practice=BiofitStereoPractice.Enabled;
+                ImageButton("Cambiar modo",veil,BiofitV2BitmapText.Art(practice?"normal":"practice"),"MODO",new Vector2(.39f,.25f),new Vector2(98,98),Vector2.zero,()=>{BiofitStereoPractice.ToggleMode();RestartLevel();});
+                Text("mode caption",veil,practice?"MODO NORMAL":"MODO PRACTICA",new Vector2(.55f,.25f),new Vector2(350,48),Vector2.zero,31,Color.white);
+                if(practice)
+                    Button("Auto checkpoint",veil,"AUTO CHECKPOINT: "+(BiofitStereoPractice.Auto?"SI":"NO"),new Vector2(.5f,.105f),new Vector2(450,64),Vector2.zero,()=>{BiofitStereoPractice.ToggleAuto();BuildScreen(LevelScene);BuildPauseScreen();},Ice,25);
+            }
             BuildBackButton(LevelScene);
         }
 

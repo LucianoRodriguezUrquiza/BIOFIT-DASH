@@ -1,0 +1,132 @@
+{
+  "tests": "5/5 host static/transaction tests passed; no Unity compile",
+  "total_source": 9884,
+  "total_active": 11852,
+  "levels": [
+    {
+      "slot": 1,
+      "name": "Stereo Madness",
+      "source": 2291,
+      "active": 2785,
+      "sha256": "baac8024b41f90e5d08e519f4b51b423e2038853aecb3ce59c6e428d1b49af12",
+      "sections": [
+        {
+          "mode": "ball",
+          "start": 7995,
+          "end": 12555,
+          "nominal_action_spacing_s": 2.2564102564102564,
+          "rows": 6,
+          "entry_floor": 120,
+          "exit_floor": 90,
+          "ceiling": 240
+        },
+        {
+          "mode": "spider",
+          "start": 22935,
+          "end": 26565,
+          "nominal_action_spacing_s": 2.769230769230769,
+          "rows": 4,
+          "entry_floor": 90,
+          "exit_floor": 90,
+          "ceiling": 210
+        }
+      ],
+      "retained": 1361,
+      "ids": 28
+    },
+    {
+      "slot": 2,
+      "name": "Back on Track",
+      "source": 1545,
+      "active": 1734,
+      "sha256": "40a9b11d0ad1d2de9fb256f89b6f0f241ea4391662e61465805e3da63d3a8f77",
+      "sections": [
+        {
+          "mode": "ball",
+          "start": 12645,
+          "end": 16785,
+          "nominal_action_spacing_s": 3.282051282051282,
+          "rows": 4,
+          "entry_floor": 120,
+          "exit_floor": 90,
+          "ceiling": 240
+        }
+      ],
+      "retained": 1004,
+      "ids": 26
+    },
+    {
+      "slot": 3,
+      "name": "Polargeist",
+      "source": 1531,
+      "active": 2111,
+      "sha256": "c85ade754fae33d3acf4b22853382bf42bef1c97be63076a804bf00cabdcc9f9",
+      "sections": [
+        {
+          "mode": "spider",
+          "start": 9645,
+          "end": 13305,
+          "nominal_action_spacing_s": 2.769230769230769,
+          "rows": 4,
+          "entry_floor": 110,
+          "exit_floor": 90,
+          "ceiling": 230
+        }
+      ],
+      "retained": 1460,
+      "ids": 35
+    },
+    {
+      "slot": 4,
+      "name": "Can't Let Go",
+      "source": 1704,
+      "active": 1871,
+      "sha256": "aedd11106fda2b56294b2d802cd203ae6b82b71da40a54824d84ad2187a384a4",
+      "sections": [
+        {
+          "mode": "ball",
+          "start": 14409,
+          "end": 17721,
+          "nominal_action_spacing_s": 2.358974358974359,
+          "rows": 4,
+          "entry_floor": 60,
+          "exit_floor": 60,
+          "ceiling": 180
+        }
+      ],
+      "retained": 1414,
+      "ids": 33
+    },
+    {
+      "slot": 5,
+      "name": "Jumper",
+      "source": 2813,
+      "active": 3351,
+      "sha256": "e3dea95ce616f049353d4048f38feb743a7e4602091dc12b632c31937fb7784f",
+      "sections": [
+        {
+          "mode": "ball",
+          "start": 6741,
+          "end": 10103,
+          "nominal_action_spacing_s": 2.4615384615384617,
+          "rows": 4,
+          "entry_floor": 60,
+          "exit_floor": 90,
+          "ceiling": 210
+        },
+        {
+          "mode": "spider",
+          "start": 16815,
+          "end": 20167,
+          "nominal_action_spacing_s": 2.4615384615384617,
+          "rows": 4,
+          "entry_floor": 90,
+          "exit_floor": 90,
+          "ceiling": 210
+        }
+      ],
+      "retained": 2229,
+      "ids": 34
+    }
+  ]
+}
