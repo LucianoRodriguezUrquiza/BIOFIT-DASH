@@ -12,6 +12,12 @@ assert "Input.GetJoystickNames()" in ux
 assert "Input.anyKeyDown" in ux and "Input.GetKeyDown(code)" in ux
 assert 'Input.GetAxisRaw("Horizontal")' in ux
 assert 'Input.GetAxisRaw("Vertical")' in ux
+assert 'Input.GetAxisRaw("BIOFIT VR Stick X")' in ux
+assert 'Input.GetAxisRaw("BIOFIT VR Stick Y")' in ux
+axes = (root / "ProjectSettings/InputManager.asset").read_text(encoding="utf-8")
+assert "m_Name: BIOFIT VR Stick X" in axes and "m_Name: BIOFIT VR Stick Y" in axes
+assert "m_Name: BIOFIT VR Stick X" in axes and "type: 2" in axes
+
 assert "if (scene == Settings && (cooldownPage || joystickPage))" in ux
 assert 'new Vector2(.820f, .078f)' in ux
 assert '"COOLDOWN"' in ux and "CooldownOptionsMs = { 900, 800, 700, 600, 500, 400 }" in ux
