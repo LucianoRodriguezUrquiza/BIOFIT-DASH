@@ -2,6 +2,18 @@
 
 > **Leer primero al iniciar un chat nuevo.** Este documento es el punto de entrada operativo y se actualiza con cada cambio **confirmado** del proyecto. No sustituye al código fuente ni a las pruebas físicas.
 
+## PRÓXIMA VERSIÓN EXPERIMENTAL — STEREO MADNESS + SHIP + VR BOX (2026-11-24)
+
+**Rama de trabajo:** `feat/stereo-madness-ship-vrbox-held-v1`, nacida de `feat/vr-joystick-input-diagnostics` ([PR #30 en borrador](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/30)), que a su vez se basó en **`main` con el cooldown configurable PR #29 ya integrado**. **No está fusionada a `main`**. Guía técnica/evidencia/limitaciones: [STEREO_SHIP_VRBOX_V1.md](STEREO_SHIP_VRBOX_V1.md).
+
+**Requisito 1, joystick:** los seis botones físicos A/B/C/D/R1/R2 del mando **`VR BOX` en `CAMBIO+C` se utilizan como LA MISMA acción** del personaje, sin asignar pausa/atrás. Dado el mapeo `A=R1=0+13`, `B=R2=0`, `C=13`, `D=1`, el software calcula **OR de 0/1/13** una vez por frame. Para **Cube**, si el botón sigue sostenido, el adaptador llama `cube.onClick()` cada frame; el `CheckGrounded()` original evita saltos en aire y permite repetir salto al aterrizar. En Ball/Spider solo pulso en `GetKeyDown`. No cambia el modo Mouse ni la entrada táctil. Nuevo controlador dentro de `BiofitThreeModes.cs`.
+
+**Requisito 2, nave Ship:** se añadió `BiofitMode.Ship`, `biofitShipPortal`, sprite/portal procedural opcionalmente reemplazable por PNG con licencia y techo limitado a tramos de nave. Valores de referencia del `Ship.cs` original del submódulo: gravedad ±2,5, `|vy|<=10` e inclinación ±40°. La nave sube mientras se mantiene joystick/Mouse/Space; cada par BLE válido activa temporalmente **400 ms de empuje virtual**, independientes de los 6 posibles cooldowns (900–400 ms) del detector. Preserva objeto `Cube` para muerte, cámara, física, BLE y respawn, sin modificar firmware.
+
+**Requisito 3, Nivel 1:** JSON real `Assets/BIOFIT/Resources/BiofitThreeModes/BackOnTrack.json` (clave histórica del loader, no confundir con `StereoMadness.json` de Nivel 4) reemplazado por **reconstrucción video-guiada** de ~85 s, 825u, **489 objetos**, fases Cube–Ship–Cube–Ship–Cube, 3 monedas, música `StereoMadness`. El video aportado tiene 95,52 s e incluye menú/finalización. El layout es una reconstrucción **APROXIMADA**, no el nivel exacto de RobTop: GDBrowser `77236587` declara 2.291 objetos; aún no existe correspondencia importada 1:1. Archivo fuente reproducible `tools/assets/generate_stereo_video_map.js`; herramienta separada `tools/assets/fetch_stereo_reference.py` puede consultar públicamente datos de objetos para auditoría, sin alterar automáticamente el nivel. No subir PNG originales RobTop al repositorio público.
+
+**Calidad:** revisar GitHub Actions de la rama y los tests `check_stereo_ship_vrbox.py`, `test_stereo_source_parser.py`, `check_three_modes_60s.py` y fuente `GeometryUxSyntax`. **No hay Unity Editor ni APK Android ni jugabilidad física verificadas en esta nueva rama aún**. Probar colisiones/bloques, duración de audio, salto sostenido, portal Ship, empuje BLE, monedas, los otros cuatro niveles y los seis cooldowns antes de cualquier integración. Mantener PR borrador, `main` intacto.
+
 ## VALIDACIÓN FÍSICA JOYSTICK — MODO CAMBIO + C (2026-11-24)
 
 - **Fuente canónica ya archivada directamente en `main`:** [JOYSTICK - Modo Juego.md](../JOYSTICK%20-%20Modo%20Juego.md). El usuario probó en Android el joystick identificado como `VR BOX` y demostró **`MODO CAMBIO + C` como modo juego** (no `+B`, aunque manuales de modelos similares lo sugieran). La nueva pantalla de diagnóstico **ya fue validada físicamente** para lectura de botones; el remapeo aún no se implementó.
