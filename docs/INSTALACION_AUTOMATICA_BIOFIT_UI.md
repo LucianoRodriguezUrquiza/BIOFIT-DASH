@@ -18,6 +18,22 @@ El usuario entregó `BiofitUi.rar` en una conversación de ChatGPT el 2026-11-23
 
 No ejecutar `git clean -fd` ni comandos destructivos sobre instalaciones locales. Este instalador no modifica firmware ESP32, detección BILATERAL LEGACY, cooldown, escenas ni físicas.
 
+## Publicación opcional de Skins.png en GitHub
+
+**Autorización expresa del usuario:** se permite añadir la hoja `Skins.png` al repositorio público. No se publican `Back.png`, `LevelSelect.png` ni `Pause.png`.
+
+En un clon de la rama `feat/vr-joystick-input-diagnostics`:
+
+```powershell
+cd "C:\Users\Capo\Documents\BIOFIT-DASH-JOYSTICK-TEST"
+git pull
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\install_biofit_ui.ps1" -PublicarSkins
+```
+
+El script requiere `BIOFIT_UI_ASSETS.zip` en Descargas y credenciales Git configuradas localmente. Comprueba los SHA-256 de los cuatro PNG, los instala en Unity, verifica que Git esté en la rama experimental, aborta si hay otros cambios ya preparados, ejecuta `git add` y `git commit` **solo para `Assets/BIOFIT/Resources/BiofitUi/Skins.png`**, y finalmente `git push` a la rama experimental. Puede pedir autenticación GitHub; no modificar `main` ni usar `--force`.
+
+**Estado:** la excepción en `.gitignore` y la automatización están en GitHub; **la imagen todavía no se ha subido desde esta conversación** porque la conexión GitHub no consume el archivo binario local. Confirmar el archivo en la URL devuelta por el script antes de afirmar publicación. Si contiene arte derivado, su uso personal no convierte automáticamente esos diseños en material libre de derechos.
+
 ## Integridad de los cuatro archivos
 
 | Archivo | Bytes | SHA-256 |
