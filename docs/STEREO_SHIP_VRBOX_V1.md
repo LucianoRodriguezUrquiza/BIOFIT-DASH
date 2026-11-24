@@ -49,7 +49,7 @@ Archivo activo **`Assets/BIOFIT/Resources/BiofitThreeModes/BackOnTrack.json`**, 
 - Mapa generado: **825 unidades**, ~85–86 s al desplazamiento actual, **489 objetos**: 143 pinchos, 250 bloques, 71 plataformas pequeñas, 17 decoraciones, cuatro portales (2 Ship + 2 Cube), 3 monedas colectables y marcador final.
 - Secuencia de modos en el mapa: **Cube (0–245), Ship (245–381), Cube (381–724), Ship (724–786), Cube (786–825)**. Los valores son **aproximados** mediante observación del video, no extraídos del GMD oficial.
 - Música `StereoMadness` cargada de `Resources/Songs/Musics` tal como ya existía en el proyecto, sin distribuir audio nuevo.
-- Las 3 monedas usan `biofitStereoCoin` como trigger físico con contador para ese intento y un recurso procedural del proyecto; **la ubicación y sus rutas no están certificadas frente al original.** Evitar presentar esto como 3 monedas idénticas.
+- Las 3 monedas usan `biofitStereoCoin` como trigger físico con contador para ese intento y un recurso procedural del proyecto. Se muestra un HUD `MONEDAS N / 3`. Como el juego original reaparece tras morir sin reconstruir la escena, al detectar un personaje nuevo se restaura el contador a cero y se reactivan las monedas recogidas durante el intento anterior. **La ubicación y sus rutas no están certificadas frente al original.** Evitar presentar esto como 3 monedas idénticas.
 - El JSON y su fuente están sincronizados mediante `node tools/assets/generate_stereo_video_map.js --check`. Para regenerar: `node tools/assets/generate_stereo_video_map.js`. Los IDs/posiciones/grupos son de una reconstrucción inferida del video.
 - `BiofitThreeModesBuild.VerifyMaps()` ahora verifica la estructura nueva del Nivel 1 y aplica los invariantes históricos de 575 unidades y su dificultad a niveles 2–5. El nuevo mapa no tiene el espaciado clínico de 1,5 s entre pinchos del antiguo Nivel 1; **no fue validado en saltos corporales** y la dificultad real podría ser significativamente mayor.
 
@@ -89,7 +89,7 @@ git clone --recurse-submodules --branch feat/stereo-madness-ship-vrbox-held-v1 h
 cd "BIOFIT-DASH-STEREO-SHIP-TEST"
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\prepare_geometry_original.ps1"
 ```
-Los cuatro PNG de `Assets/BIOFIT/Resources/BiofitUi` no se restauran automáticamente desde GitHub; si siguen ignorados, se pueden instalar con el script privado `tools/install_biofit_ui.ps1` y el ZIP original de la conversación. El `Skins.png` podría versionarse por un push local separado autorizado, si se ejecutó efectivamente. **No afirmar que los gráficos están ya en este branch sin inspeccionarlo**.
+Los cuatro PNG de `Assets/BIOFIT/Resources/BiofitUi` no se descargan desde GitHub. **La preparación habitual invoca automáticamente `tools/restore_local_biofit_ui.ps1`**, que ahora busca también el clon existente `BIOFIT-DASH-JOYSTICK-TEST`, `BIOFIT-DASH-NUEVOS-NIVELES` y `BIOFIT-DASH-COOLDOWN-EXPERIMENTAL`; copia los cuatro PNG únicamente si están completos, conservando el proyecto fuente y verificando SHA-256. Si no los encuentra, se puede usar `tools/install_biofit_ui.ps1` con el ZIP privado; no alterar `main`. El `Skins.png` podría versionarse por un push local separado autorizado, si se ejecutó efectivamente. **No afirmar que los gráficos están ya en este branch sin inspeccionarlo**.
 
 Compilación en Editor:
 `BIOFIT → GeomeTry ORIGINAL → 8. Verificar niveles 3 MODOS (60 s)` (nombre heredado; el Nivel 1 ahora supera 60 s), y luego `9. Compilar BIOFIT 3 MODOS (BLE LEGACY)`.
