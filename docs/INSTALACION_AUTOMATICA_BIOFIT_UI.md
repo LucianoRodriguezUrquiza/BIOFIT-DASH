@@ -1,6 +1,6 @@
 # Instalación automática de BiofitUi desde ZIP local
 
-El repositorio público omite deliberadamente los PNG de `Assets/BIOFIT/Resources/BiofitUi/`: la hoja `Skins.png` puede incluir imágenes de terceros (Geometry Dash), por lo que no es adecuado redistribuirla sin permiso. **No se subió ningún PNG ni el RAR del usuario a GitHub.**
+El repositorio público todavía no incluye los PNG originales enviados por el usuario. A solicitud expresa, la rama experimental permite versionar **solo `Skins.png`** mediante un comando desde el PC con Git autenticado; los otros tres permanecen locales. Los diseños podrían incluir elementos derivados y el usuario debe tener en cuenta la distribución pública.
 
 El usuario entregó `BiofitUi.rar` en una conversación de ChatGPT el 2026-11-23; se extrajeron y validaron exactamente cuatro archivos. Se generó `BIOFIT_UI_ASSETS.zip` como archivo privado descargable de ESA conversación (no disponible públicamente ni desde Github, por diseño).
 
