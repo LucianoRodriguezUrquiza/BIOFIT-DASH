@@ -16,6 +16,8 @@ jobs:
       - run: python3 tests/check_geometry_ux.py
       - run: python3 tests/check_joystick_diagnostic.py
       - run: python3 tests/check_three_modes_60s.py
+      - run: python3 tests/check_stereo_ship_vrbox.py
+      - run: node tools/assets/generate_stereo_video_map.js --check
       - run: dotnet run --project tests/LatencyRegression
       - run: dotnet run --project tests/ReceiverRegression
       - run: dotnet run --project tests/AndroidDownloadsRegression
