@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import base64
 from collections import Counter
-import gzip
 import json
 from pathlib import Path
 import urllib.error
@@ -23,20 +22,31 @@ ENDPOINT = "https://www.boomlings.com/database/downloadGJLevel22.php"
 GD_PUBLIC_SECRET = "Wmfd2893gb7"
 
 
+MAX_COMPRESSED_BYTES = 8 * 1024 * 1024
+MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024
+
+
 def decode_inner_level(encoded: str) -> str:
     encoded = encoded.strip()
     if encoded.startswith("kS") or encoded.startswith("1,"):
+        if len(encoded) > MAX_DECOMPRESSED_BYTES:
+            raise ValueError("GD object-string exceeds 64 MiB safety limit")
         return encoded
     padded = encoded.replace("-", "+").replace("_", "/")
     padded += "=" * (-len(padded) % 4)
     raw = base64.b64decode(padded, validate=True)
-    try:
-        return gzip.decompress(raw).decode("utf-8")
-    except (OSError, UnicodeDecodeError):
+    if len(raw) > MAX_COMPRESSED_BYTES:
+        raise ValueError("GD compressed level exceeds 8 MiB safety limit")
+    for wbits in (zlib.MAX_WBITS | 16, zlib.MAX_WBITS, -zlib.MAX_WBITS):
         try:
-            return zlib.decompress(raw).decode("utf-8")
-        except (zlib.error, UnicodeDecodeError) as exc:
-            raise ValueError("Encoded source is not recognized gzip/zlib") from exc
+            decoder = zlib.decompressobj(wbits)
+            data = decoder.decompress(raw, MAX_DECOMPRESSED_BYTES + 1)
+            if len(data) > MAX_DECOMPRESSED_BYTES or not decoder.eof:
+                raise ValueError("GD level decompress limit exceeded or stream incomplete")
+            return data.decode("utf-8")
+        except (zlib.error, UnicodeDecodeError):
+            continue
+    raise ValueError("Encoded GD source is not recognized gzip/zlib/deflate")
 
 
 def parse_server_response(raw: str) -> str:
@@ -81,7 +91,7 @@ def download_encoded_level() -> str:
     }).encode("ascii")
     request = urllib.request.Request(
         ENDPOINT, data=payload,
-        headers={"User-Agent": "BIOFIT-DASH-LevelLayoutResearch/1.0",
+        headers={"User-Agent": "",
                  "Content-Type": "application/x-www-form-urlencoded"},
         method="POST"
     )
