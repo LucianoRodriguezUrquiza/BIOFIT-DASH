@@ -27,6 +27,7 @@ namespace Biofit.GeomeTryOriginal
             Register("biofitSpiderPortal", BiofitMode.Spider);
             Register("biofitCubePortal", BiofitMode.Cube);
             Register("biofitShipPortal", BiofitMode.Ship);
+            RegisterCoin();
             RegisterDecoration("biofitDecoPulse");
             RegisterDecoration("biofitDecoCrystal");
             RegisterDecoration("biofitDecoStar");
@@ -61,6 +62,23 @@ namespace Biofit.GeomeTryOriginal
         // Decorative sprites are instantiated by the ORIGINAL map loader through
         // Prefab.Prefabs, without a collider or any change to player physics.
         // Optional licensed artwork overrides are loaded from Resources.
+        private static void RegisterCoin()
+        {
+            const string key = "biofitStereoCoin";
+            if (Prefab.Prefabs.ContainsKey(key) && Prefab.Prefabs[key] != null) return;
+            GameObject template = new GameObject("BIOFIT_TEMPLATE_STEREO_COIN");
+            DontDestroyOnLoad(template);
+            template.transform.position = new Vector3(-50000f, 0f, 0f);
+            var sprite = template.AddComponent<SpriteRenderer>();
+            sprite.sprite = BiofitThreeModeArt.MakeDecoration("biofitDecoStar");
+            sprite.sortingOrder = 9;
+            var collider = template.AddComponent<CircleCollider2D>();
+            collider.isTrigger = true;
+            collider.radius = .6f;
+            template.AddComponent<BiofitStereoCoinPickup>();
+            Prefab.Prefabs[key] = template;
+        }
+
         private static void RegisterDecoration(string key)
         {
             if (Prefab.Prefabs.ContainsKey(key) && Prefab.Prefabs[key] != null) return;
@@ -80,7 +98,11 @@ namespace Biofit.GeomeTryOriginal
             roof = null;
             shipCeilings.Clear();
             installed = false;
-            if (scene.name == "Level") StartCoroutine(SetupAfterOriginalGame());
+            if (scene.name == "Level")
+            {
+                BiofitStereoCoinPickup.ResetRun();
+                StartCoroutine(SetupAfterOriginalGame());
+            }
         }
 
         private IEnumerator SetupAfterOriginalGame()
@@ -137,6 +159,23 @@ namespace Biofit.GeomeTryOriginal
                 avatar.AddComponent<BiofitVrBoxController>();
             int id = GameManager.Instance?.SelectedLevel?.Id ?? 1;
             motor.SetMode(id == 2 ? BiofitMode.Ball : id == 3 ? BiofitMode.Spider : BiofitMode.Cube);
+        }
+    }
+
+    public sealed class BiofitStereoCoinPickup : MonoBehaviour
+    {
+        public static int Collected { get; private set; }
+        public static void ResetRun() { Collected = 0; }
+        private void OnTriggerEnter2D(Collider2D other)
+        {
+            Cube cube = other.GetComponent<Cube>();
+            if (cube == null || !cube.isAlive ||
+                GameManager.Instance == null ||
+                GameManager.Instance.SelectedLevel == null ||
+                GameManager.Instance.SelectedLevel.Id != 1) return;
+            Collected++;
+            Debug.Log("BIOFIT STEREO COIN " + Collected + "/3");
+            Destroy(gameObject);
         }
     }
 
