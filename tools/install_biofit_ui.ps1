@@ -1,10 +1,11 @@
 # Instala las cuatro imagenes entregadas por el usuario sin copiar PNG manualmente.
 # Requiere el paquete BIOFIT_UI_ASSETS.zip descargado localmente.
-# NO publica los recursos en GitHub (posibles licencias de terceros).
+# Solo publica Skins.png en GitHub si el usuario habilita -PublicarSkins.
 [CmdletBinding()]
 param(
     [string]$ArchivePath,
-    [string]$ProjectRoot
+    [string]$ProjectRoot,
+    [switch]$PublicarSkins
 )
 $ErrorActionPreference = 'Stop'
 
@@ -84,6 +85,39 @@ try {
     Write-Host "BIOFIT UI LISTO. Archivos nuevos o actualizados: $($changes.Count) / 4" -ForegroundColor Green
     Write-Host "Destino: $destination"
     Write-Host "Unity importara los PNG al abrir el proyecto o regresar a la ventana del Editor."
+    if ($PublicarSkins) {
+        # Publicar solo la hoja expresamente autorizada; nunca subir los otros
+        # PNG, los datos capturados, configuraciones locales ni otros cambios.
+        $git = Get-Command git -ErrorAction Stop
+        $expectedBranch = 'feat/vr-joystick-input-diagnostics'
+        $branchName = (& $git.Source -C $ProjectRoot branch --show-current).Trim()
+        if ($LASTEXITCODE -ne 0 -or $branchName -ne $expectedBranch) {
+            throw "Publicacion cancelada: debes estar en la rama '$expectedBranch', pero estas en '$branchName'."
+        }
+        $relative = 'Assets/BIOFIT/Resources/BiofitUi/Skins.png'
+        $status = @(& $git.Source -C $ProjectRoot status --porcelain --untracked-files=no)
+        if ($LASTEXITCODE -ne 0) { throw "No pude consultar el estado de Git." }
+        $preStaged = @(& $git.Source -C $ProjectRoot diff --cached --name-only)
+        if ($LASTEXITCODE -ne 0) { throw "No pude consultar los archivos preparados." }
+        if ($preStaged.Count -gt 0) {
+            throw "Ya hay cambios en staging: evita incluir archivos ajenos. Publicacion cancelada."
+        }
+        & $git.Source -C $ProjectRoot add -- $relative
+        if ($LASTEXITCODE -ne 0) { throw "No se pudo preparar Skins.png para Git." }
+        & $git.Source -C $ProjectRoot diff --cached --quiet -- $relative
+        $needsCommit = $LASTEXITCODE -eq 1
+        if ($needsCommit) {
+            & $git.Source -C $ProjectRoot commit -m 'assets: add user-authorized BiofitUi Skins sprite sheet' -- $relative
+            if ($LASTEXITCODE -ne 0) { throw "Git no pudo crear el commit de Skins.png. Revisa tu usuario Git." }
+        }
+        & $git.Source -C $ProjectRoot push origin $expectedBranch
+        if ($LASTEXITCODE -ne 0) {
+            throw "Skins.png quedo instalado y preparado localmente, pero fallo git push. Revisar GitHub y credenciales."
+        }
+        Write-Host "PUBLICADO en GitHub (rama experimental): $relative" -ForegroundColor Green
+        Write-Host "https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/blob/$expectedBranch/$relative"
+    }
+
 }
 finally {
     if (Test-Path -LiteralPath $temp) {
