@@ -57,6 +57,11 @@ assert "BilateralJumpCandidate += OnBilateralLegacyCandidate" in bridge
 assert "cube.onClick();" in bridge
 assert 'if (motor != null && motor.Mode != BiofitMode.Cube)' in bridge
 assert '"CUBO / NAVE"' in ui
+assert '"MONEDAS " + BiofitStereoCoinPickup.Collected + " / 3"' in ui
+assert 'stereoCoinHudLabel = null;' in ui
+assert 'gameObject.SetActive(false);' in src and 'coin.gameObject.SetActive(true);' in src
+assert 'if (id == 1) BiofitStereoCoinPickup.ResetRun();' in src
+
 assert "(i == 0 ? 825 : 575)" in build
 assert '"biofitShipPortal", "biofitStereoCoin"' in build
 assert "BiofitGeomeTryOriginalBuild.Verify();" in build
