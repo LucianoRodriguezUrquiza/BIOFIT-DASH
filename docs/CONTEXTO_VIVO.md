@@ -2,6 +2,13 @@
 
 > **Leer primero al iniciar un chat nuevo.** Este documento es el punto de entrada operativo y se actualiza con cada cambio **confirmado** del proyecto. No sustituye al código fuente ni a las pruebas físicas.
 
+## VALIDACIÓN FÍSICA JOYSTICK — MODO CAMBIO + C (2026-11-24)
+
+- **Fuente canónica ya archivada directamente en `main`:** [JOYSTICK - Modo Juego.md](../JOYSTICK%20-%20Modo%20Juego.md). El usuario probó en Android el joystick identificado como `VR BOX` y demostró **`MODO CAMBIO + C` como modo juego** (no `+B`, aunque manuales de modelos similares lo sugieran). La nueva pantalla de diagnóstico **ya fue validada físicamente** para lectura de botones; el remapeo aún no se implementó.
+- **Resultados A, B, C, D, R1, R2 en ese orden:** `A=0+13`, `B=0`, `C=13`, `D=1`, `R1=0+13`, `R2=0`. Código de Unity `JoystickButtonX`; `Joystick1ButtonX` es alias específico del primer mando. A/R1 y B/R2 indistinguibles entre sí. La detección muestra algunos renglones duplicados, **sin evidenciar todavía doble comando real**.
+- **Stick:** no utilizable en modo `+C` según usuario. En modo `+D` mueve puntero pero controles volumen/atrás son problemáticos y pueden cerrar la aplicación; **no adoptar modo mouse** como perfil principal. Evitar remapear las señales 0 y 13 independientemente sin prioridad: A/R1 puede producir ambas simultáneamente.
+- La UI experimental se actualizó para decir **`MODO JUEGO COMPROBADO: CAMBIO + C`**; mantener rama y PR #30 en borrador hasta implementar y validar bindings. No tocar la base BLE ni las seis opciones 900/800/700/600/500/400 ms.
+
 ## Solicitud explícita de versionar Skins.png (2026-11-23)
 
 - El usuario aclaró que usa estos gráficos solo en su proyecto y solicitó explícitamente **publicar Skins.png** en GitHub a pesar de la recomendación inicial de mantenerlo privado. El archivo original extraído de `BiofitUi.rar` mide **936729 bytes**, es PNG RGBA de **1280 × 887**, SHA-256 `3e9a3675f53e7b02303ced1a0b65aa1bb8ffcb0935fd3aae46597026b32ba7b5`.
