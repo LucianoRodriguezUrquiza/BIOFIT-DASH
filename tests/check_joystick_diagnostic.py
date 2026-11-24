@@ -9,6 +9,7 @@ assert "activeInputHandler: 0" in settings, "Project uses legacy Input Manager; 
 assert '"JOYSTICK"' in ux and "BuildJoystickDiagnostics()" in ux
 assert "RefreshJoystickDiagnostics()" in ux
 assert "Input.GetJoystickNames()" in ux
+assert "MODO JUEGO COMPROBADO: CAMBIO + C." in ux, "The real VR BOX uses MODE+C, not MODE+B"
 assert "Input.anyKeyDown" in ux and "Input.GetKeyDown(code)" in ux
 assert 'Input.GetAxisRaw("Horizontal")' in ux
 assert 'Input.GetAxisRaw("Vertical")' in ux
