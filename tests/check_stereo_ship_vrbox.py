@@ -65,6 +65,12 @@ assert 'if (id == 1) BiofitStereoCoinPickup.ResetRun();' in src
 assert "(i == 0 ? 825 : 575)" in build
 assert '"biofitShipPortal", "biofitStereoCoin"' in build
 assert "BiofitGeomeTryOriginalBuild.Verify();" in build
+# Automated reuse of the four local UI PNGs from the user's known project.
+restore = (ROOT / "tools/restore_local_biofit_ui.ps1").read_text(encoding="utf-8")
+assert "BIOFIT-DASH-JOYSTICK-TEST" in restore
+assert "BIOFIT-DASH-NUEVOS-NIVELES" in restore
+assert "Get-FileHash" in restore
+
 
 # Reproducible video-derived design source, not a claimed
 # exact original GMD/GD level object-string.
