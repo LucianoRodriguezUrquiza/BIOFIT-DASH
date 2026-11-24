@@ -1,12 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Biofit.GeomeTryOriginal
 {
-    public enum BiofitMode { Cube, Ball, Spider }
+    public enum BiofitMode { Cube, Ball, Spider, Ship }
 
     // Self-contained experimental modes. Nothing is modified inside the pinned GeomeTry submodule.
     // Maintains Character (Cube) on the original player for death, respawn, camera and progress.
@@ -14,6 +15,7 @@ namespace Biofit.GeomeTryOriginal
     {
         private GameObject avatar;
         private GameObject roof;
+        private readonly List<GameObject> shipCeilings = new List<GameObject>();
         private bool installed;
         public static bool Active =>
             Application.isEditor || Application.identifier == "com.biofitgame.threemodeslab";
@@ -24,6 +26,7 @@ namespace Biofit.GeomeTryOriginal
             Register("biofitBallPortal", BiofitMode.Ball);
             Register("biofitSpiderPortal", BiofitMode.Spider);
             Register("biofitCubePortal", BiofitMode.Cube);
+            Register("biofitShipPortal", BiofitMode.Ship);
             RegisterDecoration("biofitDecoPulse");
             RegisterDecoration("biofitDecoCrystal");
             RegisterDecoration("biofitDecoStar");
@@ -75,6 +78,7 @@ namespace Biofit.GeomeTryOriginal
         {
             avatar = null;
             roof = null;
+            shipCeilings.Clear();
             installed = false;
             if (scene.name == "Level") StartCoroutine(SetupAfterOriginalGame());
         }
@@ -86,9 +90,30 @@ namespace Biofit.GeomeTryOriginal
             Level level = GameManager.Instance == null ? null : GameManager.Instance.SelectedLevel;
             if (level == null) yield break;
             installed = true;
-            if (level.Id == 1) yield break;
             GameObject ceilingPrefab = Resources.Load<GameObject>("Prefabs/Decors/CeilPrefab");
             if (ceilingPrefab == null) { Debug.LogError("BIOFIT Three Modes: falta CeilPrefab."); yield break; }
+            if (level.Id == 1)
+            {
+                // Stereo Madness: ship-only roof spans, not a ceiling over the
+                // entire Cube level. Leave the existing levels 2-5 unchanged.
+                for (int i = 0; i < level.Map.Count; i++)
+                {
+                    if (level.Map[i].Type != "biofitShipPortal") continue;
+                    float start = level.Map[i].X + 2f;
+                    float end = level.getLastMapItem().X;
+                    for (int j = i + 1; j < level.Map.Count; j++)
+                        if (level.Map[j].Type == "biofitCubePortal")
+                        { end = level.Map[j].X; break; }
+                    if (end <= start + 1f) continue;
+                    GameObject ceiling = Instantiate(ceilingPrefab,
+                        new Vector3((start + end) * .5f, 8f, 0f), Quaternion.identity);
+                    ceiling.name = "BIOFIT_STEREO_SHIP_ROOF";
+                    ceiling.transform.localScale = new Vector3(end - start, 1f, 1f);
+                    ceiling.layer = 3;
+                    shipCeilings.Add(ceiling);
+                }
+                yield break;
+            }
             float lastX = level.getLastMapItem().X;
             roof = Instantiate(ceilingPrefab,
                 new Vector3((lastX) * .5f, 8f, 0f),
@@ -108,6 +133,8 @@ namespace Biofit.GeomeTryOriginal
             if (cube == null) return;
             BiofitModeMotor motor = avatar.GetComponent<BiofitModeMotor>();
             if (motor == null) motor = avatar.AddComponent<BiofitModeMotor>();
+            if (avatar.GetComponent<BiofitVrBoxController>() == null)
+                avatar.AddComponent<BiofitVrBoxController>();
             int id = GameManager.Instance?.SelectedLevel?.Id ?? 1;
             motor.SetMode(id == 2 ? BiofitMode.Ball : id == 3 ? BiofitMode.Spider : BiofitMode.Cube);
         }
@@ -144,6 +171,71 @@ namespace Biofit.GeomeTryOriginal
         }
     }
 
+    // This reads the REAL Android controller observed as "VR BOX".
+    // The user validated MODE CHANGE + C and KeyCodes 0, 1 and 13.
+    // A/R1=0+13, B/R2=0, C=13, D=1. All are the SAME action by request.
+    internal static class BiofitVrBoxInput
+    {
+        private static float refreshAt;
+        private static bool connected;
+        public static bool Connected
+        {
+            get
+            {
+                if (Time.unscaledTime >= refreshAt)
+                {
+                    refreshAt = Time.unscaledTime + .25f;
+                    connected = false;
+                    foreach (string name in Input.GetJoystickNames())
+                        if (!string.IsNullOrEmpty(name) &&
+                            name.IndexOf("VR BOX", StringComparison.OrdinalIgnoreCase) >= 0)
+                        { connected = true; break; }
+                }
+                return connected;
+            }
+        }
+        public static bool AnyHeld =>
+            Connected && (Input.GetKey(KeyCode.JoystickButton0) ||
+                          Input.GetKey(KeyCode.JoystickButton1) ||
+                          Input.GetKey(KeyCode.JoystickButton13));
+        public static bool AnyDown =>
+            Connected && (Input.GetKeyDown(KeyCode.JoystickButton0) ||
+                          Input.GetKeyDown(KeyCode.JoystickButton1) ||
+                          Input.GetKeyDown(KeyCode.JoystickButton13));
+    }
+
+    // The original Cube.Update only polls mouse/Space. It has no joystick
+    // binding. Maintain the validated Cube.onClick() physics AND hold repeat:
+    // while any VR BOX action is held, call onClick every frame, so a new
+    // grounded jump is possible without requiring a button release.
+    public sealed class BiofitVrBoxController : MonoBehaviour
+    {
+        private static readonly FieldInfo KeyPressed =
+            typeof(Character).GetField("keyPressed",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+        private Cube cube;
+        private BiofitModeMotor motor;
+        private void Awake()
+        {
+            cube = GetComponent<Cube>();
+            motor = GetComponent<BiofitModeMotor>();
+        }
+        private void Update()
+        {
+            if (cube == null || KeyPressed == null || !cube.enabled ||
+                !cube.isAlive || motor == null || motor.Mode != BiofitMode.Cube ||
+                GameManager.Instance == null || !GameManager.Instance.PlayMode ||
+                !BiofitVrBoxInput.AnyHeld) return;
+            bool prior = (bool)KeyPressed.GetValue(cube);
+            try
+            {
+                KeyPressed.SetValue(cube, true);
+                cube.onClick();
+            }
+            finally { KeyPressed.SetValue(cube, prior); }
+        }
+    }
+
     public sealed class BiofitModeMotor : MonoBehaviour
     {
         // Original Cube body, gravity and jump code are never changed.
@@ -151,6 +243,14 @@ namespace Biofit.GeomeTryOriginal
         // and this adapter moves the same Rigidbody2D player horizontally.
         private const float OriginalSpeed = 6.5f;
         private const float BallSpiderGravity = 4f;
+        // Original Christ0u/GeomeTry Ship.cs: gravity +/-2.5, |Vy|<=10,
+        // rotation clamp +/-40 degrees. This motor keeps the Cube object.
+        private const float ShipGravity = 2.5f;
+        private const float ShipMaxVerticalSpeed = 10f;
+        private const float ShipMaxAngle = 40f;
+        // A BLE bilateral jump is a discrete thrust pulse, unlike a held key.
+        // 400ms is a starting playable hold; user can tune after APK tests.
+        private const float ShipBleThrustSeconds = .40f;
         private const float SurfaceRay = .92f;
         private const int GroundMask = 1 << 3;
         private Cube cube;
@@ -162,6 +262,7 @@ namespace Biofit.GeomeTryOriginal
         private bool initialized;
         private bool flipped;
         private float lastManualAction;
+        private float shipBleHeldUntil;
         public BiofitMode Mode { get; private set; } = BiofitMode.Cube;
 
         private void Initialize()
@@ -184,8 +285,9 @@ namespace Biofit.GeomeTryOriginal
             if (!initialized || !cube.isAlive || newMode == Mode) return;
             Mode = newMode;
             flipped = false;
+            shipBleHeldUntil = 0f;
             body.linearVelocity = new Vector2(body.linearVelocity.x, 0f);
-            body.gravityScale = BallSpiderGravity;
+            body.gravityScale = newMode == BiofitMode.Ship ? ShipGravity : BallSpiderGravity;
             if (newMode == BiofitMode.Cube)
             {
                 cube.enabled = true;
@@ -220,7 +322,9 @@ namespace Biofit.GeomeTryOriginal
         {
             if (!initialized || Mode == BiofitMode.Cube || !cube.isAlive ||
                 GameManager.Instance == null || !GameManager.Instance.PlayMode) return;
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)) TryPulse();
+            if (Mode == BiofitMode.Ship) return; // Ship responds to held input in FixedUpdate.
+            if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) ||
+                BiofitVrBoxInput.AnyDown) TryPulse();
         }
 
         private void FixedUpdate()
@@ -229,6 +333,24 @@ namespace Biofit.GeomeTryOriginal
                 GameManager.Instance == null || !GameManager.Instance.PlayMode) return;
             // Equivalent to the original Character.FixedUpdate horizontal motion.
             transform.Translate(new Vector2(OriginalSpeed * Time.deltaTime, 0f), Space.World);
+            if (Mode == BiofitMode.Ship)
+            {
+                // No synthetic key repeat: one continuous held state controls
+                // upward gravity just like the ORIGINAL Ship. Releasing falls.
+                bool held = Input.GetKey(KeyCode.Space) ||
+                            Input.GetMouseButton(0) ||
+                            BiofitVrBoxInput.AnyHeld ||
+                            Time.unscaledTime < shipBleHeldUntil;
+                body.gravityScale = held ? -ShipGravity : ShipGravity;
+                float vy = Mathf.Clamp(body.linearVelocity.y,
+                    -ShipMaxVerticalSpeed, ShipMaxVerticalSpeed);
+                if (vy != body.linearVelocity.y)
+                    body.linearVelocity = new Vector2(body.linearVelocity.x, vy);
+                float angle = Mathf.Clamp(
+                    Mathf.Atan2(vy, 7f) * Mathf.Rad2Deg,
+                    -ShipMaxAngle, ShipMaxAngle);
+                icon.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
+            }
             if (Mode == BiofitMode.Ball)
             {
                 icon.transform.Rotate(0, 0,
@@ -255,6 +377,13 @@ namespace Biofit.GeomeTryOriginal
             // Protect against the *same* simultaneous touch and BLE pulse, not a
             // replacement for the unchanged 900-ms bilateral receiver cooldown.
             if (Time.unscaledTime - lastManualAction < .12f) return false;
+            if (Mode == BiofitMode.Ship)
+            {
+                shipBleHeldUntil = Mathf.Max(shipBleHeldUntil,
+                    Time.unscaledTime + ShipBleThrustSeconds);
+                lastManualAction = Time.unscaledTime;
+                return true;
+            }
             Vector2 support = flipped ? Vector2.up : Vector2.down;
             if (!SurfaceContact(support)) return false;
             if (Mode == BiofitMode.Ball)
@@ -360,7 +489,7 @@ namespace Biofit.GeomeTryOriginal
 
     internal static class BiofitThreeModeArt
     {
-        private static Sprite ball, spider, cubeIcon, cubePortal, ballPortal, spiderPortal;
+        private static Sprite ball, spider, ship, cubeIcon, cubePortal, ballPortal, spiderPortal, shipPortal;
         private static readonly Dictionary<string, Sprite> decorationCache = new Dictionary<string, Sprite>();
         public static Sprite Make(BiofitMode mode, bool portal)
         {
@@ -373,10 +502,12 @@ namespace Biofit.GeomeTryOriginal
             {
                 if (mode == BiofitMode.Cube) return cubeIcon ?? (cubeIcon = Build(mode, false));
                 if (mode == BiofitMode.Ball) return ball ?? (ball = Build(mode, false));
+                if (mode == BiofitMode.Ship) return ship ?? (ship = Build(mode, false));
                 return spider ?? (spider = Build(mode, false));
             }
             if (mode == BiofitMode.Cube) return cubePortal ?? (cubePortal = Build(mode, true));
             if (mode == BiofitMode.Ball) return ballPortal ?? (ballPortal = Build(mode, true));
+            if (mode == BiofitMode.Ship) return shipPortal ?? (shipPortal = Build(mode, true));
             return spiderPortal ?? (spiderPortal = Build(mode, true));
         }
         private static Sprite Build(BiofitMode mode, bool portal)
@@ -387,6 +518,7 @@ namespace Biofit.GeomeTryOriginal
             Color transparent = new Color(0, 0, 0, 0);
             Color accent = mode == BiofitMode.Ball ? new Color(1f, .36f, .25f) :
                 mode == BiofitMode.Spider ? new Color(.7f, .23f, 1f) :
+                mode == BiofitMode.Ship ? new Color(.17f, .95f, .9f) :
                 new Color(.3f, 1f, .32f);
             for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
@@ -423,6 +555,17 @@ namespace Biofit.GeomeTryOriginal
                     if (r > .46f && r < .65f && Mathf.Abs(Mathf.Sin(angle * 6f)) < .32f) c = Color.black;
                     if (r < .22f) c = Color.black;
                     if (r < .12f) c = Color.white;
+                }
+                else if (mode == BiofitMode.Ship)
+                {
+                    // Original procedural triangular ship silhouette: no third-
+                    // party texture is embedded or redistributed with the repo.
+                    float span = .88f - .64f * Mathf.Abs(v);
+                    if (u > -.83f && u < span && Mathf.Abs(v) < .68f) c = Color.black;
+                    if (u > -.69f && u < span - .13f &&
+                        Mathf.Abs(v) < .55f) c = accent;
+                    if (u > -.15f && u < .13f && Mathf.Abs(v) < .18f) c = Color.white;
+                    if (u < -.45f && Mathf.Abs(v) < .25f) c = new Color(1f, .52f, .17f);
                 }
                 else
                 {
