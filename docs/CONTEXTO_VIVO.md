@@ -2,6 +2,13 @@
 
 > **Leer primero al iniciar un chat nuevo.** Este documento es el punto de entrada operativo y se actualiza con cada cambio **confirmado** del proyecto. No sustituye al código fuente ni a las pruebas físicas.
 
+## Solicitud explícita de versionar Skins.png (2026-11-23)
+
+- El usuario aclaró que usa estos gráficos solo en su proyecto y solicitó explícitamente **publicar Skins.png** en GitHub a pesar de la recomendación inicial de mantenerlo privado. El archivo original extraído de `BiofitUi.rar` mide **936729 bytes**, es PNG RGBA de **1280 × 887**, SHA-256 `3e9a3675f53e7b02303ced1a0b65aa1bb8ffcb0935fd3aae46597026b32ba7b5`.
+- **Estado real:** `.gitignore` permite ahora versionar **solo** `Assets/BIOFIT/Resources/BiofitUi/Skins.png`, mientras que los otros tres PNG permanecen excluidos. Se agregó el parámetro opt-in `-PublicarSkins` a `tools/install_biofit_ui.ps1`; el script extrae automáticamente el ZIP validado, hace commit únicamente de Skins y ejecuta `git push` a la rama experimental, si el usuario tiene acceso GitHub desde su computadora.
+- **LIMITACIÓN:** en esta sesión la herramienta conectada de GitHub no tiene acceso directo a los bytes binarios del PNG del contenedor, por lo que **NO está subido todavía**. No afirmar que se publicó hasta ver el blob en GitHub. El usuario solo necesitará descargar el ZIP a Descargas y ejecutar el comando de instalación con `-PublicarSkins` desde su clon. No promoverlo a `main` antes de las pruebas.
+- Publicar el recurso en un repositorio público lo hace accesible a terceros. Aun cuando los modelos no coincidan exactamente con los originales, esto no determina por sí solo la ausencia de derechos de terceros.
+
 ## Recursos UI privados — instalación automática sin copiar cuatro PNG (2026-11-23)
 
 - El usuario aportó `BiofitUi.rar` con `Back.png` (7.606 B), `LevelSelect.png` (2.433.590 B), `Pause.png` (158.591 B) y `Skins.png` (936.729 B). Se extrajeron y verificaron correctamente. `Skins.png` muestra iconos reconocibles de Geometry Dash, así que **no publicar imágenes en GitHub público sin verificar licencia**; `.gitignore` preserva la exclusión de `Assets/BIOFIT/Resources/BiofitUi/`.
