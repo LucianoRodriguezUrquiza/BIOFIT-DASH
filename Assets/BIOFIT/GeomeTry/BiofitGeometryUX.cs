@@ -1232,7 +1232,7 @@ namespace Biofit.GeomeTryOriginal
                 "STICK FÍSICO X: " + Input.GetAxisRaw("BIOFIT VR Stick X").ToString("F2") +
                 "  Y: " + Input.GetAxisRaw("BIOFIT VR Stick Y").ToString("F2") +
                 "  | TECLADO H: " + Input.GetAxisRaw("Horizontal").ToString("F2") +
-                " V: " + Input.GetAxisRaw("Vertical").ToString("F2");";
+                " V: " + Input.GetAxisRaw("Vertical").ToString("F2");
         }
 
         private void BuildCooldownSettings()
