@@ -32,7 +32,7 @@ Se añadió en `Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs` el botón **JOYSTICK
 
 1. `Input.GetJoystickNames()` (vacío en algunos remotos de tipo teclado/mouse aunque estén conectados).
 2. Últimas cinco pulsaciones `KeyCode` detectadas por `Input.anyKeyDown` + `Input.GetKeyDown` únicamente mientras está abierta la subpágina, con contador y registro `BIOFIT JOYSTICK DIAGNOSTIC` en el log.
-3. Valores actuales de los ejes `Horizontal`/`Vertical` configurados por Legacy Input Manager; no garantiza medir todos los ejes físicos de un gamepad.
+3. Valores de dos ejes NUEVOS y exclusivos de observación, `BIOFIT VR Stick X` y `BIOFIT VR Stick Y` (`Joystick Axis` 1/2, tipo 2, primer par X/Y), añadidos a `ProjectSettings/InputManager.asset` **sin cambiar** `Horizontal`/`Vertical` existentes. Se muestran junto con los ejes de teclado `Horizontal` y `Vertical`. Esto mejora la cobertura de sticks HID analógicos, pero algunos mandos usan un D-pad, teclas o ejes con numeración diferente.
 4. Botón **LIMPIAR EVENTOS** y botón **VOLVER** compatible con los submenús existentes.
 
 No se agregaron bindings de gameplay ni se alteraron las físicas, cooldown, BLE, Android Activity o PlayerPrefs. **El diagnóstico no identifica por sí solo el código Android `KEYCODE_VOLUME_UP` si el sistema lo intercepta.**
@@ -52,6 +52,6 @@ No se agregaron bindings de gameplay ni se alteraron las físicas, cooldown, BLE
 - Un clic `Mouse0` puede provenir del dedo o de A/R1; no hay identificación de hardware solo mediante `Input.GetMouseButtonDown`.
 - `KEYCODE_BACK` puede convertirse en `KeyCode.Escape` o gestionarse fuera de Unity; probarlo.
 - Los botones de volumen suelen ser controles del sistema; no prometer reasignación sin interceptación a nivel nativo, que no es recomendable en esta primera integración.
-- El `stick` puede enviar teclado, mouse relativo, D-pad o ejes analógicos. `Horizontal/Vertical` existentes miden solo la configuración actual, no todos los ejes posibles.
+- El `stick` puede enviar teclado, mouse relativo, D-pad o ejes analógicos. Los dos nuevos ejes miden el primer par estándar del joystick; no garantizan detectar ejes de numeración distinta. `Horizontal/Vertical` existentes permanecen intactos.
 - Si Android ya emula un clic `Mouse0` para A, añadir otra ruta de salto con el mismo botón causaría dobles acciones. Los bindings se aplicarán con prioridad y deduplicación.
 - **No fusionar a `main` hasta probar en APK y confirmar capturas útiles.** No se cambió el carácter físicamente validado de `main` ni el cooldown de 400 ms preferido por el usuario.
