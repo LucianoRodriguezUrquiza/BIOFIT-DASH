@@ -18,12 +18,12 @@ const buildMap = function buildMap(){
  // RobTop object data. Replace only after original level coordinates verified.
  groundspikes([16,37,39,59,60,62]);
  tiles(49,4,0);tiles(63,4,0,2);tiles(81,3,0,2);
- groundspikes([50,74,76,84,86]);
+ groundspikes([74,76,84,86]);add("spike",50,1);
  tiles(97,17,0);add("spike",105,1);groundspikes([119,121]);
  tiles(130,12,0);tiles(137,7,1);groundspikes([145,146,147,149]);
  floatline(158,3,2);floatline(170,4,3);groundspikes([154,156,175,177,179]);
  tiles(183,13,0,2);groundspikes([198,200]);floatline(202,4,3);
- tiles(210,12,0);tiles(214,8,1);groundspikes([221,223]);
+ tiles(210,12,0);tiles(214,8,1);groundspikes([223]);add("spike",221,2);
  floatline(229,3,3);groundspikes([232,234,236]);
  stars([27,87,143,198,227],4);
  // Phase transition first ship; geometry based on the 30-45% video section.
@@ -66,7 +66,7 @@ const buildMap = function buildMap(){
  add("biofitStereoCoin",780,5);
  add("biofitCubePortal",786,3);
  // End sequence: floor/cube gap, few challenging yet short obstacles.
- tiles(792,9,0);groundspikes([800,802,804]);floatline(805,4,2);
+ tiles(792,9,0);groundspikes([802,804]);add("spike",800,1);floatline(805,4,2);
  groundspikes([809,811]);tiles(815,4,0);groundspikes([820,822]);
  stars([795,811],4);
  add("ground",825,-2);
