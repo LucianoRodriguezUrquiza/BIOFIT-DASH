@@ -29,14 +29,14 @@
       "y": 0
     },
     {
-      "type": "spike",
+      "type": "tile",
       "x": 50,
       "y": 0
     },
     {
-      "type": "tile",
+      "type": "spike",
       "x": 50,
-      "y": 0
+      "y": 1
     },
     {
       "type": "tile",
@@ -694,11 +694,6 @@
       "y": 1
     },
     {
-      "type": "spike",
-      "x": 221,
-      "y": 0
-    },
-    {
       "type": "tile",
       "x": 221,
       "y": 0
@@ -707,6 +702,11 @@
       "type": "tile",
       "x": 221,
       "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 221,
+      "y": 2
     },
     {
       "type": "spike",
@@ -2383,14 +2383,14 @@
       "y": 0
     },
     {
-      "type": "spike",
+      "type": "tile",
       "x": 800,
       "y": 0
     },
     {
-      "type": "tile",
+      "type": "spike",
       "x": 800,
-      "y": 0
+      "y": 1
     },
     {
       "type": "spike",
