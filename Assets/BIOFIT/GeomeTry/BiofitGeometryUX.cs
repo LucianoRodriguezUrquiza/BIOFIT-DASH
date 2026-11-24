@@ -1151,7 +1151,7 @@ namespace Biofit.GeomeTryOriginal
                 new Vector2(.5f, .5f), new Vector2(1030f, 60f),
                 Vector2.zero, 36, Color.white);
             Text("Joystick instrucciones", canvasRoot,
-                "CONECTÁ EL MANDO AL CELULAR. PROBÁ MODO + B Y LUEGO CADA BOTÓN.",
+                "CONECTÁ EL MANDO. MODO JUEGO COMPROBADO: CAMBIO + C.",
                 new Vector2(.5f, .700f), new Vector2(1290f, 64f),
                 Vector2.zero, 24, Ice);
 
