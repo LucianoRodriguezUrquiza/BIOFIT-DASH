@@ -58,6 +58,15 @@ namespace Biofit.GeomeTryOriginal
         private TMP_Text cooldownHudLabel;
         private readonly Button[] cooldownOptionButtons = new Button[6];
         private bool cooldownPage;
+        // Discovery only: listen to legacy Unity input while the Joystick diagnostic
+        // page is open. No gameplay binding is changed until Android HID codes are known.
+        private bool joystickPage;
+        private TMP_Text joystickDevicesLabel;
+        private TMP_Text joystickEventsLabel;
+        private TMP_Text joystickAxesLabel;
+        private readonly List<string> joystickHistory = new List<string>();
+        private int joystickEventCount;
+        private float joystickRefreshAt;
         private float refreshCooldownAt;
         private float commandFeedbackUntil;
         private TMP_Text skinLabel;
@@ -146,7 +155,11 @@ namespace Biofit.GeomeTryOriginal
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (scene.name != Settings) cooldownPage = false;
+            if (scene.name != Settings)
+            {
+                cooldownPage = false;
+                joystickPage = false;
+            }
             if (paused) RestorePause();
             BuildScreen(scene.name);
         }
@@ -188,6 +201,8 @@ namespace Biofit.GeomeTryOriginal
                 Time.unscaledTime >= commandFeedbackUntil)
                 commandFeedbackLabel.text = "";
 
+            if (currentScene == Settings && joystickPage)
+                RefreshJoystickDiagnostics();
             if (currentScene == Settings && statusLabel != null &&
                 Time.unscaledTime >= refreshStatusAt)
             {
@@ -292,6 +307,9 @@ namespace Biofit.GeomeTryOriginal
             commandFeedbackLabel = null;
             cooldownValueLabel = null;
             cooldownHudLabel = null;
+            joystickDevicesLabel = null;
+            joystickEventsLabel = null;
+            joystickAxesLabel = null;
             refreshCooldownAt = 0f;
             for (int i = 0; i < cooldownOptionButtons.Length; i++)
                 cooldownOptionButtons[i] = null;
@@ -358,7 +376,8 @@ namespace Biofit.GeomeTryOriginal
             else if (sceneName == Custom) BuildSkinSelection();
             else if (sceneName == Settings)
             {
-                if (cooldownPage) BuildCooldownSettings();
+                if (joystickPage) BuildJoystickDiagnostics();
+                else if (cooldownPage) BuildCooldownSettings();
                 else BuildSettings();
             }
             else if (sceneName == LevelScene) BuildLevelHud();
@@ -612,9 +631,10 @@ namespace Biofit.GeomeTryOriginal
             string target = scene == LevelScene ? Select : Menu;
             Action goBack = () =>
             {
-                if (scene == Settings && cooldownPage)
+                if (scene == Settings && (cooldownPage || joystickPage))
                 {
                     cooldownPage = false;
+                    joystickPage = false;
                     BuildScreen(Settings);
                 }
                 else Navigate(target);
@@ -1100,9 +1120,118 @@ namespace Biofit.GeomeTryOriginal
             // Dedicated subpage; do not crowd the existing capture controls.
             Button("Abrir cooldown", canvasRoot, "COOLDOWN",
                 new Vector2(.180f, .078f), new Vector2(320f, 62f),
-                Vector2.zero, () => { cooldownPage = true; BuildScreen(Settings); },
-                Ice, 26);
+                Vector2.zero, () => {
+                    joystickPage = false;
+                    cooldownPage = true;
+                    BuildScreen(Settings);
+                }, Ice, 26);
+            Button("Abrir joystick", canvasRoot, "JOYSTICK",
+                new Vector2(.820f, .078f), new Vector2(320f, 62f),
+                Vector2.zero, () => {
+                    cooldownPage = false;
+                    joystickPage = true;
+                    BuildScreen(Settings);
+                }, Ice, 26);
             RefreshBleStatus();
+        }
+
+
+        // Experimental diagnostic page for Bluetooth HID mini remotes.
+        // The mode may expose a keyboard, gamepad, mouse, or system volume keys.
+        // We deliberately do not invent a physical-button -> KeyCode mapping.
+        private void BuildJoystickDiagnostics()
+        {
+            Fill("BIOFIT joystick fondo", canvasRoot, Blue);
+            ArcadeCorners(canvasRoot);
+            ArcadeLogo(canvasRoot);
+
+            RectTransform heading = ArcadePanel("Joystick encabezado", canvasRoot,
+                new Vector2(.5f, .793f), new Vector2(1060f, 76f), Vector2.zero);
+            Text("Joystick titulo", heading, "DIAGNÓSTICO DE JOYSTICK",
+                new Vector2(.5f, .5f), new Vector2(1030f, 60f),
+                Vector2.zero, 36, Color.white);
+            Text("Joystick instrucciones", canvasRoot,
+                "CONECTÁ EL MANDO AL CELULAR. PROBÁ MODO + B Y LUEGO CADA BOTÓN.",
+                new Vector2(.5f, .700f), new Vector2(1290f, 64f),
+                Vector2.zero, 24, Ice);
+
+            RectTransform devices = ArcadePanel("Joystick dispositivo",
+                canvasRoot, new Vector2(.5f, .568f),
+                new Vector2(1210f, 126f), Vector2.zero);
+            joystickDevicesLabel = Text("Joystick dispositivo texto", devices,
+                "", new Vector2(.5f, .5f), new Vector2(1150f, 106f),
+                Vector2.zero, 25, Color.white);
+
+            RectTransform eventsPanel = ArcadePanel("Joystick eventos",
+                canvasRoot, new Vector2(.5f, .341f),
+                new Vector2(1210f, 258f), Vector2.zero);
+            joystickEventsLabel = Text("Joystick eventos texto", eventsPanel,
+                "", new Vector2(.5f, .5f), new Vector2(1130f, 235f),
+                Vector2.zero, 22, Lime);
+
+            joystickAxesLabel = Text("Joystick ejes", canvasRoot, "",
+                new Vector2(.5f, .165f), new Vector2(1140f, 40f),
+                Vector2.zero, 22, Ice);
+            Button("Joystick limpiar", canvasRoot, "LIMPIAR EVENTOS",
+                new Vector2(.5f, .075f), new Vector2(440f, 66f),
+                Vector2.zero, () => {
+                    joystickHistory.Clear();
+                    joystickEventCount = 0;
+                    RefreshJoystickDiagnostics(true);
+                }, Lime, 26);
+            RefreshJoystickDiagnostics(true);
+        }
+
+        private void RefreshJoystickDiagnostics(bool force = false)
+        {
+            if (joystickDevicesLabel == null || joystickEventsLabel == null ||
+                joystickAxesLabel == null) return;
+
+            // Input.anyKeyDown and GetKeyDown are supported by this project's
+            // activeInputHandler=0 (legacy Input Manager). Enum scan is only
+            // performed on a down-edge while this diagnostic page is visible.
+            if (Input.anyKeyDown)
+            {
+                var names = new List<string>();
+                foreach (KeyCode code in Enum.GetValues(typeof(KeyCode)))
+                {
+                    if (code != KeyCode.None && Input.GetKeyDown(code))
+                        names.Add(code.ToString());
+                }
+                if (names.Count > 0)
+                {
+                    string observation = string.Join(", ", names.ToArray());
+                    joystickEventCount++;
+                    joystickHistory.Insert(0,
+                        joystickEventCount + ": " + observation);
+                    if (joystickHistory.Count > 5)
+                        joystickHistory.RemoveAt(joystickHistory.Count - 1);
+                    Debug.Log("BIOFIT JOYSTICK DIAGNOSTIC (Unity KeyCode): " +
+                        observation);
+                }
+            }
+
+            if (!force && Time.unscaledTime < joystickRefreshAt) return;
+            joystickRefreshAt = Time.unscaledTime + .12f;
+            string[] devices = Input.GetJoystickNames();
+            var nonempty = new List<string>();
+            foreach (string device in devices)
+                if (!string.IsNullOrEmpty(device))
+                    nonempty.Add(device);
+            joystickDevicesLabel.text =
+                "JOYSTICK EN UNITY: " +
+                (nonempty.Count == 0 ? "NO DETECTADO COMO GAMEPAD" :
+                    string.Join(" / ", nonempty.ToArray())) +
+                "\nPuede funcionar como mouse o teclado sin aparecer en esta lista.";
+            joystickEventsLabel.text = "PULSACIONES RECONOCIDAS POR UNITY (" +
+                joystickEventCount + ")\n" +
+                (joystickHistory.Count == 0 ? "Esperando una tecla o clic..." :
+                    string.Join("\n", joystickHistory.ToArray())) +
+                "\nEl clic táctil también puede aparecer como Mouse0.";
+            joystickAxesLabel.text =
+                "EJES Horizontal: " + Input.GetAxisRaw("Horizontal").ToString("F2") +
+                "  |  Vertical: " + Input.GetAxisRaw("Vertical").ToString("F2") +
+                "  (valores de Input Manager)";
         }
 
         private void BuildCooldownSettings()
