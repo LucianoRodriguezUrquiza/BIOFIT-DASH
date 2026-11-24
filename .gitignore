@@ -86,8 +86,10 @@ __pycache__/
 /Assets/GeomeTryOriginal/Assets/
 /Assets/GeomeTryOriginal/Assets.meta
 
-# User-supplied graphics from the chat asset ZIP
-/Assets/BIOFIT/Resources/BiofitUi/
+# User-supplied graphics: only Skins.png authorized for public versioning.
+# Other PNGs remain local and excluded until explicitly authorized.
+/Assets/BIOFIT/Resources/BiofitUi/*
+!/Assets/BIOFIT/Resources/BiofitUi/Skins.png
 # Local backups created when replacing user-owned UI PNGs.
 /BiofitUi_Asset_Backup_*/
 
