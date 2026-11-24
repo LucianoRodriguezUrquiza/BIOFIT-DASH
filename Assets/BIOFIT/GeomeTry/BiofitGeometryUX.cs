@@ -56,6 +56,7 @@ namespace Biofit.GeomeTryOriginal
         private TMP_Text commandFeedbackLabel;
         private TMP_Text cooldownValueLabel;
         private TMP_Text cooldownHudLabel;
+        private TMP_Text stereoCoinHudLabel;
         private readonly Button[] cooldownOptionButtons = new Button[6];
         private bool cooldownPage;
         // Discovery only: listen to legacy Unity input while the Joystick diagnostic
@@ -214,6 +215,9 @@ namespace Biofit.GeomeTryOriginal
             {
                 refreshCooldownAt = Time.unscaledTime + .4f;
                 RefreshCooldownHud();
+                if (stereoCoinHudLabel != null)
+                    stereoCoinHudLabel.text =
+                        "MONEDAS " + BiofitStereoCoinPickup.Collected + " / 3";
             }
             if (currentScene == LevelScene && Time.unscaledTime >= findCubeAt)
             {
@@ -307,6 +311,7 @@ namespace Biofit.GeomeTryOriginal
             commandFeedbackLabel = null;
             cooldownValueLabel = null;
             cooldownHudLabel = null;
+            stereoCoinHudLabel = null;
             joystickDevicesLabel = null;
             joystickEventsLabel = null;
             joystickAxesLabel = null;
@@ -1467,6 +1472,12 @@ namespace Biofit.GeomeTryOriginal
 
         private void BuildLevelHud()
         {
+            if (GameManager.Instance != null &&
+                GameManager.Instance.SelectedLevel != null &&
+                GameManager.Instance.SelectedLevel.Id == 1)
+                stereoCoinHudLabel = Text("Monedas Stereo HUD", canvasRoot,
+                    "MONEDAS 0 / 3", new Vector2(.20f, .946f),
+                    new Vector2(300f, 48f), Vector2.zero, 26, Lime);
             cooldownHudLabel = Text("Cooldown BLE activo HUD", canvasRoot,
                 "", new Vector2(.780f, .946f), new Vector2(285f, 48f),
                 Vector2.zero, 26, Ice);
