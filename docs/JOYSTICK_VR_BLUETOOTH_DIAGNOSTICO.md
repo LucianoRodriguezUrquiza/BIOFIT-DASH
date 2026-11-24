@@ -30,6 +30,14 @@ Mando comercializado como DUAITEK/TodoMicro `JOYSTICK-VR`, Bluetooth clásico 3.
 - Android Open Source, `getevent`: https://source.android.com/docs/core/interaction/input/getevent
 - Unity community, modo gamepad `@+B` y mouse `@+D`: https://discussions.unity.com/t/working-bluetooth-controller-for-making-games-in-vr-on-android/661905
 
+## Hallazgo físico posterior — diagnosticar NO equivale a jugar
+
+El usuario comprobó en la APK Android con **CAMBIO + C** que Unity detecta los botones del mando `VR BOX` en la pantalla JOYSTICK, **pero pulsarlos dentro de un nivel no provoca saltos del Cube**. Al seleccionar **CAMBIO + D** (modo mouse), A/R1 **sí producen el salto**, por emulación del clic ya soportado por el juego; el modo Mouse sigue siendo inapropiado como perfil principal debido a volumen/Atrás/salida.
+
+**Esta diferencia es esperable con el código actual:** el submenú `BiofitGeometryUX.RefreshJoystickDiagnostics` únicamente lee `KeyCode` para mostrar el registro y no despacha comandos; en gameplay la implementación manual escucha `Space`/`Mouse0` (Ball/Spider) y Cube tiene su ruta original de clic. El puente `BiofitGeomeTryLegacyBridge` aplica por separado los eventos bilaterales de los ESP32, pero no recibe los botones del mando. **La conexión HID funciona; la traducción de sus `JoystickButton0/13/1` al gameplay todavía no existe.**
+
+Próxima fase: módulo `VR BOX input → Cube/Ball/Spider` que procese antes el patrón 0+13 y evite activaciones simultáneas de los perfiles 0 y 13. Mantener controles táctiles, BLE, física y cooldown configurables sin cambios. Requiere pruebas físicas en APK tras implementar. Registro fuente: [JOYSTICK - Modo Juego.md](../../JOYSTICK%20-%20Modo%20Juego.md), ya actualizado en `main`.
+
 ## Auditoría del proyecto
 
 El `ProjectSettings/ProjectSettings.asset` real indica `activeInputHandler: 0` (Legacy Input Manager), aunque `Packages/manifest.json` también incluye `com.unity.inputsystem`. La lógica de Cube usa `onClick` original; Ball/Spider ya tienen `Input.GetKeyDown(KeyCode.Space)` y `Input.GetMouseButtonDown(0)`. El puente `BiofitGeomeTryLegacyBridge` aplica los pares de tobillos al personaje. Cambiar el backend de input, sobreescribir clicks o simular eventos duplicados puede romper esta cadena. **No hacerlo en esta etapa.**
