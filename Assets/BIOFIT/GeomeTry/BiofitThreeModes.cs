@@ -158,6 +158,7 @@ namespace Biofit.GeomeTryOriginal
             if (avatar.GetComponent<BiofitVrBoxController>() == null)
                 avatar.AddComponent<BiofitVrBoxController>();
             int id = GameManager.Instance?.SelectedLevel?.Id ?? 1;
+            if (id == 1) BiofitStereoCoinPickup.ResetRun();
             motor.SetMode(id == 2 ? BiofitMode.Ball : id == 3 ? BiofitMode.Spider : BiofitMode.Cube);
         }
     }
@@ -165,7 +166,21 @@ namespace Biofit.GeomeTryOriginal
     public sealed class BiofitStereoCoinPickup : MonoBehaviour
     {
         public static int Collected { get; private set; }
-        public static void ResetRun() { Collected = 0; }
+        public static void ResetRun()
+        {
+            Collected = 0;
+            // The original GeomeTry death/respawn does not reload the scene:
+            // re-arm coins when a NEW player appears, instead of allowing
+            // progress to accumulate across multiple failed attempts.
+            Scene active = SceneManager.GetActiveScene();
+            foreach (BiofitStereoCoinPickup coin in
+                UnityEngine.Object.FindObjectsByType<BiofitStereoCoinPickup>(
+                    FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (coin == null || coin.gameObject.scene != active) continue;
+                coin.gameObject.SetActive(true);
+            }
+        }
         private void OnTriggerEnter2D(Collider2D other)
         {
             Cube cube = other.GetComponent<Cube>();
@@ -175,7 +190,7 @@ namespace Biofit.GeomeTryOriginal
                 GameManager.Instance.SelectedLevel.Id != 1) return;
             Collected++;
             Debug.Log("BIOFIT STEREO COIN " + Collected + "/3");
-            Destroy(gameObject);
+            gameObject.SetActive(false);
         }
     }
 
