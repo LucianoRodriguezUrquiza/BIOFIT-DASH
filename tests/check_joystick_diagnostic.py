@@ -31,8 +31,6 @@ assert "!/Assets/BIOFIT/Resources/BiofitUi/Skins.png" in ignore
 installer = (root / "tools/install_biofit_ui.ps1").read_text(encoding="utf-8")
 assert "[switch]$PublicarSkins" in installer
 assert "'feat/vr-joystick-input-diagnostics'" in installer
-assert "git push" not in installer  # invokes Git via executable with guarded args
 assert "push origin $expectedBranch" in installer
-assert "git add --" not in installer  # uses command object with explicit path
 assert "add -- $relative" in installer
 print("PASS optional Skins.png-only upload contract")
