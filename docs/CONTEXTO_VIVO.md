@@ -2,6 +2,12 @@
 
 > **Leer primero al iniciar un chat nuevo.** Este documento es el punto de entrada operativo y se actualiza con cada cambio **confirmado** del proyecto. No sustituye al código fuente ni a las pruebas físicas.
 
+## Recursos UI privados — instalación automática sin copiar cuatro PNG (2026-11-23)
+
+- El usuario aportó `BiofitUi.rar` con `Back.png` (7.606 B), `LevelSelect.png` (2.433.590 B), `Pause.png` (158.591 B) y `Skins.png` (936.729 B). Se extrajeron y verificaron correctamente. `Skins.png` muestra iconos reconocibles de Geometry Dash, así que **no publicar imágenes en GitHub público sin verificar licencia**; `.gitignore` preserva la exclusión de `Assets/BIOFIT/Resources/BiofitUi/`.
+- Se entregó al usuario un único archivo local `BIOFIT_UI_ASSETS.zip` en su conversación, con los cuatro PNG. La rama experimental del joystick incluye `tools/install_biofit_ui.ps1` para buscarlo en Descargas, extraerlo, validar SHA-256, respaldar archivos locales anteriores y copiar todo a `Assets/BIOFIT/Resources/BiofitUi/` mediante **un comando**. Ya no hay que copiar manualmente cuatro PNG al clonar.
+- Guía técnica y hashes: [INSTALACION_AUTOMATICA_BIOFIT_UI.md](INSTALACION_AUTOMATICA_BIOFIT_UI.md). **No confundir:** el ZIP NO está alojado en el repositorio GitHub; el instalador sí. Unity/Windows aún deben probar la instalación real; CI únicamente valida sintaxis. Esta herramienta no altera la base funcional ni la configuración del joystick/BLE.
+
 ## En curso — joystick VR Bluetooth 3.0, diagnóstico Android (2026-11-23)
 
 - **Rama experimental:** `feat/vr-joystick-input-diagnostics`, creada desde `main` verificado (`e1db0a5c`) después del merge de cooldown PR #29. No cambiar `main` ni eliminar ninguna de las seis opciones (900/800/700/600/500/400 ms).
