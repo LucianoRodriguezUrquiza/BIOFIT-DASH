@@ -14,6 +14,18 @@
 
 **Calidad:** revisar GitHub Actions de la rama y los tests `check_stereo_ship_vrbox.py`, `test_stereo_source_parser.py`, `check_three_modes_60s.py` y fuente `GeometryUxSyntax`. **No hay Unity Editor ni APK Android ni jugabilidad física verificadas en esta nueva rama aún**. Probar colisiones/bloques, duración de audio, salto sostenido, portal Ship, empuje BLE, monedas, los otros cuatro niveles y los seis cooldowns antes de cualquier integración. Mantener PR borrador, `main` intacto.
 
+## Joystick VR BOX — MODO JUEGO validado físicamente (2026-11-24)
+
+**Fuente principal de continuidad:** [JOYSTICK - Modo Juego.md](../JOYSTICK%20-%20Modo%20Juego.md), archivo creado directamente en `main` con las seis capturas y observaciones del usuario. **Para ESTE mando, `MODO CAMBIO + C` es el modo de juego probado en Android**, aunque manuales de otros mandos sugirieran `CAMBIO + B`. No corregir este hallazgo por analogía con dispositivos externos.
+
+- Unity Android detectó el dispositivo **`VR BOX`** en la pantalla del diagnóstico (implementada en rama experimental [PR #30](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/pull/30), **no integrada aún a `main`**).
+- Matriz física de botones capturada **en orden A, B, C, D, R1, R2:** **A y R1 → JoystickButton0 + JoystickButton13; B y R2 → JoystickButton0; C → JoystickButton13; D → JoystickButton1**. Los nombres equivalentes `Joystick1ButtonX` son alias del mando 1; no acciones independientes.
+- En `CAMBIO + C`, el stick **no funcionó** según la prueba del usuario, aunque las capturas solo mostraban ejes en 0.00 en instantes aislados. En **modo Mouse (`CAMBIO + D`)**, el stick/puntero funciona pero ocurren comportamientos problemáticos de volumen y Atrás, incluso salida del juego; no adoptarlo como perfil principal.
+- Hay **cuatro patrones lógicos**, no seis botones inequívocamente independientes. Cualquier futura asignación debe resolver **el patrón 0+13 antes de interpretar 0 y 13 por separado**, porque A/R1 puede provocar dos acciones si se mapea de forma ingenua. El diagnóstico muestra en varios botones 2 renglones numerados, **no demuestra por sí solo un doble comando real**.
+- **Observación física adicional (2026-11-24):** al entrar a un nivel con **CAMBIO+C**, las teclas **NO hacen saltar al Cube**, aunque el diagnóstico `Configuración → JOYSTICK` sí registra los botones. Con **CAMBIO+D (Mouse)**, A/R1 sí lo hacen saltar al simular clic, pero ese perfil tiene efectos adversos de volumen/Atrás/salida del juego.
+- **Causa técnica verificada en código:** `BiofitGeometryUX.RefreshJoystickDiagnostics` solo **muestra** eventos en el submenú experimental; no los aplica al gameplay. `BiofitThreeModes.cs` escucha manualmente `Space`/`Mouse0`, y `BiofitGeomeTryLegacyBridge.cs` ejecuta acciones por **BLE bilateral**. Por tanto **hay que programar un puente de gamepad → acción de personaje**, respetando prioridades del patrón 0+13 para evitar acciones dobles y conservando sensores/controles actuales. **La ausencia de salto en modo+C no demuestra un problema de Bluetooth ni es contradictoria con la detección correcta de botones en Unity**.
+- **Pendiente:** implementar y validar físicamente el mapeo `VR BOX` → Cube/Ball/Spider en una rama experimental, incluyendo protección de dobles eventos, acceso a pausa/atrás, convivencia con touch y BLE, y pruebas sin joystick conectado; estudiar stick con eventos/ejes completos. **Esta actualización solo documenta información; no modifica lógica de joystick, BLE, cooldown 900/800/700/600/500/400 ms ni física**.
+
 ## VALIDACIÓN FÍSICA JOYSTICK — MODO CAMBIO + C (2026-11-24)
 
 - **Fuente canónica ya archivada directamente en `main`:** [JOYSTICK - Modo Juego.md](../JOYSTICK%20-%20Modo%20Juego.md). El usuario probó en Android el joystick identificado como `VR BOX` y demostró **`MODO CAMBIO + C` como modo juego** (no `+B`, aunque manuales de modelos similares lo sugieran). La nueva pantalla de diagnóstico **ya fue validada físicamente** para lectura de botones; el remapeo aún no se implementó.
@@ -67,7 +79,7 @@
 
 
 >
-> **Última actualización verificada:** 2026-11-23.
+> **Última actualización verificada:** 2026-11-24.
 > **Repositorio:** https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY
 > **Rama de referencia:** `main`.
 > **Estado fuente:** [CONTEXTO_ACTUAL.md](CONTEXTO_ACTUAL.md) · [Tres modos y niveles](TRES_MODOS_60S_BILATERAL.md) · [Recursos](ASSET_SOURCES.md).
