@@ -24,3 +24,15 @@ assert '"COOLDOWN"' in ux and "CooldownOptionsMs = { 900, 800, 700, 600, 500, 40
 assert 'Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)' not in ux, "Do not add gameplay input to UX diagnostic."
 assert '"BIOFIT JOYSTICK DIAGNOSTIC (Unity KeyCode): "' in ux
 print("PASS joystick diagnostic UI, legacy key scan, navigation, cooldown preservation")
+
+# User explicitly approved publishing only Skins.png from local verified ZIP.
+ignore = (root / ".gitignore").read_text(encoding="utf-8")
+assert "!/Assets/BIOFIT/Resources/BiofitUi/Skins.png" in ignore
+installer = (root / "tools/install_biofit_ui.ps1").read_text(encoding="utf-8")
+assert "[switch]$PublicarSkins" in installer
+assert "'feat/vr-joystick-input-diagnostics'" in installer
+assert "git push" not in installer  # invokes Git via executable with guarded args
+assert "push origin $expectedBranch" in installer
+assert "git add --" not in installer  # uses command object with explicit path
+assert "add -- $relative" in installer
+print("PASS optional Skins.png-only upload contract")
