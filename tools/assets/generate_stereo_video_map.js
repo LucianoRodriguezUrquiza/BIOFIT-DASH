@@ -74,7 +74,7 @@ const buildMap = function buildMap(){
  return {id:1,name:"Nivel 1",difficulty:1,map,music:"StereoMadness"};
 };
 const target = path.join(__dirname, "..", "..", "Assets", "BIOFIT", "Resources", "BiofitThreeModes", "BackOnTrack.json");
-const content = JSON.stringify(buildMap(), null, 2) + "\\n";
+const content = JSON.stringify(buildMap(), null, 2) + "\n";
 if (process.argv.includes("--check")) {
   if (!fs.existsSync(target) || fs.readFileSync(target, "utf8") !== content) {
     console.error("Stereo Madness Level 1 JSON differs from its generator"); process.exit(1);
