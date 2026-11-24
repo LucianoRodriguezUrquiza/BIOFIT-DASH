@@ -34,7 +34,7 @@ $parent = [IO.Path]::GetFullPath((Join-Path $root ".."))
 $candidates = @()
 if ($SourceDir -ne "") { $candidates += [IO.Path]::GetFullPath($SourceDir) }
 else {
-    foreach ($project in @("BIOFIT-TRES-MODOS", "BIOFIT-SPIKE-LAB-LEGACY", "BIOFIT-GeomeTry-UI-V1")) {
+    foreach ($project in @("BIOFIT-DASH-JOYSTICK-TEST", "BIOFIT-DASH-NUEVOS-NIVELES", "BIOFIT-DASH-COOLDOWN-EXPERIMENTAL", "BIOFIT-TRES-MODOS", "BIOFIT-SPIKE-LAB-LEGACY", "BIOFIT-GeomeTry-UI-V1")) {
         $candidate = Join-Path (Join-Path $parent $project) "Assets\BIOFIT\Resources\BiofitUi"
         if ([IO.Path]::GetFullPath($candidate).TrimEnd('\') -ne $target.TrimEnd('\')) {
             $candidates += $candidate
