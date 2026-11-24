@@ -1,6 +1,14 @@
 # BIOFIT DASH — diagnóstico de joystick Bluetooth 3.0 VR (etapa 1)
 
-**Fecha:** 2026-11-23. **Estado:** rama `feat/vr-joystick-input-diagnostics`, todavía NO integrada a `main` y sin prueba física del joystick en la APK nueva. **Base:** `main` con PR #29 ya fusionado; cooldown 900/800/700/600/500/400 ms conservado.
+**Fecha inicial:** 2026-11-23. **Actualización física:** 2026-11-24. **Estado:** rama `feat/vr-joystick-input-diagnostics`, todavía NO integrada a `main`; **sí se comprobó físicamente en APK Android** la detección del mando `VR BOX` y su matriz de botones. Remapeo definitivo pendiente. **Base:** `main` con PR #29 ya fusionado; cooldown 900/800/700/600/500/400 ms conservado.
+
+## Corrección con evidencia primaria (2026-11-24)
+
+**El usuario confirmó MODO JUEGO = MODO CAMBIO + C en su joystick real.** El manual genérico que sugería `MODO+B` no coincide con la prueba de este aparato; por tanto **no usar `+B` como instrucción de juego**. `MODO+D` funciona como mouse pero induce controles de volumen/Atrás y a veces salida de la aplicación, por lo que no se recomienda como perfil principal.
+
+Con el mando identificado por Unity como `VR BOX` en APK Android, el usuario fotografió las entradas: **A y R1 = JoystickButton0 + JoystickButton13; B y R2 = JoystickButton0; C = JoystickButton13; D = JoystickButton1**. Los alias `Joystick1ButtonX` son el mismo código referido específicamente al joystick 1. En cuatro capturas el registro contenía dos renglones repetidos; esto no demuestra dobles acciones de juego. **El stick no respondió en MODO+C según el usuario;** los valores de ejes a cero en capturas no bastan para descartarlo en otros reportes/ejes.
+
+**Registro canónico y análisis de colisiones (en `main`):** [JOYSTICK - Modo Juego.md](../../JOYSTICK%20-%20Modo%20Juego.md). Si se mapea 0 como Volver y 13 como Pausa sin distinguir la combinación simultánea, A/R1 podría disparar ambas acciones. Diseñar prioridades para los patrones `{0,13}`, `{0}`, `{13}`, `{1}`. Los códigos definitivos para gameplay **todavía no están implementados**, solo diagnosticados.
 
 ## Hardware informado por el usuario
 
@@ -42,10 +50,10 @@ No se agregaron bindings de gameplay ni se alteraron las físicas, cooldown, BLE
 1. Emparejar el joystick desde Ajustes → Bluetooth (modo Android, LED azul cuando corresponda).
 2. Desde el clon aislado de esta rama, preparar el submódulo original con `tools/prepare_geometry_original.ps1`, abrir Unity **6000.3.28f1** y compilar desde `BIOFIT → GeomeTry ORIGINAL → 9. Compilar BIOFIT 3 MODOS (BLE LEGACY)`. El Editor Windows por sí solo no prueba la recepción del mando en Android.
 3. En la APK, ir a **Configuración → JOYSTICK**. Tocar **LIMPIAR EVENTOS** y dejar el puntero sin presionar botones de interfaz.
-4. Mantener pulsado el botón `@` (cambio de modo) y presionar `B` para modo gamepad (si ese comando funciona en este firmware). Comprobar nombre del dispositivo y pulsar por separado A, B, C, D, R1, R2 y las cuatro direcciones. Anotar lo que se ve en el panel; una pulsación de `B` puede actuar como Atrás, y una de `C` puede cambiar el volumen sin aparecer.
+4. Mantener pulsado el botón `@` (cambio de modo) y presionar **`C` (MODO DE JUEGO COMPROBADO)**. Comprobar nombre del dispositivo y pulsar por separado A, B, C, D, R1, R2 y las cuatro direcciones. Anotar lo que se ve en el panel; una pulsación de `B` puede actuar como Atrás, y una de `C` puede cambiar el volumen sin aparecer.
 5. Repetir con `@+D` (mouse), en caso de que el modo gamepad no genere eventos útiles. **No asumir que `Input.GetJoystickNames()` vacío significa no conectado.**
 6. Para señales que no aparecen, conectar Android por USB con depuración habilitada y ejecutar `adb devices`, `adb shell getevent -lp`, `adb shell getevent -lt`. Identificar el nodo del mando entre los listados y observar `EV_KEY`/`EV_ABS`/`EV_REL`. Algunos Android restringen `getevent` sin root y podrían responder Permission denied. No instalar apps de accesibilidad ni modificar el volumen del sistema como workaround por defecto.
-7. Si se obtienen los códigos, definir perfil explícito de mando y **binding por acción**: `CONFIRMAR/ACCION`, `VOLVER`, `PAUSA`, `REINICIAR`, `NAVEGACION`. Persistencia de asignaciones en `PlayerPrefs`, detección de conflictos y teclado/pantalla/BLE funcionando simultáneamente. No se implementa aún porque no se conoce el mapeo Android del mando real.
+7. Con los códigos de botones ya obtenidos, definir perfil explícito de mando y **binding por acción**: `CONFIRMAR/ACCION`, `VOLVER`, `PAUSA`, `REINICIAR`, `NAVEGACION`. Persistencia de asignaciones en `PlayerPrefs`, detección de conflictos y teclado/pantalla/BLE funcionando simultáneamente. No se implementa aún porque falta validar el comportamiento temporal de combinaciones/duplicados y la semántica definitiva de cada acción, aunque ya se conocen los `KeyCode` de los seis botones.
 
 ## Riesgos y límites
 
@@ -54,4 +62,4 @@ No se agregaron bindings de gameplay ni se alteraron las físicas, cooldown, BLE
 - Los botones de volumen suelen ser controles del sistema; no prometer reasignación sin interceptación a nivel nativo, que no es recomendable en esta primera integración.
 - El `stick` puede enviar teclado, mouse relativo, D-pad o ejes analógicos. Los dos nuevos ejes miden el primer par estándar del joystick; no garantizan detectar ejes de numeración distinta. `Horizontal/Vertical` existentes permanecen intactos.
 - Si Android ya emula un clic `Mouse0` para A, añadir otra ruta de salto con el mismo botón causaría dobles acciones. Los bindings se aplicarán con prioridad y deduplicación.
-- **No fusionar a `main` hasta probar en APK y confirmar capturas útiles.** No se cambió el carácter físicamente validado de `main` ni el cooldown de 400 ms preferido por el usuario.
+- **La APK ya registró capturas útiles, pero no fusionar la lógica de joystick a `main` hasta probar las futuras asignaciones de juego y evitar regresiones.** No se cambió el carácter físicamente validado de `main` ni el cooldown de 400 ms preferido por el usuario.
