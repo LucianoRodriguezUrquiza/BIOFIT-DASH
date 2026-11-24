@@ -29,7 +29,7 @@ assert "selectorFocusCard.anchoredPosition" in ui
 assert "1.045f" not in ui, "Do not enlarge focused card over neighbors"
 assert 'Button("BIOFIT " + MapTitles[i], board, ""' in ui
 assert '"NIVEL 1", "NIVEL 2", "NIVEL 3", "NIVEL 4", "NIVEL 5"' in ui
-assert '"CUBO", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"' in ui
+assert '"CUBO / NAVE", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"' in ui
 assert "BiofitThreeModeArt.Make(mode, false)" in ui
 assert "artwork.cards[i]" not in ui, "Baked legacy names must not show"
 assert "artwork != null ? artwork.background : null;" in ui
