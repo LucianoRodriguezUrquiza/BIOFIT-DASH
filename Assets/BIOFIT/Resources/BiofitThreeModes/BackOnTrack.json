@@ -5,48 +5,568 @@
   "map": [
     {
       "type": "spike",
-      "x": 32,
-      "y": 0
-    },
-    {
-      "type": "spike",
-      "x": 58,
+      "x": 16,
       "y": 0
     },
     {
       "type": "biofitDecoStar",
-      "x": 64,
-      "y": 3
+      "x": 27,
+      "y": 4
     },
     {
       "type": "spike",
+      "x": 37,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 39,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 49,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 50,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 50,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 51,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 52,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 59,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 60,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 62,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 63,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 63,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 64,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 64,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 65,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 65,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 66,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 66,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 74,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 76,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 81,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 81,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 82,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 82,
+      "y": 1
+    },
+    {
+      "type": "tile",
       "x": 83,
       "y": 0
     },
     {
+      "type": "tile",
+      "x": 83,
+      "y": 1
+    },
+    {
       "type": "spike",
-      "x": 107,
+      "x": 84,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 130,
+      "x": 86,
       "y": 0
     },
     {
       "type": "biofitDecoStar",
+      "x": 87,
+      "y": 4
+    },
+    {
+      "type": "tile",
+      "x": 97,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 98,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 99,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 100,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 101,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 102,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 103,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 104,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 105,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 105,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 106,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 107,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 108,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 109,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 110,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 111,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 112,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 113,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 119,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 121,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 130,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 131,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 132,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 133,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 134,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 135,
+      "y": 0
+    },
+    {
+      "type": "tile",
       "x": 136,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 137,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 137,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 138,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 138,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 139,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 139,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 140,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 140,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 141,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 141,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 142,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 143,
+      "y": 1
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 143,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 145,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 146,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 147,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 149,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 154,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 156,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 158,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 159,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 160,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 170,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 171,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 172,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 173,
       "y": 3
     },
     {
       "type": "spike",
-      "x": 153,
+      "x": 175,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 176,
+      "x": 177,
       "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 179,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 183,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 183,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 184,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 184,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 185,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 185,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 186,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 186,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 187,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 187,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 188,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 188,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 189,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 189,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 190,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 190,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 191,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 191,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 192,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 192,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 193,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 193,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 194,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 194,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 195,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 195,
+      "y": 1
     },
     {
       "type": "spike",
@@ -55,77 +575,630 @@
     },
     {
       "type": "biofitDecoStar",
+      "x": 198,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 200,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 202,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 203,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
       "x": 204,
       "y": 3
     },
     {
-      "type": "spike",
+      "type": "smallTile",
+      "x": 205,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 210,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 211,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 212,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 213,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 214,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 214,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 215,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 215,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 216,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 216,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 217,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 217,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 218,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 218,
+      "y": 1
+    },
+    {
+      "type": "tile",
       "x": 219,
       "y": 0
     },
     {
-      "type": "spike",
-      "x": 240,
+      "type": "tile",
+      "x": 219,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 220,
       "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 220,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 221,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 221,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 221,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 223,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 227,
+      "y": 4
+    },
+    {
+      "type": "smallTile",
+      "x": 229,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 230,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 231,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 232,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 234,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 236,
+      "y": 0
+    },
+    {
+      "type": "biofitShipPortal",
+      "x": 245,
+      "y": 3
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 250,
+      "y": 5
+    },
+    {
+      "type": "spike",
+      "x": 256,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 258,
+      "y": 7,
+      "rotation": 180
     },
     {
       "type": "spike",
       "x": 260,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 265,
       "y": 0
     },
     {
-      "type": "biofitDecoStar",
+      "type": "spike",
       "x": 266,
-      "y": 3
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 270,
+      "y": 6
+    },
+    {
+      "type": "tile",
+      "x": 271,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 271,
+      "y": 1
+    },
+    {
+      "type": "smallTile",
+      "x": 271,
+      "y": 6
+    },
+    {
+      "type": "tile",
+      "x": 272,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 272,
+      "y": 1
+    },
+    {
+      "type": "smallTile",
+      "x": 272,
+      "y": 6
     },
     {
       "type": "spike",
-      "x": 281,
+      "x": 280,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 282,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 284,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitStereoCoin",
+      "x": 285,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 290,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 301,
+      "x": 292,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 321,
+      "x": 294,
       "y": 0
     },
     {
       "type": "biofitDecoStar",
-      "x": 327,
-      "y": 3
+      "x": 298,
+      "y": 5
+    },
+    {
+      "type": "tile",
+      "x": 303,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 303,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 303,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 304,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 304,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 304,
+      "y": 2
     },
     {
       "type": "spike",
-      "x": 341,
+      "x": 313,
       "y": 0
     },
     {
       "type": "spike",
+      "x": 315,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 318,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 320,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "tile",
+      "x": 329,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 329,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 330,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 330,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 335,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 337,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 343,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 345,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "smallTile",
+      "x": 346,
+      "y": 6
+    },
+    {
+      "type": "smallTile",
+      "x": 347,
+      "y": 6
+    },
+    {
+      "type": "spike",
+      "x": 347,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "smallTile",
+      "x": 348,
+      "y": 6
+    },
+    {
+      "type": "spike",
+      "x": 354,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 356,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 356,
+      "y": 5
+    },
+    {
+      "type": "tile",
       "x": 360,
       "y": 0
     },
     {
-      "type": "spike",
-      "x": 379,
+      "type": "tile",
+      "x": 360,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 360,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 361,
       "y": 0
     },
     {
-      "type": "biofitDecoStar",
-      "x": 385,
-      "y": 3
+      "type": "tile",
+      "x": 361,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 361,
+      "y": 2
     },
     {
       "type": "spike",
+      "x": 365,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 367,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "biofitCubePortal",
+      "x": 381,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 388,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 389,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 390,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 391,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 392,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 393,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 394,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 395,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 396,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 397,
+      "y": 0
+    },
+    {
+      "type": "tile",
       "x": 398,
       "y": 0
     },
     {
+      "type": "tile",
+      "x": 399,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 400,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 401,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 402,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 403,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 404,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 404,
+      "y": 5
+    },
+    {
       "type": "spike",
+      "x": 407,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 409,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 412,
+      "y": 0
+    },
+    {
+      "type": "tile",
       "x": 416,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 416,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 416,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 417,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 417,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 417,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 428,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 429,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 430,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 431,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 432,
       "y": 0
     },
     {
@@ -134,28 +1207,228 @@
       "y": 0
     },
     {
+      "type": "spike",
+      "x": 436,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 438,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 444,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 444,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 445,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 445,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 448,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 450,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 455,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 455,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 455,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 455,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 456,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 456,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 456,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 456,
+      "y": 3
+    },
+    {
       "type": "biofitDecoStar",
-      "x": 440,
+      "x": 459,
+      "y": 5
+    },
+    {
+      "type": "spike",
+      "x": 460,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 462,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 465,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 471,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 471,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 471,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 471,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 471,
+      "y": 4
+    },
+    {
+      "type": "tile",
+      "x": 472,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 472,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 472,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 472,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 472,
+      "y": 4
+    },
+    {
+      "type": "spike",
+      "x": 476,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 478,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 480,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 482,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 483,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 484,
       "y": 3
     },
     {
       "type": "spike",
-      "x": 452,
+      "x": 485,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 485,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 487,
       "y": 0
     },
     {
       "type": "spike",
-      "x": 469,
+      "x": 489,
       "y": 0
     },
     {
-      "type": "spike",
-      "x": 486,
-      "y": 0
+      "type": "smallTile",
+      "x": 493,
+      "y": 4
     },
     {
-      "type": "biofitDecoStar",
-      "x": 492,
+      "type": "smallTile",
+      "x": 494,
+      "y": 4
+    },
+    {
+      "type": "smallTile",
+      "x": 495,
+      "y": 4
+    },
+    {
+      "type": "smallTile",
+      "x": 496,
+      "y": 4
+    },
+    {
+      "type": "smallTile",
+      "x": 502,
       "y": 3
     },
     {
@@ -164,28 +1437,1039 @@
       "y": 0
     },
     {
-      "type": "spike",
-      "x": 519,
-      "y": 0
+      "type": "smallTile",
+      "x": 503,
+      "y": 3
     },
     {
-      "type": "spike",
-      "x": 535,
-      "y": 0
-    },
-    {
-      "type": "biofitDecoStar",
-      "x": 541,
+      "type": "smallTile",
+      "x": 504,
       "y": 3
     },
     {
       "type": "spike",
+      "x": 505,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 505,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 506,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 507,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 509,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 509,
+      "y": 5
+    },
+    {
+      "type": "spike",
+      "x": 511,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 513,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 514,
+      "y": 2
+    },
+    {
+      "type": "spike",
+      "x": 515,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 515,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 516,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 517,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 528,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 529,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 530,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 531,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 537,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 538,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 539,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 540,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 542,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 544,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 546,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 550,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 551,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
       "x": 552,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 553,
+      "y": 2
+    },
+    {
+      "type": "spike",
+      "x": 556,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 558,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 561,
+      "y": 5
+    },
+    {
+      "type": "tile",
+      "x": 567,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 568,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 569,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 572,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 574,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 576,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 581,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 583,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 584,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 588,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 588,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 589,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 589,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 590,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 590,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 591,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 591,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 600,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 602,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 607,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 608,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 609,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 610,
+      "y": 2
+    },
+    {
+      "type": "spike",
+      "x": 611,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 611,
+      "y": 2
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 612,
+      "y": 5
+    },
+    {
+      "type": "spike",
+      "x": 613,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 614,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 616,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 617,
+      "y": 0
+    },
+    {
+      "type": "biofitStereoCoin",
+      "x": 620,
+      "y": 4
+    },
+    {
+      "type": "tile",
+      "x": 623,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 623,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 624,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 624,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 625,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 625,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 626,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 628,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 634,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 635,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 636,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 637,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 643,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 643,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 644,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 644,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 645,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 647,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 650,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 656,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 656,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 656,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 657,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 657,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 657,
+      "y": 2
+    },
+    {
+      "type": "spike",
+      "x": 658,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 660,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 662,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 664,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 669,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 670,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 670,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 671,
+      "y": 3
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 671,
+      "y": 5
+    },
+    {
+      "type": "spike",
+      "x": 672,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 672,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 681,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 682,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 683,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 686,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 688,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 690,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 695,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 696,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 697,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 697,
+      "y": 3
+    },
+    {
+      "type": "smallTile",
+      "x": 698,
+      "y": 3
+    },
+    {
+      "type": "spike",
+      "x": 699,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 701,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 707,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 707,
+      "y": 1
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 707,
+      "y": 5
+    },
+    {
+      "type": "tile",
+      "x": 708,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 708,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 711,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 713,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 715,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 717,
+      "y": 0
+    },
+    {
+      "type": "biofitShipPortal",
+      "x": 724,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 732,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 732,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 733,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 733,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 733,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "tile",
+      "x": 734,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 734,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 735,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 735,
+      "y": 1
+    },
+    {
+      "type": "spike",
+      "x": 735,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 737,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 738,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 739,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 742,
+      "y": 6
+    },
+    {
+      "type": "tile",
+      "x": 743,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 743,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 743,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 743,
+      "y": 6
+    },
+    {
+      "type": "tile",
+      "x": 744,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 744,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 744,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 744,
+      "y": 6
+    },
+    {
+      "type": "tile",
+      "x": 745,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 745,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 745,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 745,
+      "y": 6
+    },
+    {
+      "type": "tile",
+      "x": 746,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 746,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 746,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 746,
+      "y": 6
+    },
+    {
+      "type": "spike",
+      "x": 749,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 751,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 754,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 756,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 759,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "tile",
+      "x": 761,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 761,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 761,
+      "y": 2
+    },
+    {
+      "type": "spike",
+      "x": 761,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "tile",
+      "x": 762,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 762,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 762,
+      "y": 2
+    },
+    {
+      "type": "tile",
+      "x": 763,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 763,
+      "y": 1
+    },
+    {
+      "type": "tile",
+      "x": 763,
+      "y": 2
+    },
+    {
+      "type": "spike",
+      "x": 764,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 767,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 769,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 773,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 775,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 777,
+      "y": 7,
+      "rotation": 180
+    },
+    {
+      "type": "spike",
+      "x": 779,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 780,
+      "y": 0
+    },
+    {
+      "type": "biofitStereoCoin",
+      "x": 780,
+      "y": 5
+    },
+    {
+      "type": "biofitCubePortal",
+      "x": 786,
+      "y": 3
+    },
+    {
+      "type": "tile",
+      "x": 792,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 793,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 794,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 795,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 795,
+      "y": 4
+    },
+    {
+      "type": "tile",
+      "x": 796,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 797,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 798,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 799,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 800,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 800,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 802,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 804,
+      "y": 0
+    },
+    {
+      "type": "smallTile",
+      "x": 805,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 806,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 807,
+      "y": 2
+    },
+    {
+      "type": "smallTile",
+      "x": 808,
+      "y": 2
+    },
+    {
+      "type": "spike",
+      "x": 809,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 811,
+      "y": 0
+    },
+    {
+      "type": "biofitDecoStar",
+      "x": 811,
+      "y": 4
+    },
+    {
+      "type": "tile",
+      "x": 815,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 816,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 817,
+      "y": 0
+    },
+    {
+      "type": "tile",
+      "x": 818,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 820,
+      "y": 0
+    },
+    {
+      "type": "spike",
+      "x": 822,
       "y": 0
     },
     {
       "type": "ground",
-      "x": 575,
+      "x": 825,
       "y": -2
     }
   ],
