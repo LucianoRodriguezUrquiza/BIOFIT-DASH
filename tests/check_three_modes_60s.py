@@ -26,6 +26,30 @@ for i, name in enumerate(NAMES, 1):
     data = json.loads((LEVELS / (name + ".json")).read_text("utf-8"))
     assert data["id"] == i and data["name"] == f"Nivel {i}", (name, data["id"], data["name"])
     items = data["map"]
+    if i == 1:
+        # The first map was deliberately replaced: complete ~85-second
+        # video-guided Cube/Ship phase layout with 3 optional coins.
+        allowed_stereo = ALLOWED | {"tile", "smallTile",
+                                    "biofitShipPortal", "biofitStereoCoin"}
+        assert all(it["type"] in allowed_stereo for it in items)
+        assert [it["x"] for it in items] == sorted(it["x"] for it in items)
+        assert items[-1]["type"] == "ground" and items[-1]["x"] == 825
+        assert [(it["type"], it["x"]) for it in items
+                if it["type"].endswith("Portal")] == [
+            ("biofitShipPortal", 245), ("biofitCubePortal", 381),
+            ("biofitShipPortal", 724), ("biofitCubePortal", 786)
+        ]
+        assert sum(it["type"] == "biofitStereoCoin" for it in items) == 3
+        assert sum(it["type"] == "spike" for it in items) >= 100
+        assert sum(it["type"] in ("tile", "smallTile") for it in items) >= 280
+        solid = {(it["x"], it["y"]) for it in items if it["type"] == "tile"}
+        assert all((it["x"], it["y"]) not in solid for it in items
+                   if it["type"] == "spike")
+        nominal = (825 - (-10)) / SPEED_U_S
+        assert 85 < nominal < 87, nominal
+        print(f"L1 video Stereo: {len(items)} objects, two ship phases, "
+              f"3 coins, {nominal:.1f}s, static only")
+        continue
     assert all(it["type"] in ALLOWED for it in items)
     assert len([it for it in items if it["type"] == "ground" and it["x"] == 575]) == 1
     assert data["difficulty"] == i
