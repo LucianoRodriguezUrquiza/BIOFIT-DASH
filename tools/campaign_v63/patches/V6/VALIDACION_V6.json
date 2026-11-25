@@ -1,0 +1,30 @@
+{
+  "base_commit": "ab1d29b848fd32d393b5aad26a1072c2e5e6183f",
+  "branch": "niveles-mejorados",
+  "edited_image_size": [
+    2048,
+    44
+  ],
+  "source_count": 2291,
+  "old_active": 2785,
+  "new_active": 2851,
+  "removed": 44,
+  "added": 110,
+  "old_corridor_hazards": 38,
+  "new_corridor_hazards": 78,
+  "nominal_minimum_s": 1.2307692307692308,
+  "coin_count": 3,
+  "old_sha256": "b92994dcd97d2adf37754b6ceb7b82784d7895ede36b8f39a077133e9c6ef58b",
+  "new_sha256": "7c1b2f7dbe15cd88627ae27d52d05ad64ebf36dd92c62f8e22577f6b782f502a",
+  "tests": {
+    "transform_real_v5": true,
+    "preflight_simulated": true,
+    "install_simulated": true,
+    "restore_simulated": true,
+    "other_levels_unchanged": true,
+    "coins_portals_unchanged": true,
+    "unity_playtest": false,
+    "physical_ble_playtest": false
+  },
+  "limitations": "No pixel-perfect mapping at 2048 x 44 px. Timing geometric only, not gameplay proof."
+}

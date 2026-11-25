@@ -345,7 +345,16 @@ namespace Biofit.GeomeTryOriginal
             safeRoot = null;
             lastScreenWidth = -1;
             if (!IsGeomeTryScene(sceneName)) return;
-            if (sceneName == Menu) { ConfigureOriginalMenu(); AttachSceneFonts(); return; }
+            // BIOFIT_MENU_V6_RUNTIME_FIX
+            Texture2D[] menuV6 = null;
+            if (sceneName == Menu)
+            {
+                menuV6 = LoadMenuV6Art();
+                if (menuV6 == null)
+                {
+                    ConfigureOriginalMenu(); AttachSceneFonts(); return;
+                }
+            }
             EnsureUiEventSystem();
 
             GameObject host = new GameObject("BIOFIT overlay canvas",
@@ -377,7 +386,8 @@ namespace Biofit.GeomeTryOriginal
             canvasRoot = designStage;
             UpdateViewport(true);
 
-            if (sceneName == Select) BuildLevelSelection();
+            if (sceneName == Menu) BuildMenuV6(menuV6);
+            else if (sceneName == Select) BuildLevelSelection();
             else if (sceneName == Custom) BuildSkinSelection();
             else if (sceneName == Settings)
             {
@@ -431,6 +441,69 @@ namespace Biofit.GeomeTryOriginal
                 typeof(EventSystem), typeof(StandaloneInputModule));
             Debug.Log("BIOFIT UI: EventSystem creado para " +
                 SceneManager.GetActiveScene().name);
+        }
+
+        private static Texture2D[] LoadMenuV6Art()
+        {
+            string[] names = { "Fondo_Menu", "Logo_Biofit_Dash", "Boton_Skin",
+                "Boton_Play", "Boton_Configuracion" };
+            var result = new Texture2D[names.Length];
+            for (int i = 0; i < names.Length; i++)
+            {
+                result[i] = Resources.Load<Texture2D>("BiofitUiV6/" + names[i]);
+                if (result[i] == null)
+                {
+                    Debug.LogWarning("BIOFIT Menu V6: recurso ausente: " + names[i]);
+                    return null;
+                }
+            }
+            return result;
+        }
+
+        private void BuildMenuV6(Texture2D[] art)
+        {
+            // Disable ONLY old scene-local canvases and raycasters. Keep their
+            // game objects, GameManager, BLE receiver and EventSystem alive.
+            var scene = SceneManager.GetActiveScene();
+            foreach (Canvas old in FindObjectsByType<Canvas>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None))
+            {
+                if (old == canvas || old.transform.IsChildOf(transform) ||
+                    old.gameObject.scene != scene) continue;
+                old.enabled = false;
+                foreach (GraphicRaycaster ray in old.GetComponents<GraphicRaycaster>())
+                    ray.enabled = false;
+            }
+            // The existing 1600x900 safe-area stage is used for all UI screens.
+            // Convert the supplied 1670x942 design without stretching sprites.
+            var bg = Rect("BIOFIT V6 Fondo", canvasRoot, new Vector2(.5f,.5f),
+                new Vector2(1600f, 900f), Vector2.zero).gameObject.AddComponent<RawImage>();
+            bg.texture = art[0];
+            bg.raycastTarget = false;
+            MenuV6Art("BIOFIT V6 Logo", art[1], 838.5f, 219.5f, 185f, null);
+            MenuV6Art("BIOFIT V6 Personaje", art[2], 512f, 494.5f, 287f, () => Navigate(Custom));
+            MenuV6Art("BIOFIT V6 Play", art[3], 835.5f, 496f, 354f, () => Navigate(Select));
+            MenuV6Art("BIOFIT V6 Configuracion", art[4], 1160.5f, 495f, 288f, () => Navigate(Settings));
+            Debug.Log("BIOFIT MENU V6: 3 botones vinculados a Customisation, Level Selection, Settings.");
+        }
+
+        private void MenuV6Art(string name, Texture2D texture, float x, float y,
+            float h, Action click)
+        {
+            float height = h * 900f / 942f;
+            float width = height * texture.width / texture.height;
+            var rect = Rect(name, canvasRoot, new Vector2(x/1670f, 1f-y/942f),
+                new Vector2(width,height), Vector2.zero);
+            var image = rect.gameObject.AddComponent<RawImage>();
+            image.texture = texture;
+            image.raycastTarget = click != null;
+            if (click == null) return;
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.None;
+            button.interactable = true;
+            button.onClick.AddListener(() => click());
+            rect.gameObject.AddComponent<BiofitSettingsButtonFeedback>();
         }
 
         private void ConfigureOriginalMenu()
@@ -627,6 +700,7 @@ namespace Biofit.GeomeTryOriginal
                 click, image == null ? Lime : new Color(1f, 1f, 1f, 0.001f));
             if (image != null)
             {
+                b.transition = Selectable.Transition.None;
                 if (b.GetComponent<BiofitSettingsButtonFeedback>() == null)
                     b.gameObject.AddComponent<BiofitSettingsButtonFeedback>();
                 var raw = Rect(name + " image", b.transform, new Vector2(.5f, .5f),
@@ -1498,8 +1572,8 @@ namespace Biofit.GeomeTryOriginal
             if(BiofitStereoPractice.Enabled)
             {
                 hud.practiceStatus=Text("Practice status",canvasRoot,"PRACTICA",new Vector2(.5f,.865f),new Vector2(680,42),Vector2.zero,28,Color.white);
-                BiofitStereoPracticeButton.Create(canvasRoot,new Vector2(.44f,.085f),new Vector2(150,86),BiofitV2BitmapText.Art("add_checkpoint"),true);
-                BiofitStereoPracticeButton.Create(canvasRoot,new Vector2(.56f,.085f),new Vector2(150,86),BiofitV2BitmapText.Art("remove_checkpoint"),false);
+                BiofitStereoPracticeButton.Create(canvasRoot,new Vector2(.46f,.085f),new Vector2(112,88),BiofitV2BitmapText.Art("add_checkpoint"),true);
+                BiofitStereoPracticeButton.Create(canvasRoot,new Vector2(.54f,.085f),new Vector2(112,88),BiofitV2BitmapText.Art("remove_checkpoint"),false);
             }
         }
 
@@ -1550,6 +1624,32 @@ namespace Biofit.GeomeTryOriginal
                     Button("Auto checkpoint",veil,"AUTO CHECKPOINT: "+(BiofitStereoPractice.Auto?"SI":"NO"),new Vector2(.5f,.105f),new Vector2(450,64),Vector2.zero,()=>{BiofitStereoPractice.ToggleAuto();BuildScreen(LevelScene);BuildPauseScreen();},Ice,25);
             }
             BuildBackButton(LevelScene);
+        }
+
+        // BIOFIT V6.3: completion uses the original end collider, not percentage rounding.
+        public static bool ShowV63Completion()
+        {
+            if(instance==null || instance.currentScene!=LevelScene || instance.canvasRoot==null) return false;
+            instance.BuildV63Completion();return true;
+        }
+
+        private void BuildV63Completion()
+        {
+            if(paused) RestorePause();
+            EnterPause();
+            for(int i=0;i<canvasRoot.childCount;i++) canvasRoot.GetChild(i).gameObject.SetActive(false);
+            RectTransform veil=Fill("V63 completed veil",canvasRoot,new Color(0f,0f,0f,.84f));
+            veil.GetComponent<Image>().raycastTarget=true;
+            RectTransform panel=Rect("V63 completed panel",veil,new Vector2(.5f,.5f),new Vector2(1040,590),Vector2.zero);
+            var bg=panel.gameObject.AddComponent<Image>();bg.color=new Color(.025f,.15f,.22f,.98f);bg.raycastTarget=false;
+            var rim=panel.gameObject.AddComponent<Outline>();rim.effectColor=new Color(.48f,.96f,.1f,1);rim.effectDistance=new Vector2(4,-4);
+            Text("Completion title",panel,"NIVEL COMPLETO",new Vector2(.5f,.77f),new Vector2(980,120),Vector2.zero,80,Lime);
+            Text("Completion status",panel,BiofitStereoPractice.Enabled?"PRACTICA COMPLETADA":"100%",new Vector2(.5f,.60f),new Vector2(850,65),Vector2.zero,38,Color.white);
+            ImageButton("V63 retry",panel,BiofitV2BitmapText.Art("restart"),"REINICIAR",new Vector2(.32f,.33f),new Vector2(124,124),Vector2.zero,RestartLevel);
+            ImageButton("V63 main menu",panel,BiofitV2BitmapText.Art("menu"),"MENU",new Vector2(.68f,.33f),new Vector2(124,124),Vector2.zero,()=>Navigate(Menu));
+            Text("Retry label",panel,"REINICIAR",new Vector2(.32f,.13f),new Vector2(290,55),Vector2.zero,32,Color.white);
+            Text("Menu label",panel,"MENU PRINCIPAL",new Vector2(.68f,.13f),new Vector2(340,55),Vector2.zero,32,Color.white);
+            panel.gameObject.AddComponent<BiofitV63CompletionAnimation>();
         }
 
         private void RestartLevel()

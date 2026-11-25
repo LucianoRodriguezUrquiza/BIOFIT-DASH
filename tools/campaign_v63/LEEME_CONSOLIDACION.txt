@@ -1,0 +1,8 @@
+BIOFIT DASH — CONSOLIDACION V6.3 (NO ES UN PARCHE DE JUGABILIDAD)
+Cerrar Unity y descomprimir el ZIP. Abrir PowerShell en la carpeta que contiene este LEEME y consolidar_v63.py.
+Prevuelo, sin modificar archivos del juego:
+py -3 consolidar_v63.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL"
+Publicar, solo si prevuelo OK:
+py -3 consolidar_v63.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --publicar
+No repetir si hay error. Copiar el mensaje a ChatGPT. El script exige rama niveles-mejorados, V6.3 exacta y compara las fuentes C# y los PNG con los parches. Conserva los archivos y las reglas .gitignore; no ejecuta git add . ni force push. Publica solo rutas previstas y actualiza ambas ramas al mismo commit. Intenta dejar main local sincronizada. No elimina ninguna rama, no crea nuevas copias de recursos ni reinstala.
+Incluye documentos, referencias PNG y PDF, fuentes de los parches V6–V6.3, y un restaurador de datos locales. El código y los gráficos activos se leen directamente del proyecto validado. No publica el RAR, atlas, música, fuentes ni mapas crudos originales. Para volver a trabajar desde otro equipo, consultar docs/CONTEXTO_ACTUAL.md.

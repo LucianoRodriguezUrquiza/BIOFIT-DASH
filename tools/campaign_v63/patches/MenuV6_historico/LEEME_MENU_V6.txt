@@ -1,0 +1,21 @@
+BIOFIT DASH — Menú V6 (niveles-mejorados)
+
+1) Ejecutar en PowerShell:
+   py -3 instalar_menu_v6.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --verificar
+   py -3 instalar_menu_v6.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL"
+
+2) Abrir Unity en la rama / proyecto que quieras probar.
+3) Abrir Main Menu.unity.
+4) Ejecutar: BIOFIT -> Menu V6 -> Aplicar visual del menú principal
+5) Guardar la escena.
+
+Qué instala:
+- Assets/BIOFIT/Resources/BiofitUiV6/*.png
+- Assets/BIOFIT/GeomeTry/BiofitMenuPressFeedback.cs
+- Assets/BIOFIT/GeomeTry/Editor/BiofitMenuV6Installer.cs
+
+Notas:
+- Intenta reutilizar los botones existentes del menú para conservar sus eventos onClick.
+- Si no encuentra tres botones adecuados, crea los que falten y puede requerir enlazar manualmente los eventos.
+- La animación al presionar reduce brevemente la escala del botón y vuelve a su tamaño original.
+- No modifica firmware, BLE, cooldown, físicas ni los niveles.

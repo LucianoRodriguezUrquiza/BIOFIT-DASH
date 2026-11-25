@@ -173,6 +173,7 @@ namespace Biofit.GeomeTryOriginal
             GameObject tile=Resources.Load<GameObject>("Prefabs/Decors/TilePrefab");
             GameObject spike=Resources.Load<GameObject>("Prefabs/Decors/SpikePrefab");
             if(tile==null || spike==null) throw new InvalidOperationException("Faltan prefabs de colision originales.");
+            var outlines = slot==1 ? new BiofitV63Outline(d, transform, floorY, unlit, GetSprite("square_05")) : null;
             float maxGD=0f;
             foreach(Item o in d.objects)
             {
@@ -193,6 +194,7 @@ namespace Biofit.GeomeTryOriginal
                     // Object layers remain ordered relative to each other; player remains above normal geometry.
                     else sort-=650;
                     var sr=Visual(root.transform,o.frames[k],sort);
+                    if(outlines!=null && outlines.Contains(o)) sr.sprite=outlines.FillSprite;
                     if(o.id==9) sr.color=Color.black;
                     else if(o.id>=18&&o.id<=21) sr.color=new Color32(255,200,75,255);
                 }
@@ -247,6 +249,7 @@ namespace Biofit.GeomeTryOriginal
                     root.AddComponent<BiofitStereoCoinPickup>();
                 }
             }
+            if(outlines!=null) outlines.Draw();
             background.items.Sort((a,b)=>a.xGD.CompareTo(b.xGD));ground.items.Sort((a,b)=>a.xGD.CompareTo(b.xGD));
             // Both corridors have explicit continuous support surfaces. Keep the original finish coordinate.
             maxGD=0f;
@@ -257,8 +260,9 @@ namespace Biofit.GeomeTryOriginal
             GameObject wall=GameObject.Find("EndWallPrefab(Clone)");
             if(wall==null) throw new InvalidOperationException("Falta meta original.");
             wall.transform.position=new Vector3(finalX,wall.transform.position.y,wall.transform.position.z);
+            BiofitV63Finish.Install(wall);
             Physics2D.SyncTransforms();
-            Debug.Log("BIOFIT V5: "+GameManager.Instance.SelectedLevel.Name+", "+d.objects.Length+" registros activos; suelo Y="+floorY+", meta X="+finalX);
+            Debug.Log("BIOFIT V6.3: "+GameManager.Instance.SelectedLevel.Name+", "+d.objects.Length+" registros activos; suelo Y="+floorY+", meta X="+finalX);
         }
         private void AddRoof(float start,float end,float yGD)
         {

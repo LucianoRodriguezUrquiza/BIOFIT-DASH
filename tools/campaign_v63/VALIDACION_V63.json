@@ -1,0 +1,57 @@
+{
+  "version": "V6.3",
+  "user_acceptance": "2026-11-24: aprobada como estable de trabajo; alcance de pruebas no detallado",
+  "host_installer_tests": [
+    "preflight sin escritura",
+    "instalacion",
+    "rechazo de reaplicacion",
+    "preflight restauracion",
+    "restauracion"
+  ],
+  "host_tests_reported_passed": 5,
+  "unity_compilation_by_assistant": false,
+  "physical_ble_full_validation": null,
+  "android_apk_validation": null,
+  "geometry_model": {
+    "units_per_block_gd": 30,
+    "speed_sim": 6.5,
+    "time_scale": 1.5,
+    "jump_velocity_sim": 13.5,
+    "gravity_sim": 39.24,
+    "route_found_ms": {
+      "staircase": [
+        400,
+        500
+      ],
+      "ball": [
+        400,
+        500,
+        600
+      ],
+      "spider": [
+        400
+      ]
+    },
+    "limitations": "AABB aproximado, no motor Unity ni deteccion corporal"
+  },
+  "level1": {
+    "active": 3015,
+    "original": 2291,
+    "sha256_compact": "e64c3a5a6ef2e7e3234468189bfe38c944b36984b5c6c3818d029f411fff839b",
+    "coins": 3
+  },
+  "campaign_active": 12082,
+  "campaign_coins": 15,
+  "originals": 9884,
+  "other_maps_unchanged_from_v5": true,
+  "consolidation_host_tests": {
+    "data_rehydration": [
+      "V5 real -> V6.3",
+      "V6 real -> V6.3",
+      "V6.2 real -> V6.3",
+      "V6.3 real -> no change"
+    ],
+    "results": "4/4 con hashes iguales; preflight sin escritura",
+    "git_simulation": "Repositorio bare simulado, fuente UX de prueba con firmas reales, runtime/practica de parches reales, mapa 1 real, mapas 2–5 fixtures de conteo, PNG reales; avance remoto de docs, cambios locales sin commit, publicación atómica normal a main y niveles-mejorados, reglas y mapas sin cambio, rama local main. No es ejecución contra PC ni GitHub real."
+  }
+}

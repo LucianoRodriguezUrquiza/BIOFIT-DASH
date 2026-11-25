@@ -1,0 +1,14 @@
+BIOFIT DASH V6 — NIVELES MEJORADOS
+Base: V5 Campaña Clásica, main ab1d29b848fd32d393b5aad26a1072c2e5e6183f.
+Rama: niveles-mejorados.
+El instalador solo modifica Assets/BIOFIT/Resources/BiofitStereoLocal/CampaignV5/1/Active.json.
+No instala ni descarga recursos originales, no toca BLE, firmware, cooldown, física ni los niveles 2–5.
+Cerrar Unity y ejecutar desde esta carpeta:
+py -3 instalar_v6.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --verificar
+py -3 instalar_v6.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL"
+Para revertir:
+py -3 instalar_v6.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --restaurar
+El instalador guarda exclusivamente el JSON V5 en Builds/BiofitV6/Active_V5.json.
+Cambiar de rama Git por sí solo no restaura el mapa local. 
+La edición recibida es de 2048 x 44 px. Se interpretaron los cambios sobre la cuadrícula de 30 GD.
+Pruebas estáticas y simulación de instalación/restauración superadas. Falta prueba real en Unity y con BLE.

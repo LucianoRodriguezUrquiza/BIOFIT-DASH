@@ -1,0 +1,11 @@
+BIOFIT DASH — sprites para Unity
+Lienzo original: 1670 x 942 px.
+PNG RGBA con transparencia real; recortes del original, halo reconstruido. El fondo fue reconstruido con IA.
+
+Coordenadas de colocación (origen arriba a la izquierda), dimensiones y centro en píxeles:
+Boton_Skin.png: x=371, y=351, ancho=282, alto=287, centro=(512.0, 494.5)
+Boton_Play.png: x=655, y=319, ancho=361, alto=354, centro=(835.5, 496.0)
+Boton_Configuracion.png: x=1019, y=351, ancho=283, alto=288, centro=(1160.5, 495.0)
+Logo_Biofit_Dash.png: x=274, y=127, ancho=1129, alto=185, centro=(838.5, 219.5)
+
+Unity: Texture Type = Sprite (2D and UI); Alpha Is Transparency = true; Compression = None; Canvas Scaler = Scale With Screen Size; Reference Resolution = 1670 x 942. Importar el fondo como Image y los tres controles como Button.

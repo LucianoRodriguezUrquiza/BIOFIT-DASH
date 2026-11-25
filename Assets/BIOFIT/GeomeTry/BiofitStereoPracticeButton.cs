@@ -20,12 +20,25 @@ namespace Biofit.GeomeTryOriginal
             var rt=go.GetComponent<RectTransform>(); rt.SetParent(parent,false);
             rt.anchorMin=rt.anchorMax=anchor; rt.pivot=new Vector2(.5f,.5f);rt.anchoredPosition=Vector2.zero;
             var raw=go.GetComponent<RawImage>();raw.raycastTarget=true;
-            if(art!=null)
+            rt.sizeDelta=maxSize;
+            raw.texture=Resources.Load<Texture2D>("BiofitV63/checkpoint_frame");
+            var iconTexture=Resources.Load<Texture2D>("BiofitStereoV2/UI/checkpoint");
+            if(iconTexture!=null)
             {
-                float scale=Mathf.Min(maxSize.x/art.width,maxSize.y/art.height);
-                rt.sizeDelta=new Vector2(art.width*scale,art.height*scale);raw.texture=art;
+                var icon=new GameObject("Checkpoint diamond",typeof(RectTransform),typeof(CanvasRenderer),typeof(RawImage));
+                var ir=icon.GetComponent<RectTransform>();ir.SetParent(rt,false);
+                ir.anchorMin=ir.anchorMax=new Vector2(.5f,.5f);ir.pivot=new Vector2(.5f,.5f);ir.anchoredPosition=Vector2.zero;
+                float k=Mathf.Min(46f/iconTexture.width,62f/iconTexture.height);
+                ir.sizeDelta=new Vector2(iconTexture.width*k,iconTexture.height*k);
+                var img=icon.GetComponent<RawImage>();img.texture=iconTexture;img.raycastTarget=false;
             }
-            else { rt.sizeDelta=maxSize;raw.color=Color.clear;Debug.LogError("BIOFIT V3: falta sprite checkpoint"); }
+            if(!add)
+            {
+                var slash=new GameObject("Remove checkpoint symbol",typeof(RectTransform),typeof(CanvasRenderer),typeof(RawImage));
+                var sr=slash.GetComponent<RectTransform>();sr.SetParent(rt,false);sr.anchorMin=sr.anchorMax=new Vector2(.5f,.5f);sr.pivot=new Vector2(.5f,.5f);sr.anchoredPosition=Vector2.zero;sr.sizeDelta=new Vector2(65f,65f);
+                var im=slash.GetComponent<RawImage>();im.texture=Resources.Load<Texture2D>("BiofitV63/checkpoint_remove");im.raycastTarget=false;
+            }
+            go.AddComponent<BiofitSettingsButtonFeedback>();
             var button=go.AddComponent<BiofitStereoPracticeButton>();button.area=rt;button.place=add;
         }
         private void OnEnable() { if(!ActiveButtons.Contains(this)) ActiveButtons.Add(this); }

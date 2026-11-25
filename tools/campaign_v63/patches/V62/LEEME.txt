@@ -1,0 +1,12 @@
+BIOFIT DASH V6.2 — correcciones de Stereo Madness (rama niveles-mejorados)
+Requiere V6 (2851 registros, hash semántico reconocido). Conserva el menú V6.1.
+1. Cerrar Unity. Descomprimir el ZIP en el Escritorio.
+2. PowerShell: cd "$env:USERPROFILE\Desktop\BIOFIT_STEREO_V62"
+3. py -3 instalar_v62.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --verificar
+4. Si OK: py -3 instalar_v62.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL"
+5. Abrir Unity y Play. El log del runtime mantiene la etiqueta BIOFIT V5, pero debe indicar 2941 registros activos.
+Restaurar si es necesario con --restaurar (Unity cerrado). Solo se cambia Active.json de nivel 1 y se conserva su estado anterior en Builds/BiofitV62/Active_V6.json. No se cambia la rama ni se sube ningún recurso local. No modifica reglas de exclusión.
+
+Correcciones: 15% cuatro plataformas existentes y nuevo banco de cuatro a y=158; 25% banco de tres en x=6795,6825,6855 y desplazamiento de siguiente plataforma a x=6945; 49% columna baja doble y tres bloques bajos. Ball: 11 filas, 66 pinchos, plataformas interiores de 7 bloques cada una. Spider: 12 filas, 63 pinchos, plataformas interiores de 8 y 14 bloques; techo sube 30 GD y suelo final sube 30 GD; tercera moneda sube 30 GD con el suelo. Portales, música y demás niveles sin cambios.
+
+Validación: datos V6 reales reconstruidos desde nivel fuente e importadores, 26 sprites reales, instalación/preflight/repetición/restauración en estructura temporal probados; dos archivos centinela (menú y nivel 2) sin cambios. El modelo geométrico simplificado encontró rutas locales para los cinco tramos a CD 400ms y a 450ms (este último no es una opción del menú); no para todos a CD >=500ms. No sustituye el motor Unity ni incluye toda la latencia BLE. No se certifica jugabilidad. Las coordenadas de las imágenes se ajustan a cuadrícula y las plataformas interiores a alturas aproximadas; no es copia pixel exacta. Prueba primero CD 400ms en práctica.

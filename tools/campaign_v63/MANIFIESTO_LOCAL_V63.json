@@ -1,0 +1,89 @@
+{
+  "version": "V6.3",
+  "validation": "Aceptacion del usuario; no certificacion integral",
+  "files": {
+    "Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs": "448512af92ab40a9c97415d451be9c3559a70b9f6b8cd158b2dbf374fbed365b",
+    "Assets/BIOFIT/GeomeTry/BiofitGeometryUX.cs.meta": "90fe897c9ec0b8791a816dc8f899841bf8012cb0cdb954dd88a0aa0c7b99dcf8",
+    "Assets/BIOFIT/GeomeTry/BiofitMenuPressFeedback.cs": "c875f17438e876da788760c84c534a2efc422783c95d8d73daf43ce3e52e178e",
+    "Assets/BIOFIT/GeomeTry/BiofitMenuPressFeedback.cs.meta": "c6f7d1b3c84bf45d3a3688b3f553410c6e6302f4bf6f84e06effaf0370a1cc0d",
+    "Assets/BIOFIT/GeomeTry/BiofitSettingsButtonFeedback.cs": "4bd22799a1954356b4bfd9738caf0db07c953545f707f248e6a292f3fc9de72c",
+    "Assets/BIOFIT/GeomeTry/BiofitSettingsButtonFeedback.cs.meta": "ff8bde9192c05fb20a2bed5e90d8066a5b4c6380609e9c4be54d9e6aa2f827d3",
+    "Assets/BIOFIT/GeomeTry/BiofitStereoLocalRuntime.cs": "fd0c5f48a543b8a7833714b5db92fc73aeb47d639fb3d22693e119fea97e7d99",
+    "Assets/BIOFIT/GeomeTry/BiofitStereoLocalRuntime.cs.meta": "033020bfb2f9fed00c393a3469552d08cc77931c4a50703a5cee49d10640f4e3",
+    "Assets/BIOFIT/GeomeTry/BiofitStereoPracticeButton.cs": "4e22db9d7097d1c7f5423fef9473d6669532fe1c5d87d80acabc31b3776039b3",
+    "Assets/BIOFIT/GeomeTry/BiofitStereoPracticeButton.cs.meta": "a1ce5719ab1e8a8640164782097deb5ccb028527f3041f215acc1d203302cfe1",
+    "Assets/BIOFIT/GeomeTry/BiofitV63Finish.cs": "31f9acab2c0b2d356ee6225ba5cb70e7045f8069eac25f0c72d0dd9fce74145d",
+    "Assets/BIOFIT/GeomeTry/BiofitV63Finish.cs.meta": "bbfd800b6db357fece8a2ca7a603f5e134fe5375698ef69507de978b87f3bc18",
+    "Assets/BIOFIT/GeomeTry/BiofitV63Outline.cs": "d6baca4b9fc941824a19dc93477ed651abf8840436609ca43937d3b3f39ccd0a",
+    "Assets/BIOFIT/GeomeTry/BiofitV63Outline.cs.meta": "706c6151e74b333ab13bc1e62dde990b7d4a675feffec37b9763ed5a73b6dc30",
+    "Assets/BIOFIT/GeomeTry/Editor/BiofitMenuV6Installer.cs": "8c5539dce91baebaba20376a7fd008b8931d74c9b63b15f28c61f3241a6d92ca",
+    "Assets/BIOFIT/GeomeTry/Editor/BiofitMenuV6Installer.cs.meta": "65c58d37eafb4d8bd4e73f5dbd89f5ce29704a2ad1ee10cb8ed9b36adeb6d3fb",
+    "Assets/BIOFIT/Resources/BiofitUiV6.meta": "c2b2f4335736d66f38505b1d33fbb4006638c06578a65f7ace33041f7ff29708",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Boton_Configuracion.png": "6b1d5bd041ca1165673e3b2b2ca06d31a66a5d0c8b6df4a2a72b3fec73ea48fb",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Boton_Configuracion.png.meta": "971a426cb2435f5148940458cd3f273b0a20e67da87c21365aca1415c8229ca1",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Boton_Play.png": "d372889cf4bc56572e0e162c68971239fe6395f40ad6268f2a540320441713da",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Boton_Play.png.meta": "a8f6a30a01464c2533598cc35271e4ed0a9a82ac0a43c6d8c53847ce1b176905",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Boton_Skin.png": "e006c1df5bb9c06432a555c7a4981b8f8ad320f6a33771444fec568c2efc26d5",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Boton_Skin.png.meta": "9d0de1520cdb92d400db6faf1ace076c0bddc60a7160d564291e0502ba6c06d1",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Fondo_Menu.png": "cd2a80a02d68909c077bdc6a3d7fc7d38f9d9d0af4f4119c7a5ce46feeeed4bd",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Fondo_Menu.png.meta": "75ab9ca029b823a3c41c5c62e0b8862612a08d8b94eb396dbdc6221ace6e9891",
+    "Assets/BIOFIT/Resources/BiofitUiV6/LEEME.txt": "eee89fb312aac76e6481984c7c9c616aa7a0afe61a9dcd6536309732dc5c840c",
+    "Assets/BIOFIT/Resources/BiofitUiV6/LEEME.txt.meta": "97bd1d865e1a2b39b39bd450d784ced4d25c5adb694312ed47d334d5b912bd5f",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Logo_Biofit_Dash.png": "dfcef54395ade32cfc3239ae5405e0f43b03e7f85f29c8946f36c5a936271bba",
+    "Assets/BIOFIT/Resources/BiofitUiV6/Logo_Biofit_Dash.png.meta": "72bcc1384ca5e4af203541c09e77293a210c5cd1bf1f818713d5bacaab27628f",
+    "Assets/BIOFIT/Resources/BiofitV63.meta": "cf3c182fe5e37d43201f697cbbf9a09bed7324c49d184c3921d3766965fab94f",
+    "Assets/BIOFIT/Resources/BiofitV63/checkpoint_frame.png": "0ef5b6f9d6d46572251795e358935edc00bdf36378ba2057de933c611b0e2080",
+    "Assets/BIOFIT/Resources/BiofitV63/checkpoint_frame.png.meta": "3f052a7e5b6f5a7155e127fcf02379551640f66958c310472cecfb2349223c38",
+    "Assets/BIOFIT/Resources/BiofitV63/checkpoint_remove.png": "fc5750243089aa3763bdfa643928e32d5b1fc5a5f72b23e35c203f68299de0b7",
+    "Assets/BIOFIT/Resources/BiofitV63/checkpoint_remove.png.meta": "4ff28ec14c942089b1593e904689be52dd681a6857e6bc0cf60594405605bcc1",
+    "Packages/packages-lock.json": "642450fc9541214be4e2cc48e99b3fd720e4e99611abd3641cc99e07e8c688fa",
+    "ProjectSettings/EditorBuildSettings.asset": "7df8462cb4bcd32bf629b53ad2fd65245bf1c4f561d50c0d307c3e67972f495b",
+    "ProjectSettings/GraphicsSettings.asset": "f772ff31d4d259497ee5f6b11a59cde842864c639718868ddee133c61a52686d",
+    "ProjectSettings/ProjectSettings.asset": "c3371da12f989454b567c95baaab6fc4fcf036b1082eb5d961c01dffcd2d3cd2",
+    "ProjectSettings/QualitySettings.asset": "c90f8d7083c79480f3f954d4e1c412ed7838aa868654ed387e7a744a90f8181b",
+    "ProjectSettings/ShaderGraphSettings.asset": "6fead5a816c4eed70f224d5472340ecf1ea0b4de4f87d5926bb17fa10ffb3dc9",
+    "ProjectSettings/URPProjectSettings.asset": "68d75e5e1502dd7a4c18b7306430916b5ee8dadfdb0fbb588893fe38eaa2c056"
+  },
+  "maps": [
+    {
+      "slot": 1,
+      "active": 3015,
+      "original": 2291,
+      "active_sha256_compact": "e64c3a5a6ef2e7e3234468189bfe38c944b36984b5c6c3818d029f411fff839b",
+      "original_sha256_compact": "fe69e929734ff2e6c547ec9a0871a01395922c0647f099490e1a33402d7cda41",
+      "level_sha256": "7cc89979bb7d6d588e19d309d14d5b0d23557d375f2111d4fba604af22558665"
+    },
+    {
+      "slot": 2,
+      "active": 1734,
+      "original": 1545,
+      "active_sha256_compact": "db175d2b95a020ffcca792ea2b6d0b79dd103af3b8ec8b980ca02e2a7f04da5c",
+      "original_sha256_compact": "3aeccd9f93e63a60b33f2e29981ba318ec0c369465731f008eb0cccad99b8b7b",
+      "level_sha256": "cd02c25d4de0ed83995e34c19c730fa40ee2e84ab8dc5ed7f182a928fa3f0156"
+    },
+    {
+      "slot": 3,
+      "active": 2111,
+      "original": 1531,
+      "active_sha256_compact": "6313a59c0eac4bfdc281ac210226aa079f2ed4fcf5ae6b11e6b7838c078d2a33",
+      "original_sha256_compact": "2c2b8e83377af50d8c005f56a55f2efb1e6eb437421b4c6e6f632b17237949be",
+      "level_sha256": "75f9a19563bd460bacbbd522b7ff585939399e794f1d765403b94061aa97322c"
+    },
+    {
+      "slot": 4,
+      "active": 1871,
+      "original": 1704,
+      "active_sha256_compact": "cc53076263427535a026c7e0d84c6eeb52e717a2627ef9017390afa548bf0d80",
+      "original_sha256_compact": "63b87d6c804f1e50dc2c69e43ceb4acc0d283b28dc5ea3c6254f640bcde1111f",
+      "level_sha256": "d3e5fe53d1f1816e1e554c216b345b8add64c4750b8d74710360464765f3eed0"
+    },
+    {
+      "slot": 5,
+      "active": 3351,
+      "original": 2813,
+      "active_sha256_compact": "87f253f933656a0da853ccd1ddeb139c653e3ec4c5f75e034998e4f9f4b3c756",
+      "original_sha256_compact": "7a6649c50814bfaaabd7d208530db61430a2d3544844e3673c8ce61e83bcf696",
+      "level_sha256": "5c5efa393a8a9f4f6ec71675bbe2e8e122b4196c296c6617b256bd20e296b651"
+    }
+  ]
+}

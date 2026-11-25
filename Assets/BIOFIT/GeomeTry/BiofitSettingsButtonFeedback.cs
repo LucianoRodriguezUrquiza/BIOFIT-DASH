@@ -59,7 +59,7 @@ namespace Biofit.GeomeTryOriginal
             if (transparentHotspot && hitGraphic != null)
             {
                 Color color = hitGraphic.color;
-                color.a = Mathf.Lerp(color.a, held ? .16f : .001f, blend);
+                color.a = .001f; // V6.3: no rectangular overlay on transparent icon hitboxes.
                 hitGraphic.color = color;
             }
         }

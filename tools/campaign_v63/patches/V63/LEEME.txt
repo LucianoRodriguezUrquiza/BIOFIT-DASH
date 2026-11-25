@@ -1,0 +1,42 @@
+BIOFIT DASH V6.3 - NIVEL, INTERFAZ Y META
+Base local requerida: Stereo Madness V6.2, 2941 registros, menu V6.1.
+Rama experimental: niveles-mejorados. No se modifica main ni se publica nada automaticamente.
+Cerrar Unity y extraer todos los archivos del ZIP a una misma carpeta.
+
+PREVUELO:
+py -3 instalar_v63.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --verificar
+
+INSTALAR (solo si prevuelo OK):
+py -3 instalar_v63.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL"
+
+Resultado: 3015 registros activos en nivel 1, tres monedas y portales conservados.
+Abrir Unity > BIOFIT > GeomeTry ORIGINAL > 2. Abrir Main Menu original > Play.
+No aplicar la herramienta de editor del menu V6. El menu V6.1 aparece en Play Mode.
+
+RESTAURAR (Unity cerrado, si no se editaron despues los archivos del parche):
+py -3 instalar_v63.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --restaurar --verificar
+py -3 instalar_v63.py --proyecto "C:\Users\Capo\Documents\BIOFIT-DASH-STEREO-ORIGINAL" --restaurar
+
+CAMBIOS:
+- Botones de imagen: sin overlay gris rectangular; mantienen feedback de escala.
+- Checkpoints: areas iguales, cercanas, diamante original instalado y simbolo rojo de quitar.
+- Contornos conectados en 47%, 49% y escalera de 52%, sin cambiar colliders del render.
+- Escalera: siete columnas de dos bloques, dos grupos de tres saltos con puente de descanso.
+  Ajuste deliberado: ultima parte de escalera un bloque mas baja y salida conectada.
+- Ball: 88 pinchos grandes, plataformas interiores de 8 bloques cada una.
+- Spider: 80 pinchos, tres plataformas interiores (8, 14 y 4), cuatro pinchos inferiores en la ultima.
+- Meta: reemplazo local del manejador EndZone original en los cinco niveles importados.
+  Panel animado en tiempo no escalado, NIVEL COMPLETO (o PRACTICA COMPLETADA), reiniciar y menu principal.
+  No hay cambio automatico a seleccion de niveles tras cinco segundos.
+- Se conservan musica, monedas, portales, menu V6.1, niveles 2-5 (mapas), motor Cube/Ball/Spider,
+  firmware, BLE bilateral legacy y cooldown. Reglas de exclusion sin cambios.
+- El parche contiene exclusivamente codigo, dos graficos nuevos de controles y documentacion;
+  reutiliza texturas ya instaladas. La vista de revision usa sprites del archivo aportado y es para revision local.
+
+VALIDACION HOST: V6.2 reconstruida desde 1.txt y transformaciones anteriores (SHA256 comprobado),
+3015 registros V6.3; prevuelo sin escritura, instalacion, rechazo de reaplicacion, prevuelo de restauracion
+ y restauracion verificados en proyecto simulado. Sprites reales de atlas aportados, firmas UX de GitHub
+ y fixture de menu local. Simulacion AABB aproximada con collider del Cube de 1 x .95763 y trigger del
+ pincho .25 x .4, velocidad 6.5, dt .02, gravedad 39.24, escala de tiempo 1.5.
+Se hallaron recorridos a CD 400 ms para Ball, Spider y escalera. No se hallaron para todos a 500, 600 y 900.
+No equivale a compilacion Unity ni prueba real de BLE. Las posiciones inferidas de las imagenes se redondearon a cuadricula.

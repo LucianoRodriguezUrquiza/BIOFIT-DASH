@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.3 Campaña Clásica / niveles mejorados
+
+Versión estable de trabajo aprobada por el usuario el 24/11/2026. Leer [contexto actual](docs/CONTEXTO_ACTUAL.md), [relevo](docs/CONTEXTO_VIVO.md) y [referencias visuales](docs/referencias/V63/README.md). Los mapas originales y otros recursos de terceros se conservan localmente; consultar la reconstrucción documentada.
+
+---
+
 # BIOFIT DASH — Campana Clasica V5
 
 Version principal aprobada provisionalmente por el usuario el 24/11/2026. Leer primero [Contexto actual](docs/CONTEXTO_ACTUAL.md) y [relevo](docs/CONTEXTO_VIVO.md). Los recursos locales se conservan intactos. Esta consolidacion publica codigo y configuracion; las decisiones sobre publicacion de recursos de terceros quedan pendientes. El texto siguiente es el README historico.

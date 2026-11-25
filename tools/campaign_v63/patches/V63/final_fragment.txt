@@ -1,0 +1,25 @@
+        // BIOFIT V6.3: completion uses the original end collider, not percentage rounding.
+        public static bool ShowV63Completion()
+        {
+            if(instance==null || instance.currentScene!=LevelScene || instance.canvasRoot==null) return false;
+            instance.BuildV63Completion();return true;
+        }
+
+        private void BuildV63Completion()
+        {
+            if(paused) RestorePause();
+            EnterPause();
+            for(int i=0;i<canvasRoot.childCount;i++) canvasRoot.GetChild(i).gameObject.SetActive(false);
+            RectTransform veil=Fill("V63 completed veil",canvasRoot,new Color(0f,0f,0f,.84f));
+            veil.GetComponent<Image>().raycastTarget=true;
+            RectTransform panel=Rect("V63 completed panel",veil,new Vector2(.5f,.5f),new Vector2(1040,590),Vector2.zero);
+            var bg=panel.gameObject.AddComponent<Image>();bg.color=new Color(.025f,.15f,.22f,.98f);bg.raycastTarget=false;
+            var rim=panel.gameObject.AddComponent<Outline>();rim.effectColor=new Color(.48f,.96f,.1f,1);rim.effectDistance=new Vector2(4,-4);
+            Text("Completion title",panel,"NIVEL COMPLETO",new Vector2(.5f,.77f),new Vector2(980,120),Vector2.zero,80,Lime);
+            Text("Completion status",panel,BiofitStereoPractice.Enabled?"PRACTICA COMPLETADA":"100%",new Vector2(.5f,.60f),new Vector2(850,65),Vector2.zero,38,Color.white);
+            ImageButton("V63 retry",panel,BiofitV2BitmapText.Art("restart"),"REINICIAR",new Vector2(.32f,.33f),new Vector2(124,124),Vector2.zero,RestartLevel);
+            ImageButton("V63 main menu",panel,BiofitV2BitmapText.Art("menu"),"MENU",new Vector2(.68f,.33f),new Vector2(124,124),Vector2.zero,()=>Navigate(Menu));
+            Text("Retry label",panel,"REINICIAR",new Vector2(.32f,.13f),new Vector2(290,55),Vector2.zero,32,Color.white);
+            Text("Menu label",panel,"MENU PRINCIPAL",new Vector2(.68f,.13f),new Vector2(340,55),Vector2.zero,32,Color.white);
+            panel.gameObject.AddComponent<BiofitV63CompletionAnimation>();
+        }
