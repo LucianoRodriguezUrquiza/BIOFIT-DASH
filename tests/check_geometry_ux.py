@@ -275,7 +275,7 @@ delta = {"schema": 1, "slot": 1, "editorRevision": 1, "endGD": 300,
          "baseSha256": digest(base), "targetSha256": digest(target),
          "removed": [2], "added": [{"index": 100001, "kind": "solid", "xGD": 75}],
          "edits": [{"index": 1, "fields": {"xGD": 30}}], "order": [1, 100001]}
-for branch in ("main", "niveles-mejorados"):
+for branch in ("main", "niveles-mejorados", "v6.5-desarrollo"):
     with tempfile.TemporaryDirectory() as temp:
         tmp = Path(temp)
         remote = tmp / "lucianorodriguezurquiza/biofit-game-unity"
@@ -305,7 +305,7 @@ for branch in ("main", "niveles-mejorados"):
         assert run("git", "rev-parse", "HEAD", cwd=repo) == run("git", "-C", str(remote), "rev-parse", branch)
         assert set(run("git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD", cwd=repo).splitlines()) == {
             file.relative_to(repo).as_posix(), "tools/level_editor/changes/INDEX.md"}
-        if branch == "niveles-mejorados":
+        if branch != "main":
             run("git", "push", "origin", "--delete", branch, cwd=repo)
             again = folder / "BIOFIT_level_1_20261126_120001.json"
             again.write_text(file.read_text())
@@ -319,3 +319,24 @@ for branch in ("main", "niveles-mejorados"):
         denied = subprocess.run(cmd + ["--aplicar"], text=True, capture_output=True)
         assert denied.returncode != 0 and active.read_text() == target
 print("PASS: local Git publisher main/legacy branch, selective paths, deleted-branch guard and delta reconstruction")
+
+# V6.5: only the new editor session has development navigation; normal game remains.
+session = (root / "Assets/BIOFIT/GeomeTry/BiofitV65EditorSession.cs").read_text()
+interaction = (root / "Assets/BIOFIT/GeomeTry/BiofitV5Interaction.cs").read_text()
+motor = (root / "Assets/BIOFIT/GeomeTry/BiofitThreeModes.cs").read_text()
+skins = (root / "Assets/BIOFIT/GeomeTry/BiofitV65Skins.cs").read_text()
+assert session.lstrip().startswith("#if UNITY_EDITOR") and session.rstrip().endswith("#endif")
+assert "BIOFIT_EDITOR_TEST_PATH" in session and "SessionState" in session
+assert "BiofitV65EditorSession.Tick" in runtime and "BiofitV65EditorSession.TryTakeLaunch" in ui
+assert "Vista real" in editor and "Jugar desde aquí" in editor
+assert "TextAnchor.MiddleLeft" in editor and "Catalog.json" in editor
+assert 'kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f' in interaction
+assert 'MiniScale=.60f, MiniSpeed=7.8f, MiniJump=10.5f' in motor
+assert 'OriginalSpeed = 6.5f' in motor and 'BallSpiderGravity = 4f' in motor
+assert 'if(IsMini||wasMini)' in motor and "MiniSupport()" in motor
+assert '"miniPortal"' in runtime and '"normalSizePortal"' in runtime
+assert "BIOFIT_V65_BALL_SKIN" in skins and "BIOFIT_V65_SPIDER_SKIN" in skins
+assert "BuildV65VehicleSkins" in ui and "%7" in skins
+import py_compile
+py_compile.compile(str(root / "tools/level_editor/importar_arte_v65.py"), doraise=True)
+print("PASS: V6.5 static editor isolation, Red Pad, Mini Cube, catalog and skin contracts")
