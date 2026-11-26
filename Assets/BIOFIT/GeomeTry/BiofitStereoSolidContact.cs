@@ -6,7 +6,8 @@ namespace Biofit.GeomeTryOriginal
     {
         private BoxCollider2D surface;
         private bool shipEntrySupport;
-        public void Configure(bool entrySupport) { shipEntrySupport=entrySupport; }
+        private int deathMask=15;
+        public void Configure(bool entrySupport, int mask=15) { shipEntrySupport=entrySupport; deathMask=mask; }
         private void Awake() { surface=GetComponent<BoxCollider2D>(); }
         private void OnCollisionEnter2D(Collision2D c) { Evaluate(c); }
         private void OnCollisionStay2D(Collision2D c) { Evaluate(c); }
@@ -40,6 +41,7 @@ namespace Biofit.GeomeTryOriginal
         }
         private void Kill(Cube cube,string reason)
         {
+            if(!BiofitEditedDeathZone.Applies(cube,deathMask)) return;
             var motor=cube.GetComponent<BiofitModeMotor>();
             Debug.LogWarning("BIOFIT Stereo collision V3: "+reason+" "+name+" mode="+(motor==null?"Cube":motor.Mode.ToString())+" playerX="+cube.transform.position.x.ToString("F3")+" playerY="+cube.transform.position.y.ToString("F3")+" surfaceY="+surface.bounds.max.y.ToString("F3"));
             cube.Die();
