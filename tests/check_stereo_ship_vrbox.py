@@ -38,7 +38,7 @@ assert "cube.isAlive" in src
 # Ship must be a fourth mode of the same avatar. Gravity
 # is held; discrete BLE pairs create finite thrust pulses.
 for token in (
-    "public enum BiofitMode { Cube, Ball, Spider, Ship, InvertedCube }",
+    "public enum BiofitMode { Cube, Ball, Spider, Ship, InvertedCube, MiniCube, MiniInvertedCube }",
     'Register("biofitShipPortal", BiofitMode.Ship);',
     "private const float ShipGravity = 2.5f;",
     "private const float ShipMaxVerticalSpeed = 10f;",
