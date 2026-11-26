@@ -522,5 +522,17 @@ assert 'data.objects.Count(o=>o.kind=="coin")+changed.Length>3' in bulk
 assert 'changed.Any(o=>o.frames==null||o.frames.Length==0)' in bulk
 assert bulk.count('Push();')==1 and bulk.index('Máximo 3 monedas')<bulk.index('Push();')
 assert 'o.kind=kind;' in bulk and 'o.collisionMode=0;' in bulk
-assert 'o.frames=' not in bulk and 'o.xGD=' not in bulk and 'o.yGD=' not in bulk
+# Distinguish field writes from equality/null checks. Keep the invariant
+# and also reject compound assignments and prefix/postfix increment/decrement.
+field = r"\bo\.(?:frames|xGD|yGD)\b"
+field_write = re.compile(
+    field + r"\s*(?:=(?!=)|[+\-*/%&|^]=|\?\?=|<<=|>>=|\+\+|--)"
+    + r"|(?:\+\+|--)\s*" + field
+)
+for read in ("o.frames==null", "o.frames != null", "o.xGD <= 0", "o.yGD >= 0", "o.xGD == 0"):
+    assert not field_write.search(read), read
+for write in ("o.frames=newFrames", "o.xGD = 1", "o.yGD=2", "o.xGD += 30",
+              "o.frames ??= frames", "o.yGD++", "--o.xGD"):
+    assert field_write.search(write), write
+assert not field_write.search(bulk), "Bulk function editing must preserve sprites and positions"
 print("PASS: bulk function editing, mixed selection and atomic undo")

@@ -1,0 +1,58 @@
+{
+  "version": "V6.5",
+  "user_acceptance": "2026-11-26: usuario informa APK compilada y probada satisfactoriamente; acepta consolidación tras CI",
+  "local_snapshot": "ffa907d6baa7974b8152b9622026679f2981a52a",
+  "tracked_diff_reported_empty": true,
+  "evidence": "captura PowerShell del usuario; comparación con índice de deltas y manifiesto V6.3",
+  "maps": [
+    {
+      "slot": 1,
+      "name": "Stereo Madness",
+      "active_records": 2991,
+      "sha256": "bd2d104cfc88b79751e9cde421f097d6f8413da80847a7ee38c7583379cbfc43"
+    },
+    {
+      "slot": 2,
+      "name": "Back on Track",
+      "active_records": 1920,
+      "sha256": "39e8beeb17c3a549a6eb452587da86b0655b9e81b0e650ffddc0e9c4cd151651"
+    },
+    {
+      "slot": 3,
+      "name": "Polargeist",
+      "active_records": 2074,
+      "sha256": "41cb08ba05e8b2de64522e54d0ed1aaa29bf5551ce2b966e47e232fd038fe78b"
+    },
+    {
+      "slot": 4,
+      "name": "Can't Let Go",
+      "active_records": 1871,
+      "sha256": "cc53076263427535a026c7e0d84c6eeb52e717a2627ef9017390afa548bf0d80"
+    },
+    {
+      "slot": 5,
+      "name": "Jumper",
+      "active_records": 3351,
+      "sha256": "87f253f933656a0da853ccd1ddeb139c653e3ec4c5f75e034998e4f9f4b3c756"
+    }
+  ],
+  "total_active_records": 12207,
+  "ci_previous": {
+    "run_id": 45893627968,
+    "passed": 4,
+    "total": 5,
+    "failure": "check_geometry_ux.py:525, falso positivo comparación == confundida con asignación ="
+  },
+  "ci_after_fix": "pending",
+  "independent_unity_compilation": false,
+  "independent_android_test": false,
+  "independent_physical_ble_test": false,
+  "known_pending": "diagnóstico de saltos consecutivos",
+  "untracked_local": [
+    "Assets/BIOFIT/Resources/BiofitUi.meta",
+    "Assets/BIOFIT/Resources/BiofitUi/",
+    "Assets/BIOFIT/Resources/Songs.meta",
+    "Assets/BIOFIT/Resources/Songs/"
+  ],
+  "game_code_changed_by_this_fix": false
+}

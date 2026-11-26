@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.5 aprobada por el usuario; consolidación en curso
+
+26/11/2026: el usuario informa que compiló y probó satisfactoriamente su última APK, y autoriza cerrar esta versión tras corregir CI. La captura de PowerShell acredita HEAD local y remoto `ffa907d6baa7974b8152b9622026679f2981a52a` en `v6.5-desarrollo`, diff versionado vacío y coincidencia de los cinco SHA-256 de Active.json con deltas/manifiestos remotos. No acredita compilación independiente ni todos los casos BLE. Main sigue V6.4 hasta comprobar 5/5 y consolidar. Leer [CONSOLIDACION_V65.md](docs/CONSOLIDACION_V65.md), [guía V6.5](docs/LEVEL_EDITOR_V65.md) y [validación](tools/level_editor/VALIDACION_V65.json). Las secciones siguientes son históricas; conservar ICC/DIPL/RFD/BRO/FLM/RCA. No reinstalar, no subir recursos locales no versionados ni modificar firmware, físicas o mapas. Pendiente: diagnosticar degradación de saltos consecutivos, sin atribuir todavía causa ni modificar detector.
+
+---
+
 # BIOFIT DASH — V6.5 desarrollo (rama v6.5-desarrollo)
 
 26/11/2026: rama creada por autorización expresa desde main V6.4 estable. [Guía V6.5](docs/LEVEL_EDITOR_V65.md): vista real del motor, prueba de borrador desde X/Y, catálogo local ampliado y alineado, Red Pad 9.5, Mini Cube experimental (escala .60, velocidad 7.8, salto 10.5), skins Ball/Spider y carrera reconstruida a partir de recursos locales. Código publicado; CI de host 5/5 en a6f08fe, instalación/pruebas Unity y APK pendientes. Los mapas y borradores se conservan; main no se modifica. Consultar la guía antes de continuar. No reinstalar ni subir arte original. Los textos siguientes son historial V6.4. Esperar instrucciones del usuario.
