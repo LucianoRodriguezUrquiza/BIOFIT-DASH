@@ -38,6 +38,10 @@ namespace Biofit.LevelEditing
         Vector2 pan=new Vector2(0,120), inspectorScroll, paletteScroll, press, panStart;
         Dictionary<int,Vector2> dragStart;
         float zoom=1.2f, grid=30, dragGrid;
+        const float MinMoveStep=.1f, MaxMoveStep=1000f;
+        const string MoveStepPref="BIOFIT_LEVEL_EDITOR_MOVE_STEP_GD";
+        static readonly float[] MovePresets={1f,5f,10f,15f,30f,60f};
+        static readonly string[] MovePresetLabels={"1 GD","5 GD","10 GD","15 GD","30 GD","60 GD","Manual"};
         bool snap=true, showGrid=true, showColliders=true, showTriggers=true, placing, dirty, dragging, panning, selecting;
         string query="",spriteName="";
         int goIndex;
@@ -66,7 +70,7 @@ namespace Biofit.LevelEditing
         static bool IsTrigger(Item i)=>i.kind=="backgroundColor"||i.kind=="groundColor"||i.kind=="enterEffect";
         [MenuItem("BIOFIT/Level Editor/Abrir editor")]
         static void Open(){var w=GetWindow<BiofitLevelEditor>("BIOFIT Level Editor");w.minSize=new Vector2(870,510);w.Show();}
-        void OnEnable(){wantsMouseMove=true;Undo.undoRedoPerformed+=Repaint;}
+        void OnEnable(){wantsMouseMove=true;Undo.undoRedoPerformed+=Repaint;float saved=EditorPrefs.GetFloat(MoveStepPref,30f);grid=ValidMoveStep(saved)?saved:30f;}
         void OnDisable(){Undo.undoRedoPerformed-=Repaint; if(data!=null&&dirty){try{SaveDraft();}catch(Exception ex){Debug.LogError(ex);}}foreach(var image in externalTextures.Values)if(image!=null)DestroyImmediate(image);externalTextures.Clear();}
         void Guard(Action a){try{a();}catch(Exception ex){status="ERROR: "+ex.Message;Debug.LogException(ex);}Repaint();}
         void Load(int n,bool resume)
@@ -195,6 +199,22 @@ namespace Biofit.LevelEditing
             to.Push(JsonUtility.ToJson(data));data=Parse(from.Pop());selection.RemoveWhere(i=>!data.objects.Any(o=>o.index==i));dirty=true;
         }
         Item[] Selected()=>data.objects.Where(o=>selection.Contains(o.index)).ToArray();
+        static bool ValidMoveStep(float v)=>!float.IsNaN(v)&&!float.IsInfinity(v)&&v>=MinMoveStep&&v<=MaxMoveStep;
+        void SetMoveStep(float value)
+        {
+            if(!ValidMoveStep(value)){status="Paso inválido: ingresá un número entre 0,1 y 1000 GD.";return;}
+            grid=value;EditorPrefs.SetFloat(MoveStepPref,grid);Repaint();
+        }
+        void DrawMoveStep()
+        {
+            GUILayout.Label(new GUIContent("Paso GD","Incremento de movimiento con Snap activo; la grilla visual se adapta al zoom."),EditorStyles.miniLabel,GUILayout.Width(53));
+            int preset=Array.IndexOf(MovePresets,grid);if(preset<0)preset=MovePresets.Length;
+            int chosen=EditorGUILayout.Popup(preset,MovePresetLabels,GUILayout.Width(78));
+            if(chosen!=preset&&chosen<MovePresets.Length&&chosen>=0)SetMoveStep(MovePresets[chosen]);
+            EditorGUI.BeginChangeCheck();
+            float manual=EditorGUILayout.DelayedFloatField(grid,GUILayout.Width(64));
+            if(EditorGUI.EndChangeCheck())SetMoveStep(manual);
+        }
         float Snap(float v,float origin=0)=>snap?origin+Mathf.Round((v-origin)/grid)*grid:v;
         Vector2 Screen(Vector2 w)=>new Vector2(canvas.x+(w.x-pan.x)*zoom,canvas.y+(pan.y-w.y)*zoom);
         Vector2 World(Vector2 p)=>new Vector2(pan.x+(p.x-canvas.x)/zoom,pan.y-(p.y-canvas.y)/zoom);
@@ -319,7 +339,7 @@ namespace Biofit.LevelEditing
                     using(new EditorGUI.DisabledScope(paletteIndex<0||paletteIndex>=catalog.Count))
                         {bool next=GUILayout.Toggle(placing,"Colocar",EditorStyles.toolbarButton);if(next&&!placing)CancelFloatingPaste();placing=next;}
                     snap=GUILayout.Toggle(snap,"Snap",EditorStyles.toolbarButton);
-                    grid=EditorGUILayout.Popup(grid==15?0:grid==30?1:2,new[]{"15 GD","30 GD","60 GD"},GUILayout.Width(65)) switch {0=>15f,1=>30f,_=>60f};
+                    DrawMoveStep();
                     showGrid=GUILayout.Toggle(showGrid,"Grilla",EditorStyles.toolbarButton);
                     showColliders=GUILayout.Toggle(showColliders,"Colisión",EditorStyles.toolbarButton);
                     showTriggers=GUILayout.Toggle(showTriggers,"Eventos",EditorStyles.toolbarButton);

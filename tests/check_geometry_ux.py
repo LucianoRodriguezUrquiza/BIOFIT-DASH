@@ -382,3 +382,18 @@ assert 'orbPulseId++;' in orb_bridge and 'orbPulseDeadline = Time.fixedTime + Ti
 assert 'motor.Mode==BiofitMode.Cube && BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse()' in interaction
 assert 'interaction.TryInvertedOrb(cube)' in motor
 print("PASS: compact editor-only test HUD and existing BLE orb dispatch contract")
+
+# V6.5 configurable editor movement step; no level schema or runtime changes.
+assert 'MovePresets={1f,5f,10f,15f,30f,60f}' in editor
+assert 'EditorGUILayout.DelayedFloatField(grid' in editor
+assert 'MinMoveStep=.1f, MaxMoveStep=1000f' in editor
+assert '!float.IsNaN(v)&&!float.IsInfinity(v)&&v>=MinMoveStep&&v<=MaxMoveStep' in editor
+assert 'EditorPrefs.SetFloat(MoveStepPref,grid)' in editor
+assert 'grid=ValidMoveStep(saved)?saved:30f' in editor
+assert 'dragGrid=grid;dragging=false' in editor
+assert 'Mathf.Round(dx/dragGrid)*dragGrid' in editor
+assert 'Mathf.Round(delta.x/grid)*grid' in editor
+assert 'snap?origin+Mathf.Round((v-origin)/grid)*grid:v' in editor
+assert 'while(step*zoom<12)step*=2' in editor
+assert 'float step=e.shift?1:grid' in editor
+print("PASS: custom positive snap step, persistence, drag and paste contracts")
