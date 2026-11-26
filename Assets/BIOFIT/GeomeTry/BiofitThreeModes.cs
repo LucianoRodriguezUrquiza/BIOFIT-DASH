@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace Biofit.GeomeTryOriginal
 {
-    public enum BiofitMode { Cube, Ball, Spider, Ship, InvertedCube }
+    public enum BiofitMode { Cube, Ball, Spider, Ship, InvertedCube, MiniCube, MiniInvertedCube }
 
     // Self-contained experimental modes. Nothing is modified inside the pinned GeomeTry submodule.
     // Maintains Character (Cube) on the original player for death, respawn, camera and progress.
@@ -318,7 +318,21 @@ namespace Biofit.GeomeTryOriginal
         private const float SurfaceRay = .92f;
         private const int GroundMask = 1 << 3;
         private int ActiveGroundMask => BiofitStereoPractice.Available ? GroundMask | (1 << 6) : GroundMask;
-        public bool StereoInverted => Mode==BiofitMode.InvertedCube || flipped;
+        public bool IsMini => Mode==BiofitMode.MiniCube || Mode==BiofitMode.MiniInvertedCube;
+        public bool IsCubeMode => Mode==BiofitMode.Cube || Mode==BiofitMode.InvertedCube || IsMini;
+        public bool StereoInverted => Mode==BiofitMode.InvertedCube || Mode==BiofitMode.MiniInvertedCube || flipped;
+        public const float MiniScale=.60f, MiniSpeed=7.8f, MiniJump=10.5f;
+        private Vector3 normalScale;
+        public void SetMini(bool mini)
+        {
+            Initialize();if(!initialized || !IsCubeMode)return;
+            SetMode(mini?(StereoInverted?BiofitMode.MiniInvertedCube:BiofitMode.MiniCube):(StereoInverted?BiofitMode.InvertedCube:BiofitMode.Cube));
+        }
+        public void SetCubeGravity(bool invert)
+        {
+            if(!IsCubeMode)return;
+            SetMode(IsMini?(invert?BiofitMode.MiniInvertedCube:BiofitMode.MiniCube):(invert?BiofitMode.InvertedCube:BiofitMode.Cube));
+        }
         public void RestoreStereoGravity(bool inverted)
         {
             if (!BiofitStereoPractice.Available || !initialized || (Mode != BiofitMode.Ball && Mode != BiofitMode.Spider)) return;
@@ -353,6 +367,7 @@ namespace Biofit.GeomeTryOriginal
             if (icon == null && sprites.Length > 0) icon = sprites[0];
             if (icon != null) { originalSprite = icon.sprite; originalTint = icon.color; }
             initialized = cube != null && body != null && icon != null;
+            if(initialized) normalScale=transform.localScale;
             if(initialized && icon.transform!=transform && BiofitStereoLocalRuntime.IsLocal(GameManager.Instance?.SelectedLevel))
             { initialFacing=true; icon.transform.rotation=Quaternion.identity; }
         }
@@ -363,6 +378,7 @@ namespace Biofit.GeomeTryOriginal
             if (!initialized || !cube.isAlive || newMode == Mode) return;
             initialFacing=false;
             Mode = newMode;
+            transform.localScale=IsMini?normalScale*MiniScale:normalScale;
             flipped = false;
             shipBleHeldUntil = 0f;
             // Keep the incoming jump momentum at the local mode portal; do not edit Cube physics.
@@ -376,6 +392,12 @@ namespace Biofit.GeomeTryOriginal
                 icon.color = originalTint;
                 icon.flipY = false;
                 icon.transform.localRotation = Quaternion.identity;
+            }
+            else if(IsMini)
+            {
+                cube.enabled=false;flipped=newMode==BiofitMode.MiniInvertedCube;
+                body.gravityScale=flipped?-BallSpiderGravity:BallSpiderGravity;
+                icon.sprite=originalSprite;icon.color=originalTint;icon.flipY=flipped;icon.transform.localRotation=Quaternion.identity;
             }
             else if(newMode==BiofitMode.InvertedCube)
             {
@@ -419,7 +441,7 @@ namespace Biofit.GeomeTryOriginal
             if (!initialized || Mode == BiofitMode.Cube || !cube.isAlive ||
                 GameManager.Instance == null || !GameManager.Instance.PlayMode) return;
             if (Mode == BiofitMode.Ship) return; // Ship responds to held input in FixedUpdate.
-            if(Mode==BiofitMode.InvertedCube) { if(Input.GetKey(KeyCode.Space) || (Input.GetMouseButton(0) && !BiofitStereoPracticeButton.BlocksGameplayPointer()) || BiofitVrBoxInput.AnyHeld) TryPulse(); return; }
+            if(IsMini || Mode==BiofitMode.InvertedCube) { if(Input.GetKey(KeyCode.Space) || (Input.GetMouseButton(0) && !BiofitStereoPracticeButton.BlocksGameplayPointer()) || BiofitVrBoxInput.AnyHeld) TryPulse(); return; }
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) ||
                 BiofitVrBoxInput.AnyDown) TryPulse();
         }
@@ -428,6 +450,13 @@ namespace Biofit.GeomeTryOriginal
         {
             if (!initialized || Mode == BiofitMode.Cube || !cube.isAlive ||
                 GameManager.Instance == null || !GameManager.Instance.PlayMode) return;
+            if(IsMini)
+            {
+                transform.Translate(new Vector2(MiniSpeed*Time.deltaTime,0),Space.World);
+                if(!MiniSupport())icon.transform.Rotate(0,0,(StereoInverted?1:-1)*280f*Time.deltaTime);
+                else icon.transform.localRotation=Quaternion.Euler(0,0,Mathf.Round(icon.transform.localEulerAngles.z/90f)*90f);
+                return;
+            }
             // Equivalent to the original Character.FixedUpdate horizontal motion.
             transform.Translate(new Vector2(OriginalSpeed * Time.deltaTime, 0f), Space.World);
             if (Mode == BiofitMode.Ship)
@@ -460,6 +489,14 @@ namespace Biofit.GeomeTryOriginal
             }
         }
 
+        private bool MiniSupport()
+        {
+            if(playerCollider==null)return false;
+            var b=playerCollider.bounds;Vector2 dir=StereoInverted?Vector2.up:Vector2.down;
+            foreach(float side in new[]{-.85f,0f,.85f})
+                if(Physics2D.Raycast(new Vector2(b.center.x+side*b.extents.x,b.center.y),dir,b.extents.y+.06f,ActiveGroundMask).collider!=null)return true;
+            return false;
+        }
         private bool SurfaceContact(Vector2 direction)
         {
             Vector2 center = body.position;
@@ -485,6 +522,14 @@ namespace Biofit.GeomeTryOriginal
                     Time.unscaledTime + ShipBleThrustSeconds);
                 lastManualAction = Time.unscaledTime;
                 return true;
+            }
+            if(IsMini)
+            {
+                foreach(var hit in Physics2D.OverlapCircleAll(body.position,.5f))
+                {var interaction=hit.GetComponent<BiofitV5Interaction>();if(interaction!=null && interaction.TryInvertedOrb(cube)){lastManualAction=Time.unscaledTime;return true;}}
+                if(!MiniSupport())return false;
+                body.linearVelocity=new Vector2(body.linearVelocity.x,(StereoInverted?-1:1)*MiniJump);
+                lastManualAction=Time.unscaledTime;return true;
             }
             if(Mode==BiofitMode.InvertedCube)
             {
