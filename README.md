@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.5 desarrollo (rama v6.5-desarrollo)
+
+26/11/2026: rama creada por autorización expresa desde main V6.4 estable. [Guía V6.5](docs/LEVEL_EDITOR_V65.md): vista real del motor, prueba de borrador desde X/Y, catálogo local ampliado y alineado, Red Pad 9.5, Mini Cube experimental (escala .60, velocidad 7.8, salto 10.5), skins Ball/Spider y carrera reconstruida a partir de recursos locales. Código publicado; CI de host 5/5 en a6f08fe, instalación/pruebas Unity y APK pendientes. Los mapas y borradores se conservan; main no se modifica. Consultar la guía antes de continuar. No reinstalar ni subir arte original. Los textos siguientes son historial V6.4. Esperar instrucciones del usuario.
+
+---
+
 # BIOFIT DASH — V6.4 aprobada como versión estable de trabajo
 
 **26/11/2026:** el usuario probó V6.4, aprobó su funcionamiento y autorizó incorporar todos los avances a main y retirar niveles-mejorados después de corregir CI. Main será la única rama de trabajo tras completar la integración. Leer [CONSOLIDACION_V64.md](docs/CONSOLIDACION_V64.md), [guía del editor](docs/LEVEL_EDITOR_V64.md), [índice de deltas](tools/level_editor/changes/INDEX.md) y [validación](tools/level_editor/VALIDACION_V64.json). Las secciones siguientes son historial (V6.3 y V6.4 experimental), no instrucciones vigentes para la rama. Verificar HEAD remoto para confirmar integración y retirada. Estado objetivo: Stereo Madness 2991, Back on Track 1920, Polargeist 2111, Can't Let Go 1871, Jumper 3351; total 12244 registros reconstruibles a partir de bases locales y deltas. No recrear ramas retiradas ni reinstalar desde cero. Mantener ICC/DIPL/RFD/BRO/FLM/RCA. Próximas modificaciones: esperar indicaciones del usuario. La aprobación es de trabajo, no certificación exhaustiva Unity/Android/BLE; no afirmar que Active local coincide sin comprobar sus hashes.
