@@ -333,6 +333,7 @@ namespace Biofit.GeomeTryOriginal
         private Sprite originalSprite;
         private Color originalTint;
         private bool initialized;
+        private bool initialFacing;
         private bool flipped;
         private float lastManualAction;
         private float shipBleHeldUntil;
@@ -345,17 +346,22 @@ namespace Biofit.GeomeTryOriginal
             body = GetComponent<Rigidbody2D>();
             playerCollider = GetComponent<Collider2D>();
             SpriteRenderer[] sprites = GetComponentsInChildren<SpriteRenderer>(true);
-            foreach (SpriteRenderer sr in sprites)
+            // Resolve the same renderer Character.RotateSprite uses, not an arbitrary child.
+            icon=typeof(Character).GetField("spriteRenderer",BindingFlags.Instance|BindingFlags.NonPublic)?.GetValue(cube) as SpriteRenderer;
+            if(icon==null) foreach (SpriteRenderer sr in sprites)
                 if (sr.sprite != null) { icon = sr; break; }
             if (icon == null && sprites.Length > 0) icon = sprites[0];
             if (icon != null) { originalSprite = icon.sprite; originalTint = icon.color; }
             initialized = cube != null && body != null && icon != null;
+            if(initialized && icon.transform!=transform && BiofitStereoLocalRuntime.IsLocal(GameManager.Instance?.SelectedLevel))
+            { initialFacing=true; icon.transform.rotation=Quaternion.identity; }
         }
 
         public void SetMode(BiofitMode newMode)
         {
             Initialize();
             if (!initialized || !cube.isAlive || newMode == Mode) return;
+            initialFacing=false;
             Mode = newMode;
             flipped = false;
             shipBleHeldUntil = 0f;
@@ -397,6 +403,15 @@ namespace Biofit.GeomeTryOriginal
                 monitor.RecordControlDiagnostic("GEOMETRY_MODE_CHANGE mode=" + newMode +
                     " x=" + transform.position.x.ToString("F2",
                         System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        private void LateUpdate()
+        {
+            // Correct initial falling/settling sprite only. Leave all subsequent jump rotations intact.
+            if(!initialFacing || !initialized || Mode!=BiofitMode.Cube || !cube.isAlive) return;
+            if(body.linearVelocity.y>.10f) {initialFacing=false;return;}
+            icon.transform.rotation=Quaternion.identity;
+            if(Mathf.Abs(body.linearVelocity.y)<.05f && SurfaceContact(Vector2.down)) initialFacing=false;
         }
 
         private void Update()
