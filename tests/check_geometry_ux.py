@@ -209,3 +209,43 @@ assert "PrefabUtility.SaveAsPrefabAsset" in preflight
 print("PASS: live classic campaign selector, no duplicated indicators, 70 safe skins, alpha "
       "logo/corners, 16:9 safe-area, structured BLE, honest FPS; untouched "
       "source physics/legacy BLE. Editor/Android validation remains necessary.")
+
+# 9. Campaign V6.4: local original assets are deliberately absent in host CI.
+# Verify the published delta chain from the immutable V6.3 manifest instead of
+# claiming that we executed the proprietary maps or gameplay.
+import json
+manifest = json.loads((root / "tools/campaign_v63/MANIFIESTO_LOCAL_V63.json").read_text())
+maps = {m["slot"]: (m["active_sha256_compact"], m["active"]) for m in manifest["maps"]}
+assert set(maps) == set(range(1, 6))
+seen = set()
+for file in sorted((root / "tools/level_editor/changes").glob("BIOFIT_level_*.json")):
+    d = json.loads(file.read_text())
+    slot = d["slot"]
+    assert slot in maps and d["schema"] == d["editorRevision"] == 1, file
+    assert file.name.startswith(f"BIOFIT_level_{slot}_"), file
+    base, count = maps[slot]
+    # The currently published history is a linear chain per slot.
+    assert d["baseSha256"] == base, (file, "unexpected base")
+    assert re.fullmatch(r"[0-9a-f]{64}", d["targetSha256"]), file
+    assert d["targetSha256"] not in seen, file
+    seen.add(d["targetSha256"])
+    order = d["order"]
+    added = [o["index"] for o in d["added"]]
+    edited = [o["index"] for o in d["edits"]]
+    removed = d["removed"]
+    assert all(len(x) == len(set(x)) for x in (order, added, edited, removed)), file
+    assert set(added).isdisjoint(edited) and set(removed).isdisjoint(order), file
+    assert set(added + edited) <= set(order), file
+    assert len(order) == count + len(added) - len(removed), file
+    assert all("raw" not in o and "raw" not in o.get("fields", {}) for o in d["added"] + d["edits"]), file
+    maps[slot] = (d["targetSha256"], len(order))
+assert len(seen) >= 3, "Published user edits missing"
+editor = (root / "Assets/BIOFIT/GeomeTry/Editor/BiofitLevelEditor.cs").read_text()
+runtime = (root / "Assets/BIOFIT/GeomeTry/BiofitStereoLocalRuntime.cs").read_text()
+assert editor.lstrip().startswith("#if UNITY_EDITOR")
+assert "EditorWindow" in editor and "BIOFIT/Level Editor/Abrir editor" in editor
+assert "#if UNITY_EDITOR" in runtime and "BIOFIT_EDITOR_TEST_PATH" in runtime
+assert "collisionMode" in runtime and "deathMask" in runtime
+assert "BuildV63Completion()" in ui
+assert "CooldownOptionsMs = { 900, 800, 700, 600, 500, 400 }" in ui
+print("PASS: V6.4 editor isolation and published campaign delta metadata", maps)
