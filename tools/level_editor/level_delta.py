@@ -2,7 +2,7 @@
 """BIOFIT V6.4: delta exacto, local y publicación selectiva. Python 3.9+."""
 import argparse, hashlib, json, os, re, subprocess, sys, tempfile
 from pathlib import Path
-BR='niveles-mejorados'
+PUBLISH_BRANCHES={'main','niveles-mejorados'}
 REPO='lucianorodriguezurquiza/biofit-game-unity'
 DEC=json.JSONDecoder()
 FIELDS=set('index id layer order kind xGD yGD rotationGD widthGD heightGD flipX flipY frames r g b duration portalMinGD portalMaxGD collisionMode deathMask editorScaleX editorScaleY'.split())
@@ -68,11 +68,11 @@ def main():
         require(not(root/'Temp/UnityLockfile').exists(),'Cerrá Unity para aplicar desde Python');require(sha(read(active))==d['baseSha256'],'Active cambió');work.mkdir(parents=True,exist_ok=True);atomic(work/'PreviousActive.json',base);atomic(active,result);print('OK ACTIVE LOCAL; sin publicar')
     if a.publicar:
         rel=delta.relative_to(root).as_posix();require(rel.startswith('tools/level_editor/changes/') and re.fullmatch(r'BIOFIT_level_[1-5]_\d{8}_\d{6}\.json',delta.name),'Exportá con el nombre sugerido dentro de tools/level_editor/changes')
-        require(git(root,'branch','--show-current')==BR,'Publicación únicamente en '+BR);url=git(root,'remote','get-url','origin').lower().removesuffix('.git');require(url.endswith('/'+REPO) or url.endswith(':'+REPO),'Origin no autorizado');require(not git(root,'diff','--cached','--name-only'),'Hay cambios staged; no se mezclan')
-        git(root,'fetch','origin',BR);require(git(root,'rev-parse','HEAD')==git(root,'rev-parse','origin/'+BR),'Rama local y remota no coinciden; no se fuerza')
+        BR=git(root,'branch','--show-current');require(BR in PUBLISH_BRANCHES,'Publicación únicamente en main o niveles-mejorados mientras exista');url=git(root,'remote','get-url','origin').lower().removesuffix('.git');require(url.endswith('/'+REPO) or url.endswith(':'+REPO),'Origin no autorizado');require(not git(root,'diff','--cached','--name-only'),'Hay cambios staged; no se mezclan')
+        require(bool(git(root,'ls-remote','--heads','origin',BR)),'Rama remota ausente; sincronizá main. No se recrea una rama eliminada');git(root,'fetch','origin',BR);require(git(root,'rev-parse','HEAD')==git(root,'rev-parse','origin/'+BR),'Rama local y remota no coinciden; no se fuerza')
         index=root/'tools/level_editor/changes/INDEX.md';prior=read(index) if index.exists() else '# Cambios experimentales de niveles\n';require(delta.name not in prior,'Delta ya registrado')
         note=' '.join(a.nota.split());line=f'\n- [{delta.name}]({delta.name}) — ranura {slot}; {len(d["edits"])} ediciones, {len(d["added"])} altas, {len(d["removed"])} bajas; base {d["baseSha256"]}; objetivo {d["targetSha256"]}. {note}\n'
-        atomic(index,prior+line);idx=index.relative_to(root).as_posix();git(root,'add','--',rel,idx);git(root,'commit','--only','-m',f'Nivel {slot}: delta experimental del editor','--',rel,idx);git(root,'push','origin','HEAD:refs/heads/'+BR);head=git(root,'rev-parse','HEAD');remote=git(root,'ls-remote','--heads','origin',BR).split()[0];require(head==remote,'Publicación no confirmada');print('OK DELTA PUBLICADO',head,'| main intacta')
+        atomic(index,prior+line);idx=index.relative_to(root).as_posix();git(root,'add','--',rel,idx);git(root,'commit','--only','-m',f'Nivel {slot}: delta experimental del editor','--',rel,idx);git(root,'push','origin','HEAD:refs/heads/'+BR);head=git(root,'rev-parse','HEAD');remote=git(root,'ls-remote','--heads','origin',BR).split()[0];require(head==remote,'Publicación no confirmada');print('OK DELTA PUBLICADO',head,'| rama',BR,'| solo delta e índice')
 if __name__=='__main__':
     try: main()
     except Exception as e: print('DETENIDO:',e,file=sys.stderr);sys.exit(1)
