@@ -1,3 +1,9 @@
+# Estado experimental — V6.4 / BIOFIT Level Editor 1.0
+
+25/11/2026: el usuario solicitó editor de niveles exclusivo de Unity, colocación y modificación de objetos, colisiones por vehículo, edición de monedas, y corrección visual de orientación inicial del Cube. Se desarrolló en niveles-mejorados. main permanece V6.3 estable 597631a69eed15a064c96baa14759a06704d22ce. Leer [guía y arquitectura V6.4](LEVEL_EDITOR_V64.md), [validación](../tools/level_editor/VALIDACION_V64.json), [deltas](../tools/level_editor/changes/INDEX.md). V6.4 pendiente de instalación/compilación/prueba real. Los cinco mapas actuales no se modificaron. Conserva ICC, DIPL, RFD, BRO, FLM y RCA. No dar por validada ni promover a main. La documentación siguiente describe la base estable V6.3.
+
+---
+
 # BIOFIT DASH — V6.3 Campaña Clásica / niveles mejorados
 Fecha de aprobación del usuario: 24/11/2026. El usuario probó la V6.3, la consideró bastante buena y pidió dejarla estable para continuar. Esta es una aceptación de la versión de trabajo, no una certificación de todos los niveles, APK Android, latencia ni los seis cooldowns. La publicación se verifica por el SHA remoto de main y el manifiesto local de esta consolidación.
 
