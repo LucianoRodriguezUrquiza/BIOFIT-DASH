@@ -38,7 +38,7 @@ assert "cube.isAlive" in src
 # Ship must be a fourth mode of the same avatar. Gravity
 # is held; discrete BLE pairs create finite thrust pulses.
 for token in (
-    "public enum BiofitMode { Cube, Ball, Spider, Ship }",
+    "public enum BiofitMode { Cube, Ball, Spider, Ship, InvertedCube }",
     'Register("biofitShipPortal", BiofitMode.Ship);',
     "private const float ShipGravity = 2.5f;",
     "private const float ShipMaxVerticalSpeed = 10f;",
@@ -56,11 +56,18 @@ assert "motor.TryPulse();" in bridge
 assert "BilateralJumpCandidate += OnBilateralLegacyCandidate" in bridge
 assert "cube.onClick();" in bridge
 assert 'if (motor != null && motor.Mode != BiofitMode.Cube)' in bridge
-assert '"CUBO / NAVE"' in ui
-assert '"MONEDAS " + BiofitStereoCoinPickup.Collected + " / 3"' in ui
+# Ship is retained in the historical map, not advertised in the current campaign.
+assert '"CUBO / BOLA / SPIDER"' in ui
+assert '"MONEDAS " + BiofitStereoCoinPickup.Collected + " / " + BiofitStereoLocalRuntime.TotalCoins' in ui
+runtime = (ROOT / "Assets/BIOFIT/GeomeTry/BiofitStereoLocalRuntime.cs").read_text("utf-8")
+hud = (ROOT / "Assets/BIOFIT/GeomeTry/BiofitV2Hud.cs").read_text("utf-8")
+assert 'TotalCoins=0; foreach(Item item in d.objects) if(item.kind=="coin") TotalCoins++;' in runtime
+assert "BiofitStereoLocalRuntime.TotalCoins" in hud
+assert "SetActive(i<total)" in hud
 assert 'stereoCoinHudLabel = null;' in ui
 assert 'gameObject.SetActive(false);' in src and 'coin.gameObject.SetActive(true);' in src
-assert 'if (id == 1) BiofitStereoCoinPickup.ResetRun();' in src
+assert 'if(id==1) BiofitStereoCoinPickup.ResetRun();' in src
+assert 'if (BiofitStereoLocalRuntime.IsLocal(GameManager.Instance?.SelectedLevel)) { BiofitStereoCoinPickup.ResetRun(); motor.SetMode(BiofitMode.Cube); }' in src
 
 assert "(i == 0 ? 825 : 575)" in build
 assert '"biofitShipPortal", "biofitStereoCoin"' in build
