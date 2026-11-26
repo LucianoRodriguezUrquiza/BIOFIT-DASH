@@ -22,6 +22,7 @@ namespace Biofit.GeomeTryOriginal
             public int index, id, layer, order;
             // 0 preserves the exact imported behaviour. Nonzero is an explicit editor override.
             public int collisionMode, deathMask;
+            public float editorScaleX, editorScaleY;
             public string kind;
             public float xGD, yGD, rotationGD, widthGD, heightGD;
             public bool flipX, flipY;
@@ -80,9 +81,25 @@ namespace Biofit.GeomeTryOriginal
         }
         private static Data ReadData(int slot, string file)
         {
-            TextAsset asset=Resources.Load<TextAsset>(Campaign(slot)+file);
-            if(asset==null) throw new InvalidOperationException("Falta nivel local V5: "+slot+"/"+file);
-            Data d=JsonUtility.FromJson<Data>(asset.text);
+            string text=null;
+#if UNITY_EDITOR
+            if(file=="Active" && UnityEditor.SessionState.GetInt("BIOFIT_EDITOR_TEST_SLOT",-1)==slot)
+            {
+                string path=UnityEditor.SessionState.GetString("BIOFIT_EDITOR_TEST_PATH","");
+                if(!string.IsNullOrEmpty(path))
+                {
+                    if(!System.IO.File.Exists(path))throw new InvalidOperationException("Falta borrador de prueba.");
+                    text=System.IO.File.ReadAllText(path);
+                }
+            }
+#endif
+            if(text==null)
+            {
+                TextAsset asset=Resources.Load<TextAsset>(Campaign(slot)+file);
+                if(asset==null) throw new InvalidOperationException("Falta nivel local V5: "+slot+"/"+file);
+                text=asset.text;
+            }
+            Data d=JsonUtility.FromJson<Data>(text);
             if(d==null || d.unitsPerBlock!=30 || d.objects==null || d.initialBackground==null || d.initialBackground.Length!=3 || d.initialGround==null || d.initialGround.Length!=3 || d.endGD<=0) throw new InvalidOperationException("Datos V5 invalidos");
             return d;
         }
@@ -93,7 +110,7 @@ namespace Biofit.GeomeTryOriginal
             if(map==null) throw new InvalidOperationException("Falta manifest V5: "+slot);
             Level level=new Level(map); Data original=ReadData(slot,"Original"), active=ReadData(slot,"Active");
             int[] counts={2291,1545,1531,1704,2813}; int[] sections={2,1,1,1,2};
-            if(!IsLocal(level) || level.Id!=slot || level.Music==null || original.objects.Length!=counts[index] || original.sourceSha256!=active.sourceSha256 || original.endGD!=active.endGD) throw new InvalidOperationException("Manifest V5 invalido: "+slot);
+            if(!IsLocal(level) || level.Id!=slot || level.Music==null || original.objects.Length!=counts[index] || original.sourceSha256!=active.sourceSha256 || (active.editorRevision==0 && original.endGD!=active.endGD) || active.endGD>original.endGD) throw new InvalidOperationException("Manifest V5 invalido: "+slot);
             var indexes=new HashSet<int>(); var frames=new HashSet<string>();int coins=0,portals=0;
             foreach(Item o in active.objects)
             {
@@ -201,6 +218,7 @@ namespace Biofit.GeomeTryOriginal
                     // Object layers remain ordered relative to each other; player remains above normal geometry.
                     else sort-=650;
                     var sr=Visual(root.transform,o.frames[k],sort);
+                    if(o.editorScaleX>0 || o.editorScaleY>0) sr.transform.localScale=new Vector3(o.editorScaleX>0?o.editorScaleX:1,o.editorScaleY>0?o.editorScaleY:1,1);
                     if(outlines!=null && outlines.Contains(o)) sr.sprite=outlines.FillSprite;
                     if(o.id==9) sr.color=Color.black;
                     else if(o.id>=18&&o.id<=21) sr.color=new Color32(255,200,75,255);
@@ -276,7 +294,7 @@ namespace Biofit.GeomeTryOriginal
             // Both corridors have explicit continuous support surfaces. Keep the original finish coordinate.
             maxGD=0f;
             foreach(Item o in original.objects) maxGD=Mathf.Max(maxGD,o.xGD);
-            finalX=WorldX(original.endGD);
+            finalX=WorldX(d.endGD);
             GameObject end=GameObject.FindWithTag("EndOfMap");
             if(end!=null) end.transform.position=new Vector3(finalX,end.transform.position.y,end.transform.position.z);
             GameObject wall=GameObject.Find("EndWallPrefab(Clone)");
