@@ -127,7 +127,7 @@ namespace Biofit.GeomeTryOriginal
             Debug.Log("BIOFIT V5: "+level.Name+" fuente="+original.objects.Length+" activos="+active.objects.Length+" portales="+portals+"; validacion estructural, no gameplay.");
             return true;
         }
-        private static bool IsPortal(Item o) => o.kind=="cubePortal" || o.kind=="ballPortal" || o.kind=="spiderPortal" || o.kind=="gravityUp" || o.kind=="gravityDown";
+        private static bool IsPortal(Item o) => o.kind=="cubePortal" || o.kind=="ballPortal" || o.kind=="spiderPortal" || o.kind=="gravityUp" || o.kind=="gravityDown" || o.kind=="miniPortal" || o.kind=="normalSizePortal";
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void RegisterScene()
         {
@@ -274,7 +274,7 @@ namespace Biofit.GeomeTryOriginal
                         hit.size=new Vector2(size.x*.75f,(o.portalMaxGD-o.portalMinGD)/Unit);
                         hit.offset=new Vector2(0,((o.portalMinGD+o.portalMaxGD)*.5f-o.yGD)/Unit);
                     }
-                    if(o.kind=="gravityUp"||o.kind=="gravityDown")
+                    if(o.kind=="gravityUp"||o.kind=="gravityDown"||o.kind=="miniPortal"||o.kind=="normalSizePortal")
                         root.AddComponent<BiofitV5Interaction>().kind=o.kind;
                     else root.AddComponent<BiofitModePortal>().Target=o.kind=="ballPortal"?BiofitMode.Ball:o.kind=="spiderPortal"?BiofitMode.Spider:BiofitMode.Cube;
                 }
