@@ -217,7 +217,7 @@ namespace Biofit.GeomeTryOriginal
                 RefreshCooldownHud();
                 if (stereoCoinHudLabel != null)
                     stereoCoinHudLabel.text =
-                        "MONEDAS " + BiofitStereoCoinPickup.Collected + " / 3";
+                        "MONEDAS " + BiofitStereoCoinPickup.Collected + " / " + BiofitStereoLocalRuntime.TotalCoins;
             }
             if (currentScene == LevelScene && Time.unscaledTime >= findCubeAt)
             {
