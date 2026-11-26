@@ -34,7 +34,8 @@ namespace Biofit.LevelEditing
         Dictionary<int,Vector2> dragStart;
         float zoom=1.2f, grid=30, dragGrid;
         bool snap=true, showGrid=true, showColliders=true, showTriggers=true, placing, dirty, dragging, panning, selecting;
-        string query="",spriteName="", publishMessage="Editar nivel BIOFIT";
+        string query="",spriteName="";
+        float maxLength;
         Rect canvas, marquee;
         Vector2 lastWorld=new Vector2(300,15);
         string Root=>Path.GetFullPath(Path.Combine(Application.dataPath,".."));
@@ -66,13 +67,14 @@ namespace Biofit.LevelEditing
             if(resume&&File.Exists(Draft)&&File.Exists(Baseline))
             {
                 baseText=File.ReadAllText(Baseline);
-                if(Hash(baseText)!=activeHash)throw new Exception("El mapa activo cambió desde el borrador. Exportá/resguardá el borrador antes de cargar sin él.");
                 loaded=File.ReadAllText(Draft);
+                if(Hash(baseText)!=activeHash && Hash(loaded)!=activeHash)throw new Exception("El mapa activo cambió desde el borrador. Exportá/resguardá el borrador antes de cargar sin él.");
             }
             else {File.WriteAllText(Baseline,baseText,new UTF8Encoding(false));}
             data=Parse(loaded);
             baseRaw.Clear();baseTyped.Clear();
             var b=Parse(baseText);
+            maxLength=Parse(File.ReadAllText(Path.Combine(MapDir,"Original.json"))).endGD;
             var raw=RawJson.Objects(RawJson.Fields(baseText)["objects"]);
             for(int i=0;i<b.objects.Length;i++){baseRaw.Add(b.objects[i].index,raw[i]);baseTyped.Add(b.objects[i].index,JsonUtility.ToJson(b.objects[i]));}
             undo.Clear();redo.Clear();selection.Clear();dirty=loaded!=active;
@@ -136,7 +138,7 @@ namespace Biofit.LevelEditing
             Vector2 q=new Vector2(delta.x*Mathf.Cos(a)-delta.y*Mathf.Sin(a),delta.x*Mathf.Sin(a)+delta.y*Mathf.Cos(a));
             Rect r=ObjectRect(o);return Mathf.Abs(q.x)<=Mathf.Max(5,r.width/2)&&Mathf.Abs(q.y)<=Mathf.Max(5,r.height/2);
         }
-        int NextId()=>data.objects.Length==0?100000:data.objects.Max(o=>o.index)+1;
+        int NextId()=>Math.Max(100000,Math.Max(data.objects.Select(o=>o.index).DefaultIfEmpty(0).Max(),baseRaw.Keys.DefaultIfEmpty(0).Max())+1);
         void Add(Item template,Vector2 pos)
         {
             Push();var o=Clone(template);o.index=NextId();o.xGD=Snap(pos.x);o.yGD=Snap(pos.y);
@@ -168,8 +170,10 @@ namespace Biofit.LevelEditing
                 {
                     if(GUILayout.Button("Guardar borrador",EditorStyles.toolbarButton))Guard(SaveDraft);
                     if(GUILayout.Button("Validar",EditorStyles.toolbarButton))Guard(()=>{Validate();status="Validación estructural OK. Jugabilidad pendiente.";});
+                    if(GUILayout.Button("Probar borrador",EditorStyles.toolbarButton))Guard(PrepareTest);
                     if(GUILayout.Button("Aplicar al juego",EditorStyles.toolbarButton))Guard(Apply);
                     if(GUILayout.Button("Exportar cambios",EditorStyles.toolbarButton))Guard(Export);
+                    if(GUILayout.Button("FLM",EditorStyles.toolbarButton))Guard(()=>BiofitEditorFlm.Export(data,Names[slot],Tex));
                 }
             }
             if(data==null){EditorGUILayout.HelpBox(status,MessageType.Info);return;}
@@ -347,7 +351,9 @@ namespace Biofit.LevelEditing
                 n.layer=EditorGUILayout.IntField("Capa",n.layer);n.order=EditorGUILayout.IntField("Orden",n.order);
                 if(!IsInteraction(n)&&!IsTrigger(n))
                 {
+                    int beforeCollision=n.collisionMode;
                     n.collisionMode=EditorGUILayout.Popup("Colisión",Mathf.Clamp(n.collisionMode,0,4),Collisions);
+                    if(n.collisionMode!=beforeCollision && (n.collisionMode==3||n.collisionMode==4) && n.deathMask==0)n.deathMask=15;
                     if(n.collisionMode==3||n.collisionMode==4)n.deathMask=EditorGUILayout.MaskField("Mortal para",n.deathMask,Mask)&15;
                 }
                 else {n.collisionMode=0;EditorGUILayout.HelpBox("La función utiliza el trigger del motor existente.",MessageType.None);}
@@ -385,7 +391,10 @@ namespace Biofit.LevelEditing
             GUILayout.Space(8);GUILayout.Label("NIVEL",EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Monedas",data.objects.Count(o=>o.kind=="coin")+" / 3");
             EditorGUILayout.LabelField("Portales",data.objects.Count(o=>o.kind.EndsWith("Portal")).ToString());
-            EditorGUILayout.LabelField("Longitud (GD)",data.endGD.ToString("F0"));
+            float length=EditorGUILayout.DelayedFloatField("Longitud GD (máx. original)",data.endGD);
+            if(length!=data.endGD){Push();data.endGD=Mathf.Clamp(length,300,maxLength);}
+            if(GUILayout.Button("Restaurar último Active"))Guard(RestorePrevious);
+            if(GUILayout.Button("Importar PNG propio local"))Guard(ImportPng);
             if(GUILayout.Button("Abrir carpeta de trabajo"))EditorUtility.RevealInFinder(Work);
             EditorGUILayout.HelpBox("Aplicar modifica solo Active.json. Para jugar, usá el menú normal y elegí la ranura. Original.json y Level.json permanecen intactos. Exportar genera diferencias, no publica automáticamente.",MessageType.Info);
             EditorGUILayout.EndScrollView();
@@ -394,12 +403,14 @@ namespace Biofit.LevelEditing
         {
             if(data==null)throw new Exception("Sin nivel.");
             if(data.objects.Count(x=>x.kind=="coin")>3)throw new Exception("Máximo 3 monedas por HUD actual.");
+            float previousLength=Parse(baseText).endGD;
+            if(float.IsNaN(data.endGD)||data.endGD<300||data.endGD>maxLength)throw new Exception("Longitud fuera del intervalo permitido.");
             var ids=new HashSet<int>();
             foreach(var o in data.objects)
             {
                 if(!ids.Add(o.index)||!Kinds.Contains(o.kind)||o.frames==null||o.widthGD<=0||o.heightGD<=0||o.collisionMode<0||o.collisionMode>4||o.deathMask<0||o.deathMask>15)throw new Exception("Registro inválido #"+o.index);
                 foreach(float f in new[]{o.xGD,o.yGD,o.rotationGD,o.widthGD,o.heightGD,o.portalMinGD,o.portalMaxGD,o.duration})if(float.IsNaN(f)||float.IsInfinity(f))throw new Exception("Número inválido #"+o.index);
-                if(o.xGD<0||o.xGD>data.endGD||o.yGD < -300||o.yGD>3000)throw new Exception("Fuera del área del nivel #"+o.index);
+                if((!baseTyped.TryGetValue(o.index,out var existing)||existing!=JsonUtility.ToJson(o)||data.endGD<previousLength) && (o.xGD<0||o.xGD>data.endGD))throw new Exception("Fuera del área del nivel #"+o.index);
                 foreach(string f in o.frames)if(Tex(f)==null)throw new Exception("Sprite local no encontrado: "+f);
                 if(!IsTrigger(o)&&o.frames.Length==0)throw new Exception("Objeto visible sin sprite #"+o.index);
             }
@@ -408,6 +419,7 @@ namespace Biofit.LevelEditing
         {
             var header=RawJson.Fields(baseText);
             header["editorRevision"]="1";
+            if(data.endGD!=Parse(baseText).endGD)header["endGD"]=data.endGD.ToString("R",System.Globalization.CultureInfo.InvariantCulture);
             var records=new List<string>();
             foreach(var o in data.objects)
             {
@@ -434,6 +446,34 @@ namespace Biofit.LevelEditing
             string temp=path+".tmp";File.WriteAllText(temp,text,new UTF8Encoding(false));
             if(File.Exists(path))File.Replace(temp,path,null);else File.Move(temp,path);
         }
+        void PrepareTest()
+        {
+            Validate();if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
+            SaveDraft();UnityEditor.SessionState.SetString("BIOFIT_EDITOR_TEST_PATH",Draft);UnityEditor.SessionState.SetInt("BIOFIT_EDITOR_TEST_SLOT",slot+1);
+            status="Prueba preparada: "+Names[slot]+". Abrí Main Menu original, Play y seleccioná ese nivel. Active.json intacto.";
+            EditorUtility.DisplayDialog("Prueba de borrador",status,"Entendido");
+        }
+        [InitializeOnLoadMethod] static void ClearTestAfterPlay()
+        {
+            EditorApplication.playModeStateChanged+=state=>{if(state==PlayModeStateChange.EnteredEditMode){SessionState.EraseString("BIOFIT_EDITOR_TEST_PATH");SessionState.EraseInt("BIOFIT_EDITOR_TEST_SLOT");}};
+        }
+        void RestorePrevious()
+        {
+            if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
+            string p=Path.Combine(Work,"PreviousActive.json");if(!File.Exists(p))throw new Exception("No hay versión anterior guardada.");
+            if(Hash(File.ReadAllText(Active))!=activeHash)throw new Exception("Active cambió externamente.");
+            if(!EditorUtility.DisplayDialog("Restaurar","Restaurar únicamente el último Active anterior? El borrador permanece.","Restaurar","Cancelar"))return;
+            Atomic(Active,File.ReadAllText(p));activeHash=Hash(File.ReadAllText(Active));AssetDatabase.Refresh();status="Active anterior restaurado. Borrador conservado.";
+        }
+        void ImportPng()
+        {
+            string src=EditorUtility.OpenFilePanel("PNG propio o autorizado","","png");if(string.IsNullOrEmpty(src))return;
+            if(!EditorUtility.DisplayDialog("Importar local","Importar solo un PNG propio o con permiso. No se publicará automáticamente.","Importar","Cancelar"))return;
+            string name="editor_"+Path.GetFileNameWithoutExtension(src).Replace(" ","_");
+            if(name.IndexOfAny(Path.GetInvalidFileNameChars())>=0)throw new Exception("Nombre inválido.");
+            string dst=Path.Combine(Root,SpriteDir,name+".png");if(File.Exists(dst))throw new Exception("Ya existe ese sprite. No se sobrescribe.");
+            File.Copy(src,dst);AssetDatabase.ImportAsset(SpriteDir+name+".png",ImportAssetOptions.ForceSynchronousImport);textures.Remove(name);BuildCatalog();spriteName=name;status="Sprite importado localmente: "+name;
+        }
         void Apply()
         {
             Validate();
@@ -450,13 +490,21 @@ namespace Biofit.LevelEditing
         {
             Validate();SaveDraft();
             var current=RawJson.Objects(RawJson.Fields(File.ReadAllText(Draft))["objects"]);
-            var up=new List<string>();var removed=new List<int>();var now=new HashSet<int>();
-            for(int i=0;i<data.objects.Length;i++){int id=data.objects[i].index;now.Add(id);if(!baseRaw.TryGetValue(id,out var old)||old!=current[i])up.Add(current[i]);}
+            var up=new List<string>();var edits=new List<string>();var removed=new List<int>();var now=new HashSet<int>();
+            for(int i=0;i<data.objects.Length;i++)
+            {
+                int id=data.objects[i].index;now.Add(id);
+                if(!baseRaw.TryGetValue(id,out var old)){up.Add(current[i]);continue;}
+                if(old==current[i])continue;
+                var oldFields=RawJson.Fields(old);var changes=new Dictionary<string,string>();
+                foreach(var p in RawJson.Fields(current[i]))if(p.Key!="raw"&&(!oldFields.TryGetValue(p.Key,out var b)||b!=p.Value))changes[p.Key]=p.Value;
+                if(changes.Count>0)edits.Add("{\"index\":"+id+",\"fields\":"+RawJson.Join(changes)+"}");
+            }
             foreach(int id in baseRaw.Keys)if(!now.Contains(id))removed.Add(id);
-            var header=new Dictionary<string,string>{{"schema","1"},{"slot",(slot+1).ToString()},{"baseSha256","\""+Hash(baseText)+"\""},{"targetSha256","\""+Hash(File.ReadAllText(Draft))+"\""},{"editorRevision","1"},{"removed","["+string.Join(",",removed)+"]"},{"upsert","["+string.Join(",",up)+"]"},{"order","["+string.Join(",",data.objects.Select(x=>x.index))+"]"}};
+            var header=new Dictionary<string,string>{{"schema","1"},{"slot",(slot+1).ToString()},{"baseSha256","\""+Hash(baseText)+"\""},{"targetSha256","\""+Hash(File.ReadAllText(Draft))+"\""},{"editorRevision","1"},{"endGD",RawJson.Fields(File.ReadAllText(Draft))["endGD"]},{"removed","["+string.Join(",",removed)+"]"},{"added","["+string.Join(",",up)+"]"},{"edits","["+string.Join(",",edits)+"]"},{"order","["+string.Join(",",data.objects.Select(x=>x.index))+"]"}};
             string f=EditorUtility.SaveFilePanel("Exportar cambios (solo diferencia) ",Path.Combine(Root,"tools"),"BIOFIT_level_"+(slot+1)+"_changes","json");
             if(string.IsNullOrEmpty(f))return;
-            Atomic(f,RawJson.Join(header));status="Cambios exportados: "+f+" | "+up.Count+" registros nuevos/editados, "+removed.Count+" eliminados.";
+            Atomic(f,RawJson.Join(header));status="Cambios exportados: "+f+" | "+(up.Count+edits.Count)+" registros nuevos/editados, "+removed.Count+" eliminados.";
         }
     }
     // Minimal raw JSON reader: keeps unknown source fields (including 'raw')
