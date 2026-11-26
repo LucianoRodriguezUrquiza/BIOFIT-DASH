@@ -1,3 +1,9 @@
+# Guía vigente tras consolidación V6.4
+
+La V6.4 fue aprobada por el usuario el 26/11/2026. [Consolidación y estado CI](CONSOLIDACION_V64.md). El botón Publicar delta experimental conserva su nombre, pero publica exclusivamente el JSON y el índice en la rama local autorizada y sincronizada; main es el destino después de la consolidación. No recrear niveles-mejorados si se retira. El instalador histórico y las menciones a V6.3 estable/niveles-mejorados de abajo describen el estado anterior. No ejecutar el instalador histórico sobre main V6.4. Sincronizar mediante Git sin sustituir Active ni Original locales.
+
+---
+
 # BIOFIT DASH V6.4 experimental — BIOFIT Level Editor 1.0
 Fecha: 25/11/2026. Base estable: V6.3, 597631a69eed15a064c96baa14759a06704d22ce. El usuario solicitó un editor completo exclusivo de Unity, edición de colisiones por vehículo, monedas, portales, pads y corrección de orientación inicial del Cube. No autorizó merge a main. No se ejecutó Unity en el entorno del asistente. Actualización 26/11/2026: el usuario abrió el Level Editor V6.4 en Unity, editó Stereo Madness y exportó/publicó correctamente el primer delta (`9f1dba739338759ef27f6dfc5b2ab5e169e3586e`). El objetivo contiene 2998 registros, 69 ediciones, 86 altas y 103 bajas; consultar el [índice de deltas](../tools/level_editor/changes/INDEX.md). La apertura de la interfaz, edición y publicación están demostradas por capturas del usuario y el commit remoto. No se ha comprobado independientemente la compilación completa, la aplicación del delta a Active.json local, la jugabilidad, la orientación inicial del Cube, las demás funciones del editor, la APK ni los sensores físicos. main sigue V6.3 estable; no promover sin autorización. Los recursos originales siguen locales.
 
