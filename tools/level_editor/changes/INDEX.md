@@ -1,6 +1,6 @@
-# Deltas experimentales de niveles
+# Historial de deltas de niveles — V6.4
 
-V6.3 en main conserva sus cinco mapas. La rama experimental registra los deltas del usuario con ranura, huellas, altas/bajas/ediciones y nota de validación. Consultar docs/LEVEL_EDITOR_V64.md.
+Base histórica V6.3: cinco mapas locales y manifiesto inalterados. Los deltas del usuario pasan con la consolidación a main; cada entrada conserva ranura, huellas, altas/bajas/ediciones y validación. Consultar [consolidación V6.4](../../../docs/CONSOLIDACION_V64.md). Las observaciones anteriores son históricas.
 
 - [BIOFIT_level_1_20261126_001459.json](BIOFIT_level_1_20261126_001459.json) — ranura 1; 69 ediciones, 86 altas, 103 bajas; base e64c3a5a6ef2e7e3234468189bfe38c944b36984b5c6c3818d029f411fff839b; objetivo 8c7adbe0f89959dcf86b89e70c10ed62f084ebbb2407420a56a4ffb159798f0f. Edición experimental desde BIOFIT Level Editor; validación de jugabilidad pendiente.
 
