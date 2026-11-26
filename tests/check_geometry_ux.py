@@ -218,17 +218,19 @@ manifest = json.loads((root / "tools/campaign_v63/MANIFIESTO_LOCAL_V63.json").re
 maps = {m["slot"]: (m["active_sha256_compact"], m["active"]) for m in manifest["maps"]}
 assert set(maps) == set(range(1, 6))
 seen = set()
+known_bases = {slot: {digest: count} for slot, (digest, count) in maps.items()}
 for file in sorted((root / "tools/level_editor/changes").glob("BIOFIT_level_*.json")):
     d = json.loads(file.read_text())
     slot = d["slot"]
     assert slot in maps and d["schema"] == d["editorRevision"] == 1, file
     assert file.name.startswith(f"BIOFIT_level_{slot}_"), file
-    base, count = maps[slot]
-    # The currently published history is a linear chain per slot.
-    assert d["baseSha256"] == base, (file, "unexpected base")
+    # Accept a new revision from any previously published base of this slot;
+    # a cumulative re-export from an older base is also valid.
+    base = d["baseSha256"]
+    assert base in known_bases[slot], (file, "unpublished base")
+    count = known_bases[slot][base]
     assert re.fullmatch(r"[0-9a-f]{64}", d["targetSha256"]), file
-    assert d["targetSha256"] not in seen, file
-    seen.add(d["targetSha256"])
+    seen.add(file.name)
     order = d["order"]
     added = [o["index"] for o in d["added"]]
     edited = [o["index"] for o in d["edits"]]
@@ -238,6 +240,9 @@ for file in sorted((root / "tools/level_editor/changes").glob("BIOFIT_level_*.js
     assert set(added + edited) <= set(order), file
     assert len(order) == count + len(added) - len(removed), file
     assert all("raw" not in o and "raw" not in o.get("fields", {}) for o in d["added"] + d["edits"]), file
+    previous_count = known_bases[slot].get(d["targetSha256"], len(order))
+    assert previous_count == len(order), file
+    known_bases[slot][d["targetSha256"]] = len(order)
     maps[slot] = (d["targetSha256"], len(order))
 assert len(seen) >= 3, "Published user edits missing"
 editor = (root / "Assets/BIOFIT/GeomeTry/Editor/BiofitLevelEditor.cs").read_text()
@@ -249,3 +254,68 @@ assert "collisionMode" in runtime and "deathMask" in runtime
 assert "BuildV63Completion()" in ui
 assert "CooldownOptionsMs = { 900, 800, 700, 600, 500, 400 }" in ui
 print("PASS: V6.4 editor isolation and published campaign delta metadata", maps)
+
+# Exercise the real publisher against a local bare Git repository; no network,
+# credentials, user maps or Unity are needed.
+import hashlib
+import subprocess
+import sys
+import tempfile
+
+def run(*args, cwd=None):
+    return subprocess.run(args, cwd=cwd, text=True, capture_output=True, check=True).stdout.strip()
+
+def digest(value):
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+publisher = root / "tools/level_editor/level_delta.py"
+base = '{"endGD":300,"objects":[{"index":1,"xGD":15,"raw":{"unknown":42}},{"index":2,"xGD":45}]}'
+target = '{"endGD":300,"objects":[{"index":1,"xGD":30,"raw":{"unknown":42}},{"index":100001,"kind":"solid","xGD":75}],"editorRevision":1}'
+delta = {"schema": 1, "slot": 1, "editorRevision": 1, "endGD": 300,
+         "baseSha256": digest(base), "targetSha256": digest(target),
+         "removed": [2], "added": [{"index": 100001, "kind": "solid", "xGD": 75}],
+         "edits": [{"index": 1, "fields": {"xGD": 30}}], "order": [1, 100001]}
+for branch in ("main", "niveles-mejorados"):
+    with tempfile.TemporaryDirectory() as temp:
+        tmp = Path(temp)
+        remote = tmp / "lucianorodriguezurquiza/biofit-game-unity"
+        remote.parent.mkdir()
+        run("git", "init", "--bare", "--initial-branch=main", str(remote))
+        repo = tmp / "project"
+        run("git", "init", "-b", branch, str(repo))
+        run("git", "config", "user.name", "BIOFIT CI", cwd=repo)
+        run("git", "config", "user.email", "ci@example.invalid", cwd=repo)
+        (repo / ".gitignore").write_text("Assets/\n")
+        folder = repo / "tools/level_editor/changes"
+        folder.mkdir(parents=True)
+        (folder / "INDEX.md").write_text("# Test index\n")
+        run("git", "add", ".gitignore", "tools/level_editor/changes/INDEX.md", cwd=repo)
+        run("git", "commit", "-m", "fixture", cwd=repo)
+        run("git", "remote", "add", "origin", str(remote), cwd=repo)
+        run("git", "push", "-u", "origin", branch, cwd=repo)
+        active = repo / "Assets/BIOFIT/Resources/BiofitStereoLocal/CampaignV5/1/Active.json"
+        active.parent.mkdir(parents=True)
+        active.write_text(base)
+        file = folder / "BIOFIT_level_1_20261126_120000.json"
+        file.write_text(json.dumps(delta, separators=(",", ":")))
+        cmd = [sys.executable, str(publisher), "--proyecto", str(repo), "--delta", str(file)]
+        assert digest(target) in run(*cmd)
+        assert "OK DELTA PUBLICADO" in run(*cmd, "--publicar")
+        assert active.read_text() == base
+        assert run("git", "rev-parse", "HEAD", cwd=repo) == run("git", "-C", str(remote), "rev-parse", branch)
+        assert set(run("git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD", cwd=repo).splitlines()) == {
+            file.relative_to(repo).as_posix(), "tools/level_editor/changes/INDEX.md"}
+        if branch == "niveles-mejorados":
+            run("git", "push", "origin", "--delete", branch, cwd=repo)
+            again = folder / "BIOFIT_level_1_20261126_120001.json"
+            again.write_text(file.read_text())
+            denied = subprocess.run([sys.executable, str(publisher), "--proyecto", str(repo),
+                                     "--delta", str(again), "--publicar"], text=True, capture_output=True)
+            assert denied.returncode != 0 and "Rama remota ausente" in denied.stderr
+            assert not run("git", "ls-remote", "--heads", "origin", branch, cwd=repo)
+        # Delta application is separate from publication, and preserves unknown source metadata.
+        assert "OK ACTIVE LOCAL" in run(*cmd, "--aplicar")
+        assert active.read_text() == target
+        denied = subprocess.run(cmd + ["--aplicar"], text=True, capture_output=True)
+        assert denied.returncode != 0 and active.read_text() == target
+print("PASS: local Git publisher main/legacy branch, selective paths, deleted-branch guard and delta reconstruction")
