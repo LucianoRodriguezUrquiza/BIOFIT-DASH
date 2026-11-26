@@ -1,6 +1,6 @@
 # BIOFIT DASH — V6.4 experimental / Level Editor 1.0
 
-Rama niveles-mejorados: herramienta de edición de niveles exclusiva de Unity y corrección visual inicial de Cube. **La versión estable sigue siendo V6.3 en main.** V6.4 está publicada en esta rama, no instalada ni probada aún en Unity por el usuario. Leer [guía del editor](docs/LEVEL_EDITOR_V64.md), [contexto actual](docs/CONTEXTO_ACTUAL.md) y [deltas experimentales](tools/level_editor/changes/INDEX.md). No fusionar sin validación y autorización.
+Rama niveles-mejorados: herramienta de edición de niveles exclusiva de Unity y corrección visual inicial de Cube. **La versión estable sigue siendo V6.3 en main.** V6.4 está publicada en esta rama; el usuario ya abrió el editor, editó Stereo Madness y publicó su primer delta (2998 registros). Las pruebas completas de jugabilidad, APK, BLE y aplicación a Active local permanecen pendientes. Leer [guía del editor](docs/LEVEL_EDITOR_V64.md), [contexto actual](docs/CONTEXTO_ACTUAL.md) y [deltas experimentales](tools/level_editor/changes/INDEX.md). No fusionar sin validación y autorización.
 
 ---
 
