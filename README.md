@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.4 experimental / Level Editor 1.0
+
+Rama niveles-mejorados: herramienta de edición de niveles exclusiva de Unity y corrección visual inicial de Cube. **La versión estable sigue siendo V6.3 en main.** V6.4 está publicada en esta rama, no instalada ni probada aún en Unity por el usuario. Leer [guía del editor](docs/LEVEL_EDITOR_V64.md), [contexto actual](docs/CONTEXTO_ACTUAL.md) y [deltas experimentales](tools/level_editor/changes/INDEX.md). No fusionar sin validación y autorización.
+
+---
+
 # BIOFIT DASH — V6.3 Campaña Clásica / niveles mejorados
 
 Versión estable de trabajo aprobada por el usuario el 24/11/2026. Leer [contexto actual](docs/CONTEXTO_ACTUAL.md), [relevo](docs/CONTEXTO_VIVO.md) y [referencias visuales](docs/referencias/V63/README.md). Los mapas originales y otros recursos de terceros se conservan localmente; consultar la reconstrucción documentada.
