@@ -43,7 +43,21 @@
     "total": 5,
     "failure": "check_geometry_ux.py:525, falso positivo comparación == confundida con asignación ="
   },
-  "ci_after_fix": "pending",
+  "ci_after_fix": {
+    "run_id": 45906168297,
+    "commit": "aad9ca3edcbb7106a662870ca78c932605bbe30e",
+    "status": "completed",
+    "conclusion": "success",
+    "passed": 5,
+    "total": 5,
+    "jobs": [
+      "regression",
+      "geometry-csharp-syntax",
+      "geometry-windows-compat",
+      "android-export-source",
+      "phase-firmware-replay"
+    ]
+  },
   "independent_unity_compilation": false,
   "independent_android_test": false,
   "independent_physical_ble_test": false,
@@ -54,5 +68,11 @@
     "Assets/BIOFIT/Resources/Songs.meta",
     "Assets/BIOFIT/Resources/Songs/"
   ],
-  "game_code_changed_by_this_fix": false
+  "game_code_changed_by_this_fix": false,
+  "consolidation": {
+    "authorized": true,
+    "method": "fast-forward de main al cierre documental, conservando rama de desarrollo",
+    "game_code_baseline": "aad9ca3edcbb7106a662870ca78c932605bbe30e",
+    "scope": "código validado por CI; aceptación de trabajo del usuario, no certificación integral física"
+  }
 }
