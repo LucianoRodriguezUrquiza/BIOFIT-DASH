@@ -19,7 +19,6 @@ string[] sources = {
     "Assets/BIOFIT/GeomeTry/BiofitV63Outline.cs",
     "Assets/BIOFIT/GeomeTry/BiofitV63Finish.cs",
     "Assets/BIOFIT/GeomeTry/BiofitV65EditorSession.cs",
-    "Assets/BIOFIT/GeomeTry/BiofitV65Skins.cs",
     "Assets/BIOFIT/GeomeTry/BiofitV5Interaction.cs",
     "Assets/BIOFIT/GeomeTry/Editor/BiofitLevelEditor.cs",
     "Assets/BIOFIT/GeomeTry/Editor/BiofitEditorFlm.cs",

@@ -324,7 +324,11 @@ print("PASS: local Git publisher main/legacy branch, selective paths, deleted-br
 session = (root / "Assets/BIOFIT/GeomeTry/BiofitV65EditorSession.cs").read_text()
 interaction = (root / "Assets/BIOFIT/GeomeTry/BiofitV5Interaction.cs").read_text()
 motor = (root / "Assets/BIOFIT/GeomeTry/BiofitThreeModes.cs").read_text()
-skins = (root / "Assets/BIOFIT/GeomeTry/BiofitV65Skins.cs").read_text()
+skins = motor
+assert "public static class BiofitV65Skins" in motor
+assert not (root / "Assets/BIOFIT/GeomeTry/BiofitV65Skins.cs").exists()
+assert "global::Camera" not in session
+assert "Time.timeScale=0" in session
 assert session.lstrip().startswith("#if UNITY_EDITOR") and session.rstrip().endswith("#endif")
 assert "BIOFIT_EDITOR_TEST_PATH" in session and "SessionState" in session
 assert "BiofitV65EditorSession.Tick" in runtime and "BiofitV65EditorSession.TryTakeLaunch" in ui

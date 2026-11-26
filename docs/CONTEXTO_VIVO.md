@@ -1,3 +1,9 @@
+## V6.5.1 — corrección de compilación (26/11/2026)
+
+El usuario instaló V6.5 correctamente (23 mapas/borradores preservados; 1931 sprites, 119 Ball, 69 Spider, cero variantes omitidas). Unity entró en Safe Mode: CS0400 en BiofitV65EditorSession.cs por referencia a global::Camera y seis CS0103 por BiofitV65Skins no resuelta. La clase existía en GitHub; la causa exacta de su ausencia en la compilación local no está confirmada. Se integra la clase estática sin cambios funcionales en BiofitThreeModes.cs (unidad de compilación ya reconocida), se elimina su archivo separado y se actualiza la cobertura CI. La vista previa pausa el FixedUpdate de la cámara original mediante Time.timeScale=0 sin referenciar su tipo. No se modifican mapas, arte, físicas, BLE ni firmware. Las dos advertencias TMP CS0618 no bloquean. Cerrar Unity, desde la carpeta del proyecto comprobar rama v6.5-desarrollo, git pull --ff-only origin v6.5-desarrollo y reabrir. No repetir importación de arte. Compilación Unity y prueba funcional pendientes hasta confirmación del usuario; CI sintáctico no equivale a compilación semántica.
+
+---
+
 # BIOFIT DASH — V6.5 desarrollo (rama v6.5-desarrollo)
 
 26/11/2026: rama creada por autorización expresa desde main V6.4 estable. [Guía V6.5](LEVEL_EDITOR_V65.md): vista real del motor, prueba de borrador desde X/Y, catálogo local ampliado y alineado, Red Pad 9.5, Mini Cube experimental (escala .60, velocidad 7.8, salto 10.5), skins Ball/Spider y carrera reconstruida a partir de recursos locales. Código publicado; CI de host 5/5 en a6f08fe, instalación/pruebas Unity y APK pendientes. Los mapas y borradores se conservan; main no se modifica. Consultar la guía antes de continuar. No reinstalar ni subir arte original. Los textos siguientes son historial V6.4. Esperar instrucciones del usuario.

@@ -69,8 +69,9 @@ namespace Biofit.GeomeTryOriginal
                     GameManager.Instance.PlayMode=false;
                     var p=GameObject.FindGameObjectWithTag("Player");
                     if(p!=null)p.SetActive(false);
-                    var follow=FindFirstObjectByType<global::Camera>();
-                    if(follow!=null)follow.enabled=false;
+                    // The upstream camera follows in FixedUpdate. Pausing the
+                    // simulation stops that loop; no dependency on its script type.
+                    Time.timeScale=0;
                     y=Mathf.Max(floor+originalSize*.65f,y);
                     Time.timeScale=0;AudioListener.pause=true;ready=true;
                 }
