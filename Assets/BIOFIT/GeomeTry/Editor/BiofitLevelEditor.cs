@@ -16,7 +16,7 @@ namespace Biofit.LevelEditing
     public sealed class BiofitLevelEditor : EditorWindow
     {
         static readonly string[] Names={"Stereo Madness","Back on Track","Polargeist","Can't Let Go","Jumper"};
-        static readonly string[] Kinds={"solid","hazard","decoration","cubePortal","ballPortal","spiderPortal","gravityUp","gravityDown","pad","pinkPad","gravityPad","orb","coin","backgroundColor","groundColor","enterEffect"};
+        static readonly string[] Kinds={"solid","hazard","decoration","cubePortal","ballPortal","spiderPortal","gravityUp","gravityDown","pad","pinkPad","redPad","gravityPad","orb","coin","backgroundColor","groundColor","enterEffect"};
         static readonly string[] Collisions={"Original (según tipo)","Decoración / sin contacto","Plataforma sin muerte lateral","Letal al tocar (caja)","Plataforma + muerte lateral"};
         static readonly string[] Mask={"Cube / invertido","Ball","Spider","Ship"};
         const string SpriteDir="Assets/BIOFIT/Resources/BiofitStereoLocal/Sprites/";
@@ -38,6 +38,7 @@ namespace Biofit.LevelEditing
         int goIndex;
         string lastDelta="";
         float maxLength;
+        float testX=300,testY=15;int testMode=0;bool testInvert,testRestart=true,testPick;
         Rect canvas, marquee;
         Vector2 lastWorld=new Vector2(300,15);
         string Root=>Path.GetFullPath(Path.Combine(Application.dataPath,".."));
@@ -49,7 +50,7 @@ namespace Biofit.LevelEditing
         string KnownActive=>Path.Combine(Work,"Active.sha256");
         static string Hash(string s){using(var h=SHA256.Create())return BitConverter.ToString(h.ComputeHash(Encoding.UTF8.GetBytes(s))).Replace("-","").ToLowerInvariant();}
         static Item Clone(Item i)=>JsonUtility.FromJson<Item>(JsonUtility.ToJson(i));
-        static bool IsInteraction(Item i)=>i.kind.EndsWith("Portal")||i.kind=="gravityUp"||i.kind=="gravityDown"||i.kind=="pad"||i.kind=="pinkPad"||i.kind=="gravityPad"||i.kind=="orb"||i.kind=="coin";
+        static bool IsInteraction(Item i)=>i.kind.EndsWith("Portal")||i.kind=="gravityUp"||i.kind=="gravityDown"||i.kind=="pad"||i.kind=="pinkPad"||i.kind=="redPad"||i.kind=="gravityPad"||i.kind=="orb"||i.kind=="coin";
         static bool IsTrigger(Item i)=>i.kind=="backgroundColor"||i.kind=="groundColor"||i.kind=="enterEffect";
         [MenuItem("BIOFIT/Level Editor/Abrir editor")]
         static void Open(){var w=GetWindow<BiofitLevelEditor>("BIOFIT Level Editor");w.minSize=new Vector2(870,510);w.Show();}
@@ -109,7 +110,7 @@ namespace Biofit.LevelEditing
             for(int i=1;i<=7;i++)Template(i,i==5?"decoration":"solid",30,30,new[]{"square_"+i.ToString("D2")},i==5?1:5,i==5?-7:2);
             Template(8,"hazard",30,30,new[]{"spike_01"});Template(9,"hazard",30.25f,26,new[]{"pit_01"});Template(39,"hazard",30,13.5f,new[]{"spike_02"});Template(103,"hazard",20,19,new[]{"spike_03"});
             Template(40,"solid",30,13.5f,new[]{"plank_01"});Template(62,"solid",30,16,new[]{"square_b_01"});Template(68,"solid",30,16,new[]{"square_b_06"});
-            Template(35,"pad",25,4,new[]{"bump_01"},3,12);Template(140,"pinkPad",25,5,new[]{"bump_03"},3,12);Template(67,"gravityPad",25,6,new[]{"gravbump_01"},3,12);Template(36,"orb",30,30,new[]{"ring_01"},3,12);
+            Template(35,"pad",25,4,new[]{"bump_01"},3,12);Template(140,"pinkPad",25,5,new[]{"bump_03"},3,12);Template(900001,"redPad",25,4,new[]{"bump_03"},3,12);Template(67,"gravityPad",25,6,new[]{"gravbump_01"},3,12);Template(36,"orb",30,30,new[]{"ring_01"},3,12);
             Template(142,"coin",40,40,new[]{"secretCoin_01"},5,9);
             Template(10,"gravityDown",34.5f,77,new[]{"portal_01_back","portal_01_front"},5,10);Template(11,"gravityUp",34.5f,77,new[]{"portal_02_back","portal_02_front"},5,10);Template(12,"cubePortal",44.5f,85.5f,new[]{"portal_03_back","portal_03_front"},5,10);Template(47,"ballPortal",44.5f,85.5f,new[]{"portal_07_back","portal_07_front"},5,10);Template(1331,"spiderPortal",44.5f,84.5f,new[]{"portal_17_back","portal_17_front"},5,10);
             Template(29,"backgroundColor",20.5f,28,Array.Empty<string>());Template(30,"groundColor",20.5f,28,Array.Empty<string>());
@@ -187,7 +188,7 @@ namespace Biofit.LevelEditing
         }
         void OnGUI()
         {
-            EditorGUILayout.LabelField("BIOFIT LEVEL EDITOR • V6.4 experimental",EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("BIOFIT LEVEL EDITOR • V6.5 desarrollo",EditorStyles.boldLabel);
             using(new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 requestedSlot=EditorGUILayout.Popup(requestedSlot,Names,GUILayout.Width(155));
@@ -198,6 +199,8 @@ namespace Biofit.LevelEditing
                     if(GUILayout.Button("Guardar borrador",EditorStyles.toolbarButton))Guard(SaveDraft);
                     if(GUILayout.Button("Validar",EditorStyles.toolbarButton))Guard(()=>{Validate();status="Validación estructural OK. Jugabilidad pendiente.";});
                     if(GUILayout.Button("Probar borrador",EditorStyles.toolbarButton))Guard(PrepareTest);
+                    if(GUILayout.Button("Vista real",EditorStyles.toolbarButton))Guard(()=>LaunchV65(true));
+                    if(GUILayout.Button("Jugar desde aquí",EditorStyles.toolbarButton))Guard(()=>LaunchV65(false));
                     if(GUILayout.Button("Aplicar al juego",EditorStyles.toolbarButton))Guard(Apply);
                     if(GUILayout.Button("Exportar cambios",EditorStyles.toolbarButton))Guard(Export);
                     if(GUILayout.Button("FLM",EditorStyles.toolbarButton))Guard(()=>BiofitEditorFlm.Export(data,Names[slot],Tex));
@@ -234,7 +237,7 @@ namespace Biofit.LevelEditing
                 }
                 using(new EditorGUILayout.HorizontalScope())
                 {
-                    using(new EditorGUILayout.VerticalScope(GUILayout.Width(225)))DrawCatalog();
+                    using(new EditorGUILayout.VerticalScope(GUILayout.Width(310)))DrawCatalog();
                     using(new EditorGUILayout.VerticalScope())
                     {
                         canvas=GUILayoutUtility.GetRect(300,300,GUILayout.ExpandWidth(true),GUILayout.ExpandHeight(true));
@@ -248,7 +251,7 @@ namespace Biofit.LevelEditing
         }
         static string Friendly(string kind)
         {
-            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
+            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (9,5)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
         }
         void DrawCatalog()
         {
@@ -262,8 +265,10 @@ namespace Biofit.LevelEditing
                 using(new EditorGUILayout.HorizontalScope())
                 {
                     var t=o.frames!=null&&o.frames.Length>0?Tex(o.frames[0]):null;
-                    GUILayout.Label(t,GUILayout.Width(30),GUILayout.Height(30));
-                    if(GUILayout.Toggle(paletteIndex==i,label,EditorStyles.miniButton,GUILayout.Height(30))&&paletteIndex!=i){paletteIndex=i;placing=true;}
+                    Color oldColor=GUI.color;if(o.kind=="redPad")GUI.color=new Color(1f,.2f,.2f);
+                    GUILayout.Label(t,GUILayout.Width(30),GUILayout.Height(30));GUI.color=oldColor;
+                    var style=new GUIStyle(EditorStyles.miniButton){alignment=TextAnchor.MiddleLeft,wordWrap=true,clipping=TextClipping.Clip};
+                    if(GUILayout.Toggle(paletteIndex==i,new GUIContent(label,label),style,GUILayout.Width(250),GUILayout.Height(42))&&paletteIndex!=i){paletteIndex=i;placing=true;}
                 }
             }
             EditorGUILayout.EndScrollView();
@@ -321,6 +326,7 @@ namespace Biofit.LevelEditing
                 GUI.FocusControl(null);press=e.mousePosition;panStart=pan;
                 if(e.button==1||e.button==2){panning=true;e.Use();return;}
                 if(e.button!=0)return;
+                if(testPick){testX=Snap(lastWorld.x);testY=Snap(lastWorld.y);testPick=false;e.Use();Repaint();return;}
                 if(placing&&catalog.Count>0){Add(catalog[Mathf.Clamp(paletteIndex,0,catalog.Count-1)],lastWorld);e.Use();Repaint();return;}
                 var hits=data.objects.Where(o=>(showTriggers||!IsTrigger(o))&&Hit(o,e.mousePosition)).OrderByDescending(o=>o.layer*100+o.order).ThenByDescending(o=>o.index).ToArray();
                 var hit=hits.FirstOrDefault();
@@ -430,6 +436,13 @@ namespace Biofit.LevelEditing
                 if(GUILayout.Button("Rotar 90° individual")){Push();foreach(var o in selected)o.rotationGD+=90;}
             }
             else EditorGUILayout.HelpBox("Seleccioná objetos o elegí una plantilla del catálogo y activá Colocar.",MessageType.Info);
+            GUILayout.Space(8);GUILayout.Label("PRUEBA V6.5",EditorStyles.boldLabel);
+            testX=EditorGUILayout.FloatField("Inicio X GD",testX);testY=EditorGUILayout.FloatField("Centro Y GD",testY);
+            testMode=EditorGUILayout.Popup("Vehículo",testMode,new[]{"Cube","Ball","Spider","Auto por portales"});
+            testInvert=EditorGUILayout.Toggle("Gravedad invertida",testInvert);testRestart=EditorGUILayout.Toggle("Reiniciar aquí",testRestart);
+            if(GUILayout.Button("Elegir punto en mapa")){testPick=true;placing=false;}
+            if(GUILayout.Button("Usar centro de vista")){var v=World(canvas.center);testX=v.x;testY=v.y;}
+            GUILayout.Label("Progreso: "+(100f*testX/data.endGD).ToString("F1")+" %");
             GUILayout.Space(8);GUILayout.Label("NIVEL",EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Monedas",data.objects.Count(o=>o.kind=="coin")+" / 3");
             EditorGUILayout.LabelField("Portales",data.objects.Count(o=>o.kind.EndsWith("Portal")).ToString());
@@ -490,6 +503,20 @@ namespace Biofit.LevelEditing
             string temp=path+".tmp";File.WriteAllText(temp,text,new UTF8Encoding(false));
             if(File.Exists(path))File.Replace(temp,path,null);else File.Move(temp,path);
         }
+        void LaunchV65(bool preview)
+        {
+            Validate();if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
+            if(!UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return;
+            var scene=AssetDatabase.LoadAssetAtPath<SceneAsset>("Assets/GeomeTryOriginal/Assets/Scenes/Main Menu.unity");
+            if(scene==null)throw new Exception("Falta Main Menu original.");
+            if(float.IsNaN(testX)||float.IsInfinity(testX)||float.IsNaN(testY)||float.IsInfinity(testY))throw new Exception("Coordenadas inválidas.");
+            SaveDraft();int mode=testMode;bool invert=testInvert;
+            if(mode==3){mode=0;invert=false;foreach(var o in data.objects.Where(o=>o.xGD<=testX).OrderBy(o=>o.xGD)){switch(o.kind){case "cubePortal":mode=0;invert=false;break;case "ballPortal":mode=1;invert=false;break;case "spiderPortal":mode=2;invert=false;break;case "gravityUp":if(mode==0)invert=true;break;case "gravityDown":if(mode==0)invert=false;break;}}}
+            Biofit.GeomeTryOriginal.BiofitV65EditorSession.Configure(slot+1,Draft,Mathf.Clamp(testX,0,data.endGD),testY,mode,invert,testRestart,preview);
+            SessionState.SetString("BIOFIT_V65_PREV_START_SCENE",UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene==null?"":AssetDatabase.GetAssetPath(UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene));
+            UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene=scene;
+            EditorApplication.isPlaying=true;
+        }
         void PrepareTest()
         {
             Validate();if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
@@ -499,7 +526,7 @@ namespace Biofit.LevelEditing
         }
         [InitializeOnLoadMethod] static void ClearTestAfterPlay()
         {
-            EditorApplication.playModeStateChanged+=state=>{if(state==PlayModeStateChange.EnteredEditMode){SessionState.EraseString("BIOFIT_EDITOR_TEST_PATH");SessionState.EraseInt("BIOFIT_EDITOR_TEST_SLOT");}};
+            EditorApplication.playModeStateChanged+=state=>{if(state==PlayModeStateChange.EnteredEditMode){SessionState.EraseString("BIOFIT_EDITOR_TEST_PATH");SessionState.EraseInt("BIOFIT_EDITOR_TEST_SLOT");Biofit.GeomeTryOriginal.BiofitV65EditorSession.Clear();}};
         }
         void RestorePrevious()
         {
