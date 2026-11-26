@@ -41,6 +41,8 @@ namespace Biofit.LevelEditing
         [Serializable] sealed class ArtEntry {public string name,kind;public float widthGD,heightGD;}
         [Serializable] sealed class ArtIndex {public ArtEntry[] items;}
         int catalogPage; string priorQuery="";
+        int catalogCategory;
+        static readonly string[] CatalogCategories={"Todos","Bloques","Plataformas","Pinchos / peligros","Decoración","Portales","Impulsos / orbes","Monedas","Eventos / colores"};
         readonly Dictionary<string,Texture2D> externalTextures=new Dictionary<string,Texture2D>();
         string ArtDir=>Path.Combine(Root,"Builds","BiofitV65Art");
         float testX=300,testY=15;int testMode=0;bool testInvert,testRestart=true,testPick;
@@ -104,7 +106,7 @@ namespace Biofit.LevelEditing
         static Data Parse(string s){var d=JsonUtility.FromJson<Data>(s);if(d==null||d.objects==null||d.unitsPerBlock!=30)throw new Exception("JSON de nivel no reconocido.");return d;}
         void BuildCatalog()
         {
-            catalog.Clear();catalogPage=0;
+            catalog.Clear();catalogPage=0;paletteIndex=-1;placing=false;paletteScroll=Vector2.zero;
             var seen=new HashSet<string>();
             void Template(int id,string kind,float w,float h,string[] frames,int layer=5,int order=2)
             {
@@ -256,7 +258,8 @@ namespace Biofit.LevelEditing
                     if(GUILayout.Button("Duplicar",EditorStyles.toolbarButton)){Copy();Paste(new Vector2(grid,0));}
                     if(GUILayout.Button("Eliminar",EditorStyles.toolbarButton))Delete();
                     if(GUILayout.Button("Vaciar borrador",EditorStyles.toolbarButton))Guard(()=>{if(EditorUtility.DisplayDialog("Crear desde cero","Vaciar todos los registros del borrador. Se conserva la ranura, música y longitud.","Vaciar","Cancelar")){Push();data.objects=Array.Empty<Item>();selection.Clear();}});
-                    placing=GUILayout.Toggle(placing,"Colocar",EditorStyles.toolbarButton);
+                    using(new EditorGUI.DisabledScope(paletteIndex<0||paletteIndex>=catalog.Count))
+                        placing=GUILayout.Toggle(placing,"Colocar",EditorStyles.toolbarButton);
                     snap=GUILayout.Toggle(snap,"Snap",EditorStyles.toolbarButton);
                     grid=EditorGUILayout.Popup(grid==15?0:grid==30?1:2,new[]{"15 GD","30 GD","60 GD"},GUILayout.Width(65)) switch {0=>15f,1=>30f,_=>60f};
                     showGrid=GUILayout.Toggle(showGrid,"Grilla",EditorStyles.toolbarButton);
@@ -291,13 +294,46 @@ namespace Biofit.LevelEditing
         {
             switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "miniPortal":return "Portal mini (rosa)";case "normalSizePortal":return "Portal tamaño normal (verde)";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (9,5)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
         }
+        // Categories are presentation only: never change the kind, collider or sprite.
+        static int CatalogCategory(Item o)
+        {
+            switch(o.kind)
+            {
+                case "solid":
+                    string frame=o.frames!=null&&o.frames.Length>0?o.frames[0]:"";
+                    return o.heightGD<=18f || frame.StartsWith("plank",StringComparison.OrdinalIgnoreCase)
+                        || frame.StartsWith("gd_plank",StringComparison.OrdinalIgnoreCase)?2:1;
+                case "hazard":return 3;
+                case "cubePortal":case "ballPortal":case "spiderPortal":case "miniPortal":case "normalSizePortal":case "gravityUp":case "gravityDown":return 5;
+                case "pad":case "pinkPad":case "redPad":case "gravityPad":case "orb":return 6;
+                case "coin":return 7;
+                case "backgroundColor":case "groundColor":case "enterEffect":return 8;
+                default:return 4;
+            }
+        }
+        static string CatalogName(Item o)
+        {
+            return o.kind=="solid"?CatalogCategories[CatalogCategory(o)]:Friendly(o.kind);
+        }
+        void ResetCatalogFilter()
+        {
+            catalogPage=0;paletteScroll=Vector2.zero;paletteIndex=-1;placing=false;
+        }
         void DrawCatalog()
         {
             GUILayout.Label("CATÁLOGO LOCAL",EditorStyles.boldLabel);
+            int nextCategory=GUILayout.SelectionGrid(catalogCategory,CatalogCategories,2,
+                new GUIStyle(GUI.skin.button){alignment=TextAnchor.MiddleCenter,fontSize=11},
+                GUILayout.Height(110),GUILayout.ExpandWidth(true));
+            if(nextCategory!=catalogCategory){catalogCategory=nextCategory;ResetCatalogFilter();}
             query=EditorGUILayout.TextField("Buscar",query);
-            if(query!=priorQuery){priorQuery=query;catalogPage=0;paletteScroll=Vector2.zero;}
-            string Label(Item o)=>Friendly(o.kind)+" / "+o.kind+" #"+o.id+" "+string.Join(" ",o.frames??Array.Empty<string>());
-            var matched=Enumerable.Range(0,catalog.Count).Where(i=>Label(catalog[i]).IndexOf(query,StringComparison.OrdinalIgnoreCase)>=0).ToArray();
+            if(query!=priorQuery){priorQuery=query;ResetCatalogFilter();}
+            string Label(Item o)=>CatalogName(o)+" "+Friendly(o.kind)+" "+o.kind+" #"+o.id+" "+string.Join(" ",o.frames??Array.Empty<string>());
+            var matched=Enumerable.Range(0,catalog.Count)
+                .Where(i=>(catalogCategory==0||CatalogCategory(catalog[i])==catalogCategory)
+                    && Label(catalog[i]).IndexOf(query,StringComparison.OrdinalIgnoreCase)>=0)
+                .OrderBy(i=>catalog[i].id==0?1:0).ThenBy(i=>catalog[i].id)
+                .ThenBy(i=>string.Join(" ",catalog[i].frames??Array.Empty<string>()),StringComparer.OrdinalIgnoreCase).ToArray();
             int pages=Mathf.Max(1,Mathf.CeilToInt(matched.Length/60f));catalogPage=Mathf.Clamp(catalogPage,0,pages-1);
             using(new EditorGUILayout.HorizontalScope())
             {
@@ -305,21 +341,41 @@ namespace Biofit.LevelEditing
                 GUILayout.Label((catalogPage+1)+"/"+pages+" · "+matched.Length+" objetos");
                 if(GUILayout.Button(">",GUILayout.Width(30))){catalogPage=Mathf.Min(pages-1,catalogPage+1);paletteScroll=Vector2.zero;}
             }
-            paletteScroll=EditorGUILayout.BeginScrollView(paletteScroll);
+            paletteScroll=EditorGUILayout.BeginScrollView(paletteScroll,false,true);
+            var titleStyle=new GUIStyle(EditorStyles.label){alignment=TextAnchor.MiddleLeft,fontSize=11,fontStyle=FontStyle.Bold,wordWrap=false,clipping=TextClipping.Clip,normal={textColor=Color.white}};
+            var detailStyle=new GUIStyle(titleStyle){fontStyle=FontStyle.Normal,fontSize=10,normal={textColor=new Color(.82f,.86f,.91f)}};
             foreach(int i in matched.Skip(catalogPage*60).Take(60))
             {
-                var o=catalog[i];string label=Label(o);
-                using(new EditorGUILayout.HorizontalScope())
+                var o=catalog[i];bool selected=paletteIndex==i;
+                string frame=string.Join(", ",o.frames??Array.Empty<string>());
+                string label=CatalogName(o)+(o.id==0?" · Arte":" · ID "+o.id);
+                // A single explicit 54px rect owns the background, preview, two
+                // single-line labels and click area; no miniButton texture stretching.
+                Rect row=GUILayoutUtility.GetRect(120,54,GUILayout.ExpandWidth(true));
+                Rect body=new Rect(row.x+1,row.y+2,Mathf.Max(1,row.width-2),50);
+                if(Event.current.type==EventType.Repaint)
                 {
+                    EditorGUI.DrawRect(body,selected?new Color(.17f,.35f,.52f):new Color(.22f,.24f,.27f));
+                    if(selected)EditorGUI.DrawRect(new Rect(body.x,body.y,3,body.height),new Color(.37f,.77f,1f));
+                    Rect image=new Rect(body.x+7,body.y+7,36,36);
+                    EditorGUI.DrawRect(image,new Color(.12f,.14f,.17f));
                     var t=o.frames!=null&&o.frames.Length>0?Tex(o.frames[0]):null;
                     Color oldColor=GUI.color;if(o.kind=="redPad")GUI.color=new Color(1f,.2f,.2f);
-                    GUILayout.Label(t,GUILayout.Width(30),GUILayout.Height(30));GUI.color=oldColor;
-                    var style=new GUIStyle(EditorStyles.miniButton){alignment=TextAnchor.MiddleLeft,wordWrap=true,clipping=TextClipping.Clip};
-                    if(GUILayout.Toggle(paletteIndex==i,new GUIContent(label,label),style,GUILayout.Width(250),GUILayout.Height(42))&&paletteIndex!=i){paletteIndex=i;placing=true;}
+                    if(t!=null)GUI.DrawTexture(image,t,ScaleMode.ScaleToFit,true);
+                    else GUI.Label(image,"—",detailStyle);
+                    GUI.color=oldColor;
+                    float tx=body.x+51,tw=Mathf.Max(1,body.width-59);
+                    GUI.Label(new Rect(tx,body.y+5,tw,18),label,titleStyle);
+                    GUI.Label(new Rect(tx,body.y+25,tw,18),string.IsNullOrEmpty(frame)?o.kind:frame,detailStyle);
                 }
+                if(GUI.Button(body,new GUIContent("",Label(o)),GUIStyle.none))
+                {paletteIndex=i;placing=true;testPick=false;}
             }
+            if(matched.Length==0)EditorGUILayout.HelpBox("No hay objetos para esta categoría y búsqueda.",MessageType.Info);
             EditorGUILayout.EndScrollView();
-            if(GUILayout.Button("Colocar seleccionado"))placing=true;
+            using(new EditorGUI.DisabledScope(paletteIndex<0||paletteIndex>=catalog.Count))
+                if(GUILayout.Button("Colocar seleccionado")){placing=true;testPick=false;}
+            GUILayout.Label("La categoría no cambia la función ni la colisión.",EditorStyles.miniLabel);
         }
         void DrawCanvas()
         {
@@ -376,7 +432,7 @@ namespace Biofit.LevelEditing
                 if(e.button==1||e.button==2){panning=true;e.Use();return;}
                 if(e.button!=0)return;
                 if(testPick){testX=Snap(lastWorld.x);testY=Snap(lastWorld.y);testPick=false;e.Use();Repaint();return;}
-                if(placing&&catalog.Count>0){Guard(()=>Add(catalog[Mathf.Clamp(paletteIndex,0,catalog.Count-1)],lastWorld));e.Use();Repaint();return;}
+                if(placing&&paletteIndex>=0&&paletteIndex<catalog.Count){Guard(()=>Add(catalog[paletteIndex],lastWorld));e.Use();Repaint();return;}
                 var hits=data.objects.Where(o=>(showTriggers||!IsTrigger(o))&&Hit(o,e.mousePosition)).OrderByDescending(o=>o.layer*100+o.order).ThenByDescending(o=>o.index).ToArray();
                 var hit=hits.FirstOrDefault();
                 if(e.alt&&hits.Length>1){int prev=Array.FindIndex(hits,o=>selection.Contains(o.index));hit=hits[(prev+1)%hits.Length];}

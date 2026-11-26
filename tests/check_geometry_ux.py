@@ -344,3 +344,13 @@ assert "BuildV65VehicleSkins" in ui and "%7" in skins
 import py_compile
 py_compile.compile(str(root / "tools/level_editor/importar_arte_v65.py"), doraise=True)
 print("PASS: V6.5 static editor isolation, Red Pad, Mini Cube, catalog and skin contracts")
+
+# V6.5 catalog: categories and explicit row bounds, no implicit placement on filter change.
+assert 'GUILayout.SelectionGrid(catalogCategory,CatalogCategories,2' in editor
+assert 'static int CatalogCategory(Item o)' in editor
+assert 'case "hazard":return 3;' in editor and 'case "coin":return 7;' in editor
+assert 'GUILayoutUtility.GetRect(120,54' in editor and 'body.y+25,tw,18' in editor
+assert 'GUIStyle.none' in editor and 'ResetCatalogFilter()' in editor
+assert 'if(placing&&paletteIndex>=0&&paletteIndex<catalog.Count)' in editor
+assert 'Mathf.Clamp(paletteIndex,0,catalog.Count-1)' not in editor
+print("PASS: catalog categories, row layout and explicit selection")
