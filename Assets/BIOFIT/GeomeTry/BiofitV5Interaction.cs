@@ -25,7 +25,7 @@ namespace Biofit.GeomeTryOriginal
             if(kind=="gravityUp"||kind=="gravityDown") {motor.SetMode(kind=="gravityUp"?BiofitMode.InvertedCube:BiofitMode.Cube);return;}
             if(kind=="gravityPad") {motor.SetMode(motor.Mode==BiofitMode.InvertedCube?BiofitMode.Cube:BiofitMode.InvertedCube);return;}
             // GeomeTry yellow pad/orb 20; pink pad 12.5. Opposite of current gravity.
-            rb.linearVelocity=new Vector2(rb.linearVelocity.x,(motor.Mode==BiofitMode.InvertedCube?-1f:1f)*(kind=="pinkPad"?12.5f:20f));
+            rb.linearVelocity=new Vector2(rb.linearVelocity.x,(motor.Mode==BiofitMode.InvertedCube?-1f:1f)*(kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f));
         }
         public bool TryInvertedOrb(Cube cube)
         {
