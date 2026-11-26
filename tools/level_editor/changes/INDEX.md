@@ -11,3 +11,5 @@ V6.3 en main conserva sus cinco mapas. La rama experimental registra los deltas 
 - El editor abrió y el usuario exportó/publicó correctamente; alcance de jugabilidad, APK y BLE pendientes. No afirmar que el delta está aplicado localmente sin comprobar Active.json. No modificar main ni la geometría del usuario. El delta requiere base local V6.3 coincidente.
 
 - [BIOFIT_level_1_20261126_004628.json](BIOFIT_level_1_20261126_004628.json) — ranura 1; 0 ediciones, 16 altas, 23 bajas; base 8c7adbe0f89959dcf86b89e70c10ed62f084ebbb2407420a56a4ffb159798f0f; objetivo bd2d104cfc88b79751e9cde421f097d6f8413da80847a7ee38c7583379cbfc43. Edición experimental desde BIOFIT Level Editor; validación de jugabilidad pendiente.
+
+- [BIOFIT_level_2_20261126_114359.json](BIOFIT_level_2_20261126_114359.json) — ranura 2; 135 ediciones, 268 altas, 82 bajas; base db175d2b95a020ffcca792ea2b6d0b79dd103af3b8ec8b980ca02e2a7f04da5c; objetivo 39e8beeb17c3a549a6eb452587da86b0655b9e81b0e650ffddc0e9c4cd151651. Edición experimental desde BIOFIT Level Editor; validación de jugabilidad pendiente.
