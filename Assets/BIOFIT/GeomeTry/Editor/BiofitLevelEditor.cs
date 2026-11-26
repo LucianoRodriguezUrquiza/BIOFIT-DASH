@@ -16,7 +16,7 @@ namespace Biofit.LevelEditing
     public sealed class BiofitLevelEditor : EditorWindow
     {
         static readonly string[] Names={"Stereo Madness","Back on Track","Polargeist","Can't Let Go","Jumper"};
-        static readonly string[] Kinds={"solid","hazard","decoration","cubePortal","ballPortal","spiderPortal","gravityUp","gravityDown","pad","pinkPad","redPad","gravityPad","orb","coin","backgroundColor","groundColor","enterEffect"};
+        static readonly string[] Kinds={"solid","hazard","decoration","cubePortal","ballPortal","spiderPortal","miniPortal","normalSizePortal","gravityUp","gravityDown","pad","pinkPad","redPad","gravityPad","orb","coin","backgroundColor","groundColor","enterEffect"};
         static readonly string[] Collisions={"Original (según tipo)","Decoración / sin contacto","Plataforma sin muerte lateral","Letal al tocar (caja)","Plataforma + muerte lateral"};
         static readonly string[] Mask={"Cube / invertido","Ball","Spider","Ship"};
         const string SpriteDir="Assets/BIOFIT/Resources/BiofitStereoLocal/Sprites/";
@@ -113,6 +113,7 @@ namespace Biofit.LevelEditing
             Template(35,"pad",25,4,new[]{"bump_01"},3,12);Template(140,"pinkPad",25,5,new[]{"bump_03"},3,12);Template(900001,"redPad",25,4,new[]{"bump_03"},3,12);Template(67,"gravityPad",25,6,new[]{"gravbump_01"},3,12);Template(36,"orb",30,30,new[]{"ring_01"},3,12);
             Template(142,"coin",40,40,new[]{"secretCoin_01"},5,9);
             Template(10,"gravityDown",34.5f,77,new[]{"portal_01_back","portal_01_front"},5,10);Template(11,"gravityUp",34.5f,77,new[]{"portal_02_back","portal_02_front"},5,10);Template(12,"cubePortal",44.5f,85.5f,new[]{"portal_03_back","portal_03_front"},5,10);Template(47,"ballPortal",44.5f,85.5f,new[]{"portal_07_back","portal_07_front"},5,10);Template(1331,"spiderPortal",44.5f,84.5f,new[]{"portal_17_back","portal_17_front"},5,10);
+            Template(99,"miniPortal",44,89.5f,new[]{"gd_portal_09_back","gd_portal_09_front"},5,10);Template(101,"normalSizePortal",44,89.5f,new[]{"gd_portal_08_back","gd_portal_08_front"},5,10);
             Template(29,"backgroundColor",20.5f,28,Array.Empty<string>());Template(30,"groundColor",20.5f,28,Array.Empty<string>());
             for(int k=1;k<=5;k++)
             {
@@ -251,7 +252,7 @@ namespace Biofit.LevelEditing
         }
         static string Friendly(string kind)
         {
-            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (9,5)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
+            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "miniPortal":return "Portal mini (rosa)";case "normalSizePortal":return "Portal tamaño normal (verde)";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (9,5)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
         }
         void DrawCatalog()
         {
@@ -438,7 +439,7 @@ namespace Biofit.LevelEditing
             else EditorGUILayout.HelpBox("Seleccioná objetos o elegí una plantilla del catálogo y activá Colocar.",MessageType.Info);
             GUILayout.Space(8);GUILayout.Label("PRUEBA V6.5",EditorStyles.boldLabel);
             testX=EditorGUILayout.FloatField("Inicio X GD",testX);testY=EditorGUILayout.FloatField("Centro Y GD",testY);
-            testMode=EditorGUILayout.Popup("Vehículo",testMode,new[]{"Cube","Ball","Spider","Auto por portales"});
+            testMode=EditorGUILayout.Popup("Vehículo",testMode,new[]{"Cube","Ball","Spider","Auto por portales","Mini Cube"});
             testInvert=EditorGUILayout.Toggle("Gravedad invertida",testInvert);testRestart=EditorGUILayout.Toggle("Reiniciar aquí",testRestart);
             if(GUILayout.Button("Elegir punto en mapa")){testPick=true;placing=false;}
             if(GUILayout.Button("Usar centro de vista")){var v=World(canvas.center);testX=v.x;testY=v.y;}
@@ -511,7 +512,7 @@ namespace Biofit.LevelEditing
             if(scene==null)throw new Exception("Falta Main Menu original.");
             if(float.IsNaN(testX)||float.IsInfinity(testX)||float.IsNaN(testY)||float.IsInfinity(testY))throw new Exception("Coordenadas inválidas.");
             SaveDraft();int mode=testMode;bool invert=testInvert;
-            if(mode==3){mode=0;invert=false;foreach(var o in data.objects.Where(o=>o.xGD<=testX).OrderBy(o=>o.xGD)){switch(o.kind){case "cubePortal":mode=0;invert=false;break;case "ballPortal":mode=1;invert=false;break;case "spiderPortal":mode=2;invert=false;break;case "gravityUp":if(mode==0)invert=true;break;case "gravityDown":if(mode==0)invert=false;break;}}}
+            if(mode==3){mode=0;invert=false;foreach(var o in data.objects.Where(o=>o.xGD<=testX).OrderBy(o=>o.xGD)){switch(o.kind){case "cubePortal":mode=0;invert=false;break;case "ballPortal":mode=1;invert=false;break;case "spiderPortal":mode=2;invert=false;break;case "gravityUp":if(mode==0||mode==4)invert=true;break;case "gravityDown":if(mode==0||mode==4)invert=false;break;case "miniPortal":if(mode==0)mode=4;break;case "normalSizePortal":if(mode==4)mode=0;break;}}}
             Biofit.GeomeTryOriginal.BiofitV65EditorSession.Configure(slot+1,Draft,Mathf.Clamp(testX,0,data.endGD),testY,mode,invert,testRestart,preview);
             SessionState.SetString("BIOFIT_V65_PREV_START_SCENE",UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene==null?"":AssetDatabase.GetAssetPath(UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene));
             UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene=scene;
