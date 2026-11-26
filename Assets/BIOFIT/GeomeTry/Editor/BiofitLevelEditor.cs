@@ -55,6 +55,10 @@ namespace Biofit.LevelEditing
         readonly Dictionary<string,Texture2D> externalTextures=new Dictionary<string,Texture2D>();
         string ArtDir=>Path.Combine(Root,"Builds","BiofitV65Art");
         float testX=300,testY=15;int testMode=0;bool testInvert,testRestart=true,testPick;
+        // Local display options only; never serialized into a map.
+        bool showTrajectory=true, trajectoryInverted, trajectoryMini=true;
+        float trajectoryGravityTime=1f;
+        const float TrajectorySpeed=6.5f, TrajectoryGravityScale=4f, TrajectoryGD=30f;
         Rect canvas, marquee;
         Vector2 lastWorld=new Vector2(300,15);
         string Root=>Path.GetFullPath(Path.Combine(Application.dataPath,".."));
@@ -507,10 +511,137 @@ namespace Biofit.LevelEditing
                 }
                 GUI.matrix=prior;
             }
+            if(Event.current.type==EventType.Repaint && showTrajectory && selection.Count==1 && !HasFloatingPaste)
+            {
+                var selected=Selected();
+                if(selected.Length==1 && IsTrajectoryObject(selected[0]))DrawSelectedTrajectory(selected[0]);
+            }
             var marker=Screen(new Vector2(testX,testY));Outline(new Rect(marker.x-7,marker.y-7,14,14),Color.cyan);
             if(selecting)Outline(new Rect(marquee.x-old.x,marquee.y-old.y,marquee.width,marquee.height),Color.yellow);
             GUI.Label(new Rect(5,2,250,20),"GD "+lastWorld.x.ToString("F0")+", "+lastWorld.y.ToString("F0"));
             canvas=old;GUI.EndGroup();
+        }
+        static bool IsTrajectoryObject(Item o)
+        {
+            return o.kind=="pad"||o.kind=="pinkPad"||o.kind=="redPad"||o.kind=="gravityPad"
+                ||Biofit.GeomeTryOriginal.BiofitV5Interaction.IsOrbKind(o.kind);
+        }
+        static bool TrajectoryFlips(string kind)=>kind=="gravityPad"||kind=="blueOrb"||kind=="greenOrb";
+        static float TrajectoryImpulse(string kind)
+        {
+            switch(kind)
+            {
+                case "pinkPad":case "pinkOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.PinkOrbImpulse;
+                case "redPad":case "redOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.RedOrbImpulse;
+                case "gravityPad":case "blueOrb":return 0f;
+                case "greenOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.GreenOrbImpulse;
+                default:return 20f;
+            }
+        }
+        static Vector2 TrajectoryPoint(Vector2 origin,float speed,float vy,float acceleration,float time)
+        {
+            return origin+TrajectoryGD*new Vector2(speed*time,vy*time+.5f*acceleration*time*time);
+        }
+        float TrajectoryGravity()=>Mathf.Abs(Physics2D.gravity.y)*TrajectoryGravityScale;
+        float TrajectoryDuration(string kind,float gravity)
+        {
+            return TrajectoryFlips(kind)?trajectoryGravityTime:2f*TrajectoryImpulse(kind)/gravity;
+        }
+        void DrawSelectedTrajectory(Item o)
+        {
+            float gravity=TrajectoryGravity();
+            if(gravity<=.001f||float.IsNaN(gravity)||float.IsInfinity(gravity))return;
+            // For pads the player center is approximately half a block away
+            // from the trigger; for orbs assume activation at the orb center.
+            bool orb=Biofit.GeomeTryOriginal.BiofitV5Interaction.IsOrbKind(o.kind);
+            float side=trajectoryInverted?-1f:1f;
+            bool flips=TrajectoryFlips(o.kind);
+            float vy=side*TrajectoryImpulse(o.kind);
+            float acceleration=(flips?side:-side)*gravity;
+            // Gravity-changing green orb initially moves toward the new support.
+            float duration=TrajectoryDuration(o.kind,gravity);
+            var origin=new Vector2(o.xGD,o.yGD+(orb?0f:side*15f));
+            DrawTrajectoryCurve(origin,TrajectorySpeed,vy,acceleration,duration,
+                new Color(1f,.84f,.18f),"Cube / Ball / Spider",flips,gravity);
+            if(trajectoryMini)
+            {
+                var miniOrigin=new Vector2(o.xGD,o.yGD+(orb?0f:side*15f*Biofit.GeomeTryOriginal.BiofitModeMotor.MiniScale));
+                DrawTrajectoryCurve(miniOrigin,Biofit.GeomeTryOriginal.BiofitModeMotor.MiniSpeed,vy,acceleration,duration,
+                    new Color(.30f,.86f,1f),"Mini Cube",flips,gravity);
+            }
+        }
+        static void TrajectoryLine(Vector2 a,Vector2 b,Color color,float width)
+        {
+            var delta=b-a;if(delta.sqrMagnitude<.0001f)return;
+            Matrix4x4 saved=GUI.matrix;
+            try
+            {
+                GUIUtility.RotateAroundPivot(Mathf.Atan2(delta.y,delta.x)*Mathf.Rad2Deg,a);
+                EditorGUI.DrawRect(new Rect(a.x,a.y-width*.5f,delta.magnitude,width),color);
+            }
+            finally {GUI.matrix=saved;}
+        }
+        void TrajectoryLabel(Vector2 p,string label,Color color,float offset)
+        {
+            if(p.x<0||p.x>canvas.width||p.y<0||p.y>canvas.height)return;
+            var style=new GUIStyle(EditorStyles.miniBoldLabel){normal={textColor=color}};
+            var size=style.CalcSize(new GUIContent(label));
+            var rect=new Rect(Mathf.Clamp(p.x+5,0,Mathf.Max(0,canvas.width-size.x-8)),
+                Mathf.Clamp(p.y+offset,0,Mathf.Max(0,canvas.height-17)),size.x+7,16);
+            EditorGUI.DrawRect(rect,new Color(.035f,.06f,.10f,.92f));
+            GUI.Label(new Rect(rect.x+3,rect.y,rect.width-3,rect.height),label,style);
+        }
+        void DrawTrajectoryCurve(Vector2 origin,float speed,float vy,float acceleration,float duration,Color color,string label,bool flips,float gravity)
+        {
+            const int segments=80;
+            Vector2 prev=Screen(origin);
+            // Dashed arc stays in the existing clipped canvas; it does not add
+            // GameObjects, change data, or participate in selection/hit testing.
+            for(int i=1;i<=segments;i++)
+            {
+                Vector2 next=Screen(TrajectoryPoint(origin,speed,vy,acceleration,duration*i/segments));
+                if(i%4!=0)TrajectoryLine(prev,next,color,2f);
+                prev=next;
+            }
+            Vector2 end=prev;
+            Vector2 before=Screen(TrajectoryPoint(origin,speed,vy,acceleration,duration*(segments-1)/segments));
+            Vector2 direction=(end-before).normalized, perpendicular=new Vector2(-direction.y,direction.x);
+            TrajectoryLine(end,end-direction*9f+perpendicular*4f,color,2f);
+            TrajectoryLine(end,end-direction*9f-perpendicular*4f,color,2f);
+            float labelTime=flips?duration*.40f:duration*.5f;
+            Vector2 point=Screen(TrajectoryPoint(origin,speed,vy,acceleration,labelTime));
+            TrajectoryLabel(point,label,color,label=="Mini Cube"?5f:-20f);
+            if(!flips)
+            {
+                Vector2 apex=Screen(TrajectoryPoint(origin,speed,vy,acceleration,Mathf.Abs(vy)/gravity));
+                EditorGUI.DrawRect(new Rect(apex.x-2,apex.y-2,4,4),color);
+                TrajectoryLabel(end,(speed*duration).ToString("F2")+" bloques",color,label=="Mini Cube"?5f:-20f);
+            }
+        }
+        void DrawTrajectoryInspector(Item o)
+        {
+            GUILayout.Space(6);GUILayout.Label("TRAYECTORIA ESTIMADA",EditorStyles.boldLabel);
+            showTrajectory=EditorGUILayout.Toggle("Mostrar al seleccionar",showTrajectory);
+            trajectoryInverted=EditorGUILayout.Toggle("Gravedad inicial invertida",trajectoryInverted);
+            trajectoryMini=EditorGUILayout.Toggle("Incluir Mini Cube",trajectoryMini);
+            float gravity=TrajectoryGravity();
+            if(gravity<=.001f||float.IsNaN(gravity)||float.IsInfinity(gravity))return;
+            float v=TrajectoryImpulse(o.kind);
+            EditorGUILayout.LabelField("Impulso inicial",v.ToString("F2")+" u/s");
+            if(TrajectoryFlips(o.kind))
+            {
+                trajectoryGravityTime=EditorGUILayout.Slider("Horizonte sim. (s)",trajectoryGravityTime,.25f,2f);
+                EditorGUILayout.LabelField("Avance estimado",(TrajectorySpeed*trajectoryGravityTime).ToString("F2")+" bloques");
+                EditorGUILayout.HelpBox("Invierte gravedad. La curva termina en el horizonte elegido, no al aterrizar.",MessageType.None);
+            }
+            else
+            {
+                float t=TrajectoryDuration(o.kind,gravity);
+                EditorGUILayout.LabelField("Altura desde activación",(v*v/(2f*gravity)).ToString("F2")+" bloques");
+                EditorGUILayout.LabelField("Alcance a igual altura",(TrajectorySpeed*t).ToString("F2")+" bloques");
+                if(trajectoryMini)EditorGUILayout.LabelField("Alcance Mini Cube",(Biofit.GeomeTryOriginal.BiofitModeMotor.MiniSpeed*t).ToString("F2")+" bloques");
+            }
+            EditorGUILayout.HelpBox("Amarillo: Cube/Ball/Spider (misma física). Celeste: Mini Cube. Guía ideal del centro, sin colisiones, portales, otras acciones ni latencia BLE. Validar con Jugar desde aquí.",MessageType.Info);
         }
         static void Outline(Rect r,Color c){EditorGUI.DrawRect(new Rect(r.x,r.y,r.width,1),c);EditorGUI.DrawRect(new Rect(r.x,r.yMax-1,r.width,1),c);EditorGUI.DrawRect(new Rect(r.x,r.y,1,r.height),c);EditorGUI.DrawRect(new Rect(r.xMax-1,r.y,1,r.height),c);}
         void HandleCanvas()
@@ -638,6 +769,7 @@ namespace Biofit.LevelEditing
                     if(n.yGD!=o.yGD&&n.portalMinGD==o.portalMinGD&&n.portalMaxGD==o.portalMaxGD&&o.portalMaxGD>o.portalMinGD){n.portalMinGD+=n.yGD-o.yGD;n.portalMaxGD+=n.yGD-o.yGD;}
                     data.objects[Array.IndexOf(data.objects,o)]=n;
                 }
+                if(IsTrajectoryObject(n))DrawTrajectoryInspector(n);
                 spriteName=EditorGUILayout.TextField("Sprite local",spriteName);
                 if(GUILayout.Button("Seleccionar todos del mismo ID")){int id=o.id;foreach(var v in data.objects)if(v.id==id)selection.Add(v.index);}
                 if(GUILayout.Button("Añadir sprite al objeto"))Guard(()=>{if(Tex(spriteName)==null)throw new Exception("Sprite inexistente.");Push();var v=Selected()[0];v.frames=(v.frames??Array.Empty<string>()).Concat(new[]{spriteName}).ToArray();});

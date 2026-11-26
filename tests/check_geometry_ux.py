@@ -447,3 +447,35 @@ assert 'if (Vector2.Distance(destination, body.position) < 1.0f) return false;' 
 assert 'body.position = destination;' in pulse and 'StartCoroutine(SpiderEffect(oldPosition, transform.position));' in pulse
 assert 'bool applied = motor.TryPulse();' in orb_bridge
 print("PASS: Ball/Spider pad and orb dispatch, actual contact, priority and preserved teleport contracts")
+
+# Editor-only analytic trajectory, selected single pad/orb, no runtime writes.
+assert 'showTrajectory && selection.Count==1 && !HasFloatingPaste' in editor
+assert 'IsTrajectoryObject(selected[0])' in editor
+assert 'TrajectorySpeed=6.5f, TrajectoryGravityScale=4f, TrajectoryGD=30f' in editor
+assert 'private const float OriginalSpeed = 6.5f;' in motor
+assert 'private const float BallSpiderGravity = 4f;' in motor
+assert 'Physics2D.gravity.y' in editor
+assert 'm_Gravity: {x: 0, y: -9.81}' in (root / "ProjectSettings/Physics2DSettings.asset").read_text()
+assert 'speed*time,vy*time+.5f*acceleration*time*time' in editor
+assert '2f*TrajectoryImpulse(kind)/gravity' in editor
+assert 'float acceleration=(flips?side:-side)*gravity' in editor
+assert 'BiofitV5Interaction.PinkOrbImpulse' in editor and 'BiofitV5Interaction.RedOrbImpulse' in editor and 'BiofitV5Interaction.GreenOrbImpulse' in editor
+assert 'case "gravityPad":case "blueOrb":return 0f;' in editor
+assert '"Cube / Ball / Spider"' in editor and '"Mini Cube"' in editor
+assert 'BiofitModeMotor.MiniSpeed' in editor and 'BiofitModeMotor.MiniScale' in editor
+assert 'trajectoryGravityTime,.25f,2f' in editor
+assert 'finally {GUI.matrix=saved;}' in editor
+# Independent numerical checks of the documented ideal model.
+import math
+for v, expected_h, expected_range in ((20,5.10,6.63),(12.5,1.99,4.14),(9.5,1.15,3.15)):
+    g=9.81*4
+    t=2*v/g
+    assert abs(v*t-.5*g*t*t)<1e-9
+    assert abs(v*v/(2*g)-expected_h)<.01
+    assert abs(6.5*t-expected_range)<.01
+    assert 7.8*t>6.5*t
+    for side in (-1,1):
+        assert abs(side*v*t-.5*side*g*t*t)<1e-9
+assert math.isclose(.5*g,19.62)
+assert math.isclose(13.5+.5*g,33.12)
+print("PASS: selected-only trajectory guide and ideal kinematics")
