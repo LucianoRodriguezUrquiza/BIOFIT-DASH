@@ -16,9 +16,12 @@ namespace Biofit.GeomeTryOriginal
         private const int ExpectedObjects = 2291;
         private const float OriginX = Character.InitialPosition;
         private const float Unit = 30f;
+        public static int TotalCoins { get; private set; } = 3;
         [Serializable] public sealed class Item
         {
             public int index, id, layer, order;
+            // 0 preserves the exact imported behaviour. Nonzero is an explicit editor override.
+            public int collisionMode, deathMask;
             public string kind;
             public float xGD, yGD, rotationGD, widthGD, heightGD;
             public bool flipX, flipY;
@@ -30,6 +33,7 @@ namespace Biofit.GeomeTryOriginal
         {
             public string sourceSha256;
             public int unitsPerBlock;
+            public int editorRevision;
             public float endGD;
             public Item[] objects;
             public int[] initialBackground, initialGround;
@@ -94,11 +98,13 @@ namespace Biofit.GeomeTryOriginal
             foreach(Item o in active.objects)
             {
                 if(o==null || !indexes.Add(o.index) || o.frames==null || o.widthGD<=0 || o.heightGD<=0 || float.IsNaN(o.xGD)||float.IsNaN(o.yGD)||float.IsInfinity(o.xGD)||float.IsInfinity(o.yGD)||o.kind=="shipPortal") throw new InvalidOperationException("Registro V5 invalido");
+                if(o.collisionMode<0 || o.collisionMode>4 || o.deathMask<0 || o.deathMask>15) throw new InvalidOperationException("Colision de editor invalida");
                 if(o.kind=="coin") coins++;
                 if(o.kind=="ballPortal"||o.kind=="spiderPortal") portals++;
                 foreach(string f in o.frames) frames.Add(f);
             }
-            if(coins!=3 || portals!=sections[index]) throw new InvalidOperationException("Portales o monedas V5 invalidos");
+            if(active.editorRevision==0 && (coins!=3 || portals!=sections[index])) throw new InvalidOperationException("Portales o monedas V5 invalidos");
+            if(active.editorRevision!=0 && (active.editorRevision!=1 || coins>3)) throw new InvalidOperationException("Mapa editado: revisión desconocida o más de tres monedas.");
             frames.Add("fondo");frames.Add("suelo");
             foreach(string f in frames) if(Resources.Load<Texture2D>(ResourceRoot+"Sprites/"+f)==null) throw new InvalidOperationException("Falta textura V5: "+f);
             Debug.Log("BIOFIT V5: "+level.Name+" fuente="+original.objects.Length+" activos="+active.objects.Length+" portales="+portals+"; validacion estructural, no gameplay.");
@@ -148,6 +154,7 @@ namespace Biofit.GeomeTryOriginal
             ValidateInstalled(slot-1);
             Data original=ReadData(slot,"Original");
             Data d=ReadData(slot,"Active");
+            TotalCoins=0; foreach(Item item in d.objects) if(item.kind=="coin") TotalCoins++;
             Tilemap tm=FindFirstObjectByType<Tilemap>();
             if(tm==null || Mathf.Abs(tm.cellSize.x-1f)>.001f || Mathf.Abs(tm.cellSize.y-1f)>.001f)
                 throw new InvalidOperationException("Tilemap original no disponible o escala inesperada.");
@@ -173,7 +180,7 @@ namespace Biofit.GeomeTryOriginal
             GameObject tile=Resources.Load<GameObject>("Prefabs/Decors/TilePrefab");
             GameObject spike=Resources.Load<GameObject>("Prefabs/Decors/SpikePrefab");
             if(tile==null || spike==null) throw new InvalidOperationException("Faltan prefabs de colision originales.");
-            var outlines = slot==1 ? new BiofitV63Outline(d, transform, floorY, unlit, GetSprite("square_05")) : null;
+            var outlines = slot==1 && d.editorRevision==0 ? new BiofitV63Outline(d, transform, floorY, unlit, GetSprite("square_05")) : null;
             float maxGD=0f;
             foreach(Item o in d.objects)
             {
@@ -199,7 +206,22 @@ namespace Biofit.GeomeTryOriginal
                     else if(o.id>=18&&o.id<=21) sr.color=new Color32(255,200,75,255);
                 }
                 Vector2 size=new Vector2(o.widthGD/Unit,o.heightGD/Unit);
-                if(o.kind=="solid")
+                if(o.collisionMode!=0 && (o.kind=="solid" || o.kind=="hazard" || o.kind=="decoration"))
+                {
+                    if(o.collisionMode==2 || o.collisionMode==4)
+                    {
+                        root.layer=6;
+                        var support=root.AddComponent<BoxCollider2D>(); support.size=size;
+                        if(o.collisionMode==4) root.AddComponent<BiofitStereoSolidContact>().Configure(false,o.deathMask);
+                    }
+                    else if(o.collisionMode==3)
+                    {
+                        var lethal=root.AddComponent<BoxCollider2D>(); lethal.size=size; lethal.isTrigger=true;
+                        root.AddComponent<BiofitEditedDeathZone>().deathMask=o.deathMask;
+                    }
+                    // 1: visual only. Existing imported objects follow their original path below.
+                }
+                else if(o.kind=="solid")
                 {
                     // Keep geometry and orientation; NEVER inherit the rotated TileDeathZone.
                     root.layer=6; // original Tile layer, included in Cube.groundLayer (72).
