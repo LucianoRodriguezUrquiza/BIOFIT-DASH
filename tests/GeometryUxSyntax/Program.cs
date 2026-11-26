@@ -12,13 +12,21 @@ string[] sources = {
     "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs",
     "Assets/BIOFIT/GeomeTry/BiofitThreeModes.cs",
     "Assets/BIOFIT/GeomeTry/Editor/BiofitThreeModesBuild.cs",
+    "Assets/BIOFIT/GeomeTry/BiofitStereoLocalRuntime.cs",
+    "Assets/BIOFIT/GeomeTry/BiofitStereoSolidContact.cs",
+    "Assets/BIOFIT/GeomeTry/BiofitEditedDeathZone.cs",
+    "Assets/BIOFIT/GeomeTry/BiofitV2Hud.cs",
+    "Assets/BIOFIT/GeomeTry/BiofitV63Outline.cs",
+    "Assets/BIOFIT/GeomeTry/BiofitV63Finish.cs",
+    "Assets/BIOFIT/GeomeTry/Editor/BiofitLevelEditor.cs",
+    "Assets/BIOFIT/GeomeTry/Editor/BiofitEditorFlm.cs",
 };
 bool broken = false;
 foreach (string path in sources)
 {
     string source = File.ReadAllText(path);
     var tree = CSharpSyntaxTree.ParseText(source,
-        new CSharpParseOptions(LanguageVersion.Latest));
+        new CSharpParseOptions(LanguageVersion.Latest).WithPreprocessorSymbols("UNITY_EDITOR"));
     var bad = tree.GetDiagnostics()
         .Where(x => x.Severity == DiagnosticSeverity.Error).ToArray();
     foreach (var error in bad)
