@@ -60,8 +60,19 @@ namespace Biofit.LevelEditing
         {
             if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
             if(data!=null&&dirty)SaveDraft();
+            string nextDir=Path.Combine(Application.dataPath,"BIOFIT/Resources/BiofitStereoLocal/CampaignV5",(n+1).ToString());
+            string nextActive=Path.Combine(nextDir,"Active.json");
+            string nextWork=Path.Combine(Root,"Builds","BiofitLevelEditor",(n+1).ToString());
+            if(!File.Exists(nextActive))throw new Exception("Falta "+nextActive);
+            // Preflight before switching the current document: a rejected load cannot redirect saves.
+            string candidate=File.ReadAllText(nextActive);Parse(candidate);Parse(File.ReadAllText(Path.Combine(nextDir,"Original.json")));
+            string candidateBase=Path.Combine(nextWork,"Base.json"),candidateDraft=Path.Combine(nextWork,"Draft.json"),candidateKnown=Path.Combine(nextWork,"Active.sha256");
+            if(resume&&File.Exists(candidateBase)&&File.Exists(candidateDraft))
+            {
+                string btext=File.ReadAllText(candidateBase),dtext=File.ReadAllText(candidateDraft);Parse(btext);Parse(dtext);
+                string h=Hash(candidate);if(Hash(btext)!=h&&Hash(dtext)!=h&&(!File.Exists(candidateKnown)||File.ReadAllText(candidateKnown).Trim()!=h))throw new Exception("El mapa activo cambió; el borrador se conserva sin abrir.");
+            }
             slot=n;requestedSlot=n;
-            if(!File.Exists(Active))throw new Exception("Falta "+Active);
             Directory.CreateDirectory(Work);
             string active=File.ReadAllText(Active);
             activeHash=Hash(active);
@@ -89,6 +100,19 @@ namespace Biofit.LevelEditing
         {
             catalog.Clear();
             var seen=new HashSet<string>();
+            void Template(int id,string kind,float w,float h,string[] frames,int layer=5,int order=2)
+            {
+                string key=id+"|"+kind+"|"+string.Join(",",frames);
+                if(frames.All(f=>Tex(f)!=null)&&seen.Add(key))catalog.Add(new Item{id=id,kind=kind,widthGD=w,heightGD=h,frames=frames,layer=layer,order=order,xGD=15,yGD=h/2});
+            }
+            // Standard functional objects stay in the palette even when all copies are removed from the campaign.
+            for(int i=1;i<=7;i++)Template(i,i==5?"decoration":"solid",30,30,new[]{"square_"+i.ToString("D2")},i==5?1:5,i==5?-7:2);
+            Template(8,"hazard",30,30,new[]{"spike_01"});Template(9,"hazard",30.25f,26,new[]{"pit_01"});Template(39,"hazard",30,13.5f,new[]{"spike_02"});Template(103,"hazard",20,19,new[]{"spike_03"});
+            Template(40,"solid",30,13.5f,new[]{"plank_01"});Template(62,"solid",30,16,new[]{"square_b_01"});Template(68,"solid",30,16,new[]{"square_b_06"});
+            Template(35,"pad",25,4,new[]{"bump_01"},3,12);Template(140,"pinkPad",25,5,new[]{"bump_03"},3,12);Template(67,"gravityPad",25,6,new[]{"gravbump_01"},3,12);Template(36,"orb",30,30,new[]{"ring_01"},3,12);
+            Template(142,"coin",40,40,new[]{"secretCoin_01"},5,9);
+            Template(10,"gravityDown",34.5f,77,new[]{"portal_01_back","portal_01_front"},5,10);Template(11,"gravityUp",34.5f,77,new[]{"portal_02_back","portal_02_front"},5,10);Template(12,"cubePortal",44.5f,85.5f,new[]{"portal_03_back","portal_03_front"},5,10);Template(47,"ballPortal",44.5f,85.5f,new[]{"portal_07_back","portal_07_front"},5,10);Template(1331,"spiderPortal",44.5f,84.5f,new[]{"portal_17_back","portal_17_front"},5,10);
+            Template(29,"backgroundColor",20.5f,28,Array.Empty<string>());Template(30,"groundColor",20.5f,28,Array.Empty<string>());
             for(int k=1;k<=5;k++)
             {
                 string f=Path.Combine(Application.dataPath,"BIOFIT/Resources/BiofitStereoLocal/CampaignV5",k.ToString(),"Active.json");
@@ -117,7 +141,7 @@ namespace Biofit.LevelEditing
             if(!textures.TryGetValue(name,out var t)){t=AssetDatabase.LoadAssetAtPath<Texture2D>(SpriteDir+name+".png");textures[name]=t;}
             return t;
         }
-        void Push(){undo.Push(JsonUtility.ToJson(data));redo.Clear();dirty=true;}
+        void Push(){undo.Push(JsonUtility.ToJson(data));if(undo.Count>60){var kept=undo.Take(60).Reverse().ToArray();undo.Clear();foreach(var x in kept)undo.Push(x);}redo.Clear();dirty=true;}
         void History(bool back)
         {
             var from=back?undo:redo;var to=back?redo:undo;if(from.Count==0)return;
@@ -500,7 +524,7 @@ namespace Biofit.LevelEditing
             if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
             if(Hash(File.ReadAllText(Active))!=activeHash)throw new Exception("Active.json cambió externamente; no se sobrescribe.");
             if(!EditorUtility.DisplayDialog("Aplicar al juego","Se reemplaza Active.json de "+Names[slot]+". Se conserva una copia puntual del anterior. No se publica a GitHub.","Aplicar","Cancelar"))return;
-            SaveDraft();string s=File.ReadAllText(Draft);
+            SaveDraft();SessionState.EraseString("BIOFIT_EDITOR_TEST_PATH");SessionState.EraseInt("BIOFIT_EDITOR_TEST_SLOT");string s=File.ReadAllText(Draft);
             // Keep the publication baseline (Base.json) until explicitly exporting/reloading.
             File.WriteAllText(Path.Combine(Work,"PreviousActive.json"),File.ReadAllText(Active),new UTF8Encoding(false));
             Atomic(Active,s);activeHash=Hash(s);File.WriteAllText(KnownActive,activeHash);
