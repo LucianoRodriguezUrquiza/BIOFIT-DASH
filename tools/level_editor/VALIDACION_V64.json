@@ -14,10 +14,23 @@
     "main_unchanged": true,
     "fixture_code_not_unity": true
   },
-  "unity_compilation": false,
-  "unity_ui_test": false,
+  "unity_compilation": null,
+  "unity_ui_test": "partial_user_evidence",
   "cube_orientation_live_test": false,
   "physical_ble_validation": null,
   "apk_validation": null,
-  "stable": false
+  "stable": false,
+  "user_evidence_20261126": {
+    "editor_opened": true,
+    "object_editing": true,
+    "delta_export": true,
+    "delta_publish_remote_verified": true,
+    "publication_commit": "9f1dba739338759ef27f6dfc5b2ab5e169e3586e",
+    "target_records": 2998,
+    "edits": 69,
+    "added": 86,
+    "removed": 103,
+    "active_local_verified": false,
+    "full_editor_feature_test": false
+  }
 }
