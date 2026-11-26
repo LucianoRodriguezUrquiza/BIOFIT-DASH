@@ -24,7 +24,7 @@ namespace Biofit.GeomeTryOriginal
             // Never extend this exception to an obstacle ahead of the avatar.
             float overlap=Mathf.Min(a.max.y,b.max.y)-Mathf.Max(a.min.y,b.min.y);
             bool top=a.center.y>b.center.y && a.min.y>=b.max.y-.10f && overlap<=.10f;
-            bool reverseMode=motor!=null && (motor.Mode==BiofitMode.Ball || motor.Mode==BiofitMode.Spider || motor.Mode==BiofitMode.InvertedCube);
+            bool reverseMode=motor!=null && (motor.Mode==BiofitMode.Ball || motor.Mode==BiofitMode.Spider || motor.Mode==BiofitMode.InvertedCube || motor.Mode==BiofitMode.MiniInvertedCube);
             bool bottom=a.center.y<b.center.y && a.max.y<=b.min.y+.10f && overlap<=.10f;
             // Both faces are legitimate support during a gravity flip; lateral impacts stay lethal.
             if(reverseMode && (top || bottom)) return;
