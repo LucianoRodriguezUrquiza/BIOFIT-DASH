@@ -158,6 +158,14 @@ namespace Biofit.GeomeTryOriginal
             sprite=Sprite.Create(tex,new Rect(0,0,tex.width,tex.height),new Vector2(.5f,.5f),60f,0,SpriteMeshType.FullRect);
             sprites.Add(frame,sprite); return sprite;
         }
+        private Sprite RedPadSprite(string frame)
+        {
+            string key="BIOFIT_RED_PAD:"+frame;
+            if(sprites.TryGetValue(key,out var cached))return cached;
+            var original=GetSprite(frame);var texture=BiofitRedPadArt.Texture(original.texture);
+            var sprite=Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),new Vector2(.5f,.5f),original.pixelsPerUnit,0,SpriteMeshType.FullRect);
+            sprites.Add(key,sprite);return sprite;
+        }
         private SpriteRenderer Visual(Transform parent,string frame,int sorting)
         {
             var child=new GameObject(frame); child.transform.SetParent(parent,false);
@@ -220,7 +228,7 @@ namespace Biofit.GeomeTryOriginal
                     var sr=Visual(root.transform,o.frames[k],sort);
                     if(o.editorScaleX>0 || o.editorScaleY>0) sr.transform.localScale=new Vector3(o.editorScaleX>0?o.editorScaleX:1,o.editorScaleY>0?o.editorScaleY:1,1);
                     if(outlines!=null && outlines.Contains(o)) sr.sprite=outlines.FillSprite;
-                    if(o.kind=="redPad") sr.color=new Color32(255,45,55,255);
+                    if(o.kind=="redPad") sr.sprite=RedPadSprite(o.frames[k]);
                     else if(o.id==9) sr.color=Color.black;
                     else if(o.id>=18&&o.id<=21) sr.color=new Color32(255,200,75,255);
                 }
@@ -350,6 +358,45 @@ namespace Biofit.GeomeTryOriginal
         {
             foreach(Sprite s in sprites.Values) if(s!=null) Destroy(s);
             if(unlit!=null) Destroy(unlit);
+        }
+    }
+
+    // Shared visual-only recolour for the runtime and the level editor.
+    // Keeps the original canvas dimensions and draws a thin white alpha contour.
+    public static class BiofitRedPadArt
+    {
+        static readonly Dictionary<Texture2D,Texture2D> cache=new Dictionary<Texture2D,Texture2D>();
+        public static Texture2D Texture(Texture2D source)
+        {
+            if(source==null)return null;
+            if(cache.TryGetValue(source,out var cached)&&cached!=null)return cached;
+            int w=source.width,h=source.height;
+            var result=new Texture2D(w,h,TextureFormat.RGBA32,false);
+            Color32[] pixels;
+            if(source.isReadable)pixels=source.GetPixels32();
+            else
+            {
+                var previous=RenderTexture.active;
+                var rt=RenderTexture.GetTemporary(w,h,0,RenderTextureFormat.ARGB32);
+                try {Graphics.Blit(source,rt);RenderTexture.active=rt;result.ReadPixels(new Rect(0,0,w,h),0,0,false);pixels=result.GetPixels32();}
+                finally {RenderTexture.active=previous;RenderTexture.ReleaseTemporary(rt);}
+            }
+            var output=new Color32[pixels.Length];
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++)
+            {
+                int i=y*w+x;var p=pixels[i];
+                bool edge=false;
+                for(int dy=-1;dy<=1&&!edge;dy++)for(int dx=-1;dx<=1;dx++)
+                {
+                    int nx=x+dx,ny=y+dy;
+                    if(nx<0||nx>=w||ny<0||ny>=h||pixels[ny*w+nx].a<64){edge=true;break;}
+                }
+                if(p.a==0){output[i]=p;continue;}
+                bool white=p.r>200&&p.g>200&&p.b>200;
+                output[i]=edge||white?new Color32(255,255,255,p.a):new Color32(255,(byte)(30+p.g/10),(byte)(40+p.b/12),p.a);
+            }
+            result.SetPixels32(output);result.filterMode=source.filterMode;result.wrapMode=TextureWrapMode.Clamp;
+            result.hideFlags=HideFlags.HideAndDontSave;result.Apply(false,true);cache[source]=result;return result;
         }
     }
 }

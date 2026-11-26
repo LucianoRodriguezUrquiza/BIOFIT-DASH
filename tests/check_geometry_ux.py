@@ -354,3 +354,18 @@ assert 'GUIStyle.none' in editor and 'ResetCatalogFilter()' in editor
 assert 'if(placing&&paletteIndex>=0&&paletteIndex<catalog.Count)' in editor
 assert 'Mathf.Clamp(paletteIndex,0,catalog.Count-1)' not in editor
 print("PASS: catalog categories, row layout and explicit selection")
+
+# V6.5 clipboard: preview is not inserted until commit; cut keeps same-slot IDs.
+assert 'case KeyCode.X:Cut();' in editor and 'case KeyCode.V:BeginFloatingPaste();' in editor
+assert 'EventType.MouseUp&&e.button==0&&pasteArmed' in editor
+assert 'if(inside)Guard(()=>Paste(FloatingDelta(lastWorld)))' in editor
+assert 'cutClipboard&&cutSlot==slot&&added.All' in editor
+assert 'if(!preserveIds)o.index=id++' in editor
+assert 'Mathf.Round(delta.x/grid)*grid' in editor
+assert 'CancelFloatingPaste();status="Pegado cancelado.' in editor
+assert 'public static class BiofitRedPadArt' in runtime
+assert 'if(o.kind=="redPad") sr.sprite=RedPadSprite' in runtime
+assert 'new Color32(255,255,255,p.a)' in runtime
+assert editor.count('BiofitRedPadArt.Texture(t)')==2
+assert 'kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f' in interaction
+print("PASS: clipboard placement and visual-only Red Pad contract")

@@ -30,6 +30,11 @@ namespace Biofit.LevelEditing
         readonly List<Item> catalog=new List<Item>();
         readonly Stack<string> undo=new Stack<string>(), redo=new Stack<string>();
         List<Item> clipboard=new List<Item>();
+        List<Item> floatingPaste;
+        bool cutClipboard, pasteArmed, canvasFocused;
+        int cutSlot=-1;
+        Vector2 pasteAnchor;
+        bool HasFloatingPaste=>floatingPaste!=null;
         Vector2 pan=new Vector2(0,120), inspectorScroll, paletteScroll, press, panStart;
         Dictionary<int,Vector2> dragStart;
         float zoom=1.2f, grid=30, dragGrid;
@@ -67,6 +72,7 @@ namespace Biofit.LevelEditing
         void Load(int n,bool resume)
         {
             if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
+            CancelFloatingPaste();
             if(data!=null&&dirty)SaveDraft();
             string nextDir=Path.Combine(Application.dataPath,"BIOFIT/Resources/BiofitStereoLocal/CampaignV5",(n+1).ToString());
             string nextActive=Path.Combine(nextDir,"Active.json");
@@ -184,6 +190,7 @@ namespace Biofit.LevelEditing
         void Push(){undo.Push(JsonUtility.ToJson(data));if(undo.Count>60){var kept=undo.Take(60).Reverse().ToArray();undo.Clear();foreach(var x in kept)undo.Push(x);}redo.Clear();dirty=true;}
         void History(bool back)
         {
+            CancelFloatingPaste();
             var from=back?undo:redo;var to=back?redo:undo;if(from.Count==0)return;
             to.Push(JsonUtility.ToJson(data));data=Parse(from.Pop());selection.RemoveWhere(i=>!data.objects.Any(o=>o.index==i));dirty=true;
         }
@@ -218,13 +225,63 @@ namespace Biofit.LevelEditing
             o.xGD+=dx;o.yGD+=dy;
             if(o.portalMaxGD>o.portalMinGD){o.portalMinGD+=dy;o.portalMaxGD+=dy;}
         }
-        void Delete(){if(selection.Count==0)return;Push();data.objects=data.objects.Where(o=>!selection.Contains(o.index)).ToArray();selection.Clear();}
-        void Copy(){clipboard=Selected().Select(Clone).ToList();}
+        void Delete(){CancelFloatingPaste();if(selection.Count==0)return;Push();data.objects=data.objects.Where(o=>!selection.Contains(o.index)).ToArray();selection.Clear();}
+        void Copy()
+        {
+            CancelFloatingPaste();
+            var items=Selected();if(items.Length==0)return;
+            clipboard=items.Select(Clone).ToList();cutClipboard=false;cutSlot=-1;
+            status=clipboard.Count+" objeto(s) copiado(s). Ctrl+V para colocar.";
+        }
+        void Cut()
+        {
+            CancelFloatingPaste();
+            var items=Selected();if(items.Length==0)return;
+            clipboard=items.Select(Clone).ToList();cutClipboard=true;cutSlot=slot;
+            Push();data.objects=data.objects.Where(o=>!selection.Contains(o.index)).ToArray();selection.Clear();
+            status=clipboard.Count+" objeto(s) cortado(s). Ctrl+V para colocar; Ctrl+Z para restaurar.";
+        }
+        void CancelFloatingPaste()
+        {
+            floatingPaste=null;pasteArmed=false;
+        }
+        void BeginFloatingPaste()
+        {
+            if(clipboard.Count==0)return;
+            floatingPaste=clipboard.Select(Clone).ToList();pasteArmed=false;
+            pasteAnchor=new Vector2((floatingPaste.Min(o=>o.xGD)+floatingPaste.Max(o=>o.xGD))*.5f,
+                (floatingPaste.Min(o=>o.yGD)+floatingPaste.Max(o=>o.yGD))*.5f);
+            placing=false;testPick=false;dragStart=null;dragging=false;selecting=false;panning=false;
+            status="Pegado flotante: mové el mouse y soltá clic izquierdo para confirmar. Esc cancela.";
+            Repaint();
+        }
+        Vector2 FloatingDelta(Vector2 target)
+        {
+            Vector2 delta=target-pasteAnchor;
+            // Snap the translation, not individual objects: keep every relative offset.
+            if(snap)delta=new Vector2(Mathf.Round(delta.x/grid)*grid,Mathf.Round(delta.y/grid)*grid);
+            return delta;
+        }
         void Paste(Vector2 delta)
         {
-            if(clipboard.Count==0)return;Push();int id=NextId();selection.Clear();var added=new List<Item>();
-            foreach(var source in clipboard){var o=Clone(source);o.index=id++;Shift(o,delta.x,delta.y);selection.Add(o.index);added.Add(o);}
+            var source=HasFloatingPaste?floatingPaste:clipboard;
+            if(source.Count==0)return;
+            // Validate all items before mutating the draft/history.
+            var added=source.Select(Clone).ToArray();
+            foreach(var o in added)
+            {
+                Shift(o,delta.x,delta.y);
+                if(o.xGD<0||o.xGD>data.endGD)throw new Exception("Pegado fuera del nivel. Elegí otra posición.");
+                foreach(string f in o.frames??Array.Empty<string>())EnsureFrame(f);
+            }
+            var occupied=new HashSet<int>(data.objects.Select(o=>o.index));
+            bool preserveIds=cutClipboard&&cutSlot==slot&&added.All(o=>!occupied.Contains(o.index));
+            int id=NextId();
+            Push();selection.Clear();
+            foreach(var o in added){if(!preserveIds)o.index=id++;selection.Add(o.index);}
             data.objects=data.objects.Concat(added).ToArray();
+            cutClipboard=false;cutSlot=-1;CancelFloatingPaste();
+            status=added.Length+" objeto(s) pegado(s) y seleccionado(s).";
         }
         void OnGUI()
         {
@@ -253,13 +310,14 @@ namespace Biofit.LevelEditing
                 {
                     if(GUILayout.Button("Deshacer",EditorStyles.toolbarButton))History(true);
                     if(GUILayout.Button("Rehacer",EditorStyles.toolbarButton))History(false);
+                    if(GUILayout.Button("Cortar",EditorStyles.toolbarButton))Cut();
                     if(GUILayout.Button("Copiar",EditorStyles.toolbarButton))Copy();
-                    if(GUILayout.Button("Pegar +1",EditorStyles.toolbarButton))Paste(new Vector2(grid,0));
-                    if(GUILayout.Button("Duplicar",EditorStyles.toolbarButton)){Copy();Paste(new Vector2(grid,0));}
+                    if(GUILayout.Button("Pegar",EditorStyles.toolbarButton))BeginFloatingPaste();
+                    if(GUILayout.Button("Duplicar +1",EditorStyles.toolbarButton)){if(selection.Count>0){Copy();Guard(()=>Paste(new Vector2(grid,0)));}}
                     if(GUILayout.Button("Eliminar",EditorStyles.toolbarButton))Delete();
                     if(GUILayout.Button("Vaciar borrador",EditorStyles.toolbarButton))Guard(()=>{if(EditorUtility.DisplayDialog("Crear desde cero","Vaciar todos los registros del borrador. Se conserva la ranura, música y longitud.","Vaciar","Cancelar")){Push();data.objects=Array.Empty<Item>();selection.Clear();}});
                     using(new EditorGUI.DisabledScope(paletteIndex<0||paletteIndex>=catalog.Count))
-                        placing=GUILayout.Toggle(placing,"Colocar",EditorStyles.toolbarButton);
+                        {bool next=GUILayout.Toggle(placing,"Colocar",EditorStyles.toolbarButton);if(next&&!placing)CancelFloatingPaste();placing=next;}
                     snap=GUILayout.Toggle(snap,"Snap",EditorStyles.toolbarButton);
                     grid=EditorGUILayout.Popup(grid==15?0:grid==30?1:2,new[]{"15 GD","30 GD","60 GD"},GUILayout.Width(65)) switch {0=>15f,1=>30f,_=>60f};
                     showGrid=GUILayout.Toggle(showGrid,"Grilla",EditorStyles.toolbarButton);
@@ -286,7 +344,7 @@ namespace Biofit.LevelEditing
                     }
                     using(new EditorGUILayout.VerticalScope(GUILayout.Width(270)))DrawInspector();
                 }
-                EditorGUILayout.LabelField("Mouse: arrastrar objeto • Shift selección múltiple • arrastrar vacío: caja • botón medio/derecho: desplazar • rueda: zoom • Supr • Ctrl+Z/Y/C/V/D",EditorStyles.miniLabel);
+                EditorGUILayout.LabelField("Mouse: arrastrar objeto • Shift selección múltiple • arrastrar vacío: caja • botón medio/derecho: desplazar • rueda: zoom • Supr • Ctrl+Z/Y/X/C/V/D",EditorStyles.miniLabel);
                 EditorGUILayout.LabelField(status+(dirty?" | borrador modificado":""),EditorStyles.wordWrappedMiniLabel);
             }
         }
@@ -317,7 +375,7 @@ namespace Biofit.LevelEditing
         }
         void ResetCatalogFilter()
         {
-            catalogPage=0;paletteScroll=Vector2.zero;paletteIndex=-1;placing=false;
+            catalogPage=0;paletteScroll=Vector2.zero;paletteIndex=-1;placing=false;CancelFloatingPaste();
         }
         void DrawCatalog()
         {
@@ -360,7 +418,7 @@ namespace Biofit.LevelEditing
                     Rect image=new Rect(body.x+7,body.y+7,36,36);
                     EditorGUI.DrawRect(image,new Color(.12f,.14f,.17f));
                     var t=o.frames!=null&&o.frames.Length>0?Tex(o.frames[0]):null;
-                    Color oldColor=GUI.color;if(o.kind=="redPad")GUI.color=new Color(1f,.2f,.2f);
+                    Color oldColor=GUI.color;if(t!=null&&o.kind=="redPad")t=Biofit.GeomeTryOriginal.BiofitRedPadArt.Texture(t);
                     if(t!=null)GUI.DrawTexture(image,t,ScaleMode.ScaleToFit,true);
                     else GUI.Label(image,"—",detailStyle);
                     GUI.color=oldColor;
@@ -369,12 +427,12 @@ namespace Biofit.LevelEditing
                     GUI.Label(new Rect(tx,body.y+25,tw,18),string.IsNullOrEmpty(frame)?o.kind:frame,detailStyle);
                 }
                 if(GUI.Button(body,new GUIContent("",Label(o)),GUIStyle.none))
-                {paletteIndex=i;placing=true;testPick=false;}
+                {CancelFloatingPaste();paletteIndex=i;placing=true;testPick=false;}
             }
             if(matched.Length==0)EditorGUILayout.HelpBox("No hay objetos para esta categoría y búsqueda.",MessageType.Info);
             EditorGUILayout.EndScrollView();
             using(new EditorGUI.DisabledScope(paletteIndex<0||paletteIndex>=catalog.Count))
-                if(GUILayout.Button("Colocar seleccionado")){placing=true;testPick=false;}
+                if(GUILayout.Button("Colocar seleccionado")){CancelFloatingPaste();placing=true;testPick=false;}
             GUILayout.Label("La categoría no cambia la función ni la colisión.",EditorStyles.miniLabel);
         }
         void DrawCanvas()
@@ -390,8 +448,15 @@ namespace Biofit.LevelEditing
             }
             float fy=Screen(Vector2.zero).y;EditorGUI.DrawRect(new Rect(0,fy,canvas.width,2),Color.cyan);
             float end=Screen(new Vector2(data.endGD,0)).x;EditorGUI.DrawRect(new Rect(end,0,2,canvas.height),Color.green);
-            foreach(var o in data.objects.OrderBy(x=>x.layer*100+x.order))
+            var ghosts=new HashSet<Item>();
+            if(HasFloatingPaste)
             {
+                Vector2 delta=FloatingDelta(World(Event.current.mousePosition));
+                foreach(var src in floatingPaste){var ghost=Clone(src);Shift(ghost,delta.x,delta.y);ghosts.Add(ghost);}
+            }
+            foreach(var o in data.objects.OrderBy(x=>x.layer*100+x.order).Concat(ghosts.OrderBy(x=>x.layer*100+x.order)))
+            {
+                bool ghost=ghosts.Contains(o);
                 if(IsTrigger(o)&&!showTriggers)continue;
                 Rect r=ObjectRect(o);float margin=Mathf.Max(r.width,r.height);
                 if(!new Rect(-margin,-margin,canvas.width+2*margin,canvas.height+2*margin).Contains(r.center))continue;
@@ -402,13 +467,15 @@ namespace Biofit.LevelEditing
                     var t=Tex(f);if(t==null)continue;
                     float sw=t.width*zoom*.5f*(o.editorScaleX>0?o.editorScaleX:1),sh=t.height*zoom*.5f*(o.editorScaleY>0?o.editorScaleY:1);
                     Rect sr=new Rect(r.center.x-sw*.5f,r.center.y-sh*.5f,sw,sh);
-                    Color before=GUI.color;if(o.kind=="redPad")GUI.color=new Color(1f,.2f,.2f);
+                    Color before=GUI.color;
+                    if(o.kind=="redPad")t=Biofit.GeomeTryOriginal.BiofitRedPadArt.Texture(t);
+                    if(ghost)GUI.color=new Color(before.r,before.g,before.b,.65f);
                     GUI.DrawTextureWithTexCoords(sr,t,new Rect(o.flipX?1:0,o.flipY?1:0,o.flipX?-1:1,o.flipY?-1:1));GUI.color=before;painted=true;
                 }
                 if(!painted){EditorGUI.DrawRect(r,new Color(.7f,.45f,.1f,.65f));GUI.Label(r,o.kind,EditorStyles.miniLabel);}
-                if(showColliders||selection.Contains(o.index))
+                if(ghost||showColliders||selection.Contains(o.index))
                 {
-                    Color c=selection.Contains(o.index)?Color.yellow:o.collisionMode==1||o.kind=="decoration"?new Color(.7f,.7f,.7f,.45f):o.collisionMode==3||o.kind=="hazard"?Color.red:Color.green;
+                    Color c=ghost?Color.cyan:selection.Contains(o.index)?Color.yellow:o.collisionMode==1||o.kind=="decoration"?new Color(.7f,.7f,.7f,.45f):o.collisionMode==3||o.kind=="hazard"?Color.red:Color.green;
                     float w=o.widthGD*zoom,h=o.heightGD*zoom;
                     Outline(new Rect(r.center.x-w/2,r.center.y-h/2,w,h),c);
                 }
@@ -425,12 +492,30 @@ namespace Biofit.LevelEditing
             Event e=Event.current;
             bool inside=canvas.Contains(e.mousePosition);
             if(inside)lastWorld=World(e.mousePosition);
+            if(e.type==EventType.MouseMove&&HasFloatingPaste)Repaint();
+            if(e.type==EventType.MouseDown)canvasFocused=inside;
+            if((inside||canvasFocused)&&!EditorGUIUtility.editingTextField&&(e.type==EventType.ValidateCommand||e.type==EventType.ExecuteCommand))
+            {
+                string command=e.commandName;
+                if(command=="Cut"||command=="Copy"||command=="Paste")
+                {
+                    if(e.type==EventType.ExecuteCommand){if(command=="Cut")Cut();else if(command=="Copy")Copy();else BeginFloatingPaste();}
+                    e.Use();Repaint();return;
+                }
+            }
+            if(HasFloatingPaste&&e.type==EventType.MouseUp&&e.button==0&&pasteArmed)
+            {
+                pasteArmed=false;
+                if(inside)Guard(()=>Paste(FloatingDelta(lastWorld)));
+                e.Use();Repaint();return;
+            }
             if(e.type==EventType.ScrollWheel&&inside){Vector2 anchor=World(e.mousePosition);zoom=Mathf.Clamp(zoom*Mathf.Pow(1.12f,-e.delta.y),.01f,4);Vector2 after=World(e.mousePosition);pan+=anchor-after;e.Use();Repaint();return;}
             if(e.type==EventType.MouseDown&&inside)
             {
                 GUI.FocusControl(null);press=e.mousePosition;panStart=pan;
                 if(e.button==1||e.button==2){panning=true;e.Use();return;}
                 if(e.button!=0)return;
+                if(HasFloatingPaste){pasteArmed=true;e.Use();Repaint();return;}
                 if(testPick){testX=Snap(lastWorld.x);testY=Snap(lastWorld.y);testPick=false;e.Use();Repaint();return;}
                 if(placing&&paletteIndex>=0&&paletteIndex<catalog.Count){Guard(()=>Add(catalog[paletteIndex],lastWorld));e.Use();Repaint();return;}
                 var hits=data.objects.Where(o=>(showTriggers||!IsTrigger(o))&&Hit(o,e.mousePosition)).OrderByDescending(o=>o.layer*100+o.order).ThenByDescending(o=>o.index).ToArray();
@@ -465,16 +550,16 @@ namespace Biofit.LevelEditing
                 if(selecting)foreach(var o in data.objects)if((showTriggers||!IsTrigger(o))&&marquee.Contains(Screen(new Vector2(o.xGD,o.yGD))))selection.Add(o.index);
                 dragStart=null;dragging=false;panning=false;selecting=false;e.Use();Repaint();
             }
-            else if(e.type==EventType.KeyDown&&inside&&!EditorGUIUtility.editingTextField)
+            else if(e.type==EventType.KeyDown&&(inside||canvasFocused)&&!EditorGUIUtility.editingTextField)
             {
                 bool used=true;
                 if(e.keyCode==KeyCode.Delete||e.keyCode==KeyCode.Backspace)Delete();
-                else if(e.keyCode==KeyCode.Escape){placing=false;selection.Clear();}
+                else if(e.keyCode==KeyCode.Escape){if(HasFloatingPaste){CancelFloatingPaste();status="Pegado cancelado. El portapapeles se conserva.";}else{placing=false;selection.Clear();}}
                 else if(e.keyCode==KeyCode.LeftArrow||e.keyCode==KeyCode.RightArrow||e.keyCode==KeyCode.UpArrow||e.keyCode==KeyCode.DownArrow)
                 {if(selection.Count>0){Push();float step=e.shift?1:grid;foreach(var o in Selected())Shift(o,e.keyCode==KeyCode.LeftArrow?-step:e.keyCode==KeyCode.RightArrow?step:0,e.keyCode==KeyCode.DownArrow?-step:e.keyCode==KeyCode.UpArrow?step:0);}}
                 else if(e.control||e.command)
                 {
-                    switch(e.keyCode){case KeyCode.Z:History(!e.shift);break;case KeyCode.Y:History(false);break;case KeyCode.C:Copy();break;case KeyCode.V:Paste(new Vector2(grid,0));break;case KeyCode.D:Copy();Paste(new Vector2(grid,0));break;case KeyCode.A:foreach(var o in data.objects)selection.Add(o.index);break;case KeyCode.S:Guard(SaveDraft);break;default:used=false;break;}
+                    switch(e.keyCode){case KeyCode.Z:History(!e.shift);break;case KeyCode.Y:History(false);break;case KeyCode.X:Cut();break;case KeyCode.C:Copy();break;case KeyCode.V:BeginFloatingPaste();break;case KeyCode.D:if(selection.Count>0){Copy();Guard(()=>Paste(new Vector2(grid,0)));}break;case KeyCode.A:foreach(var o in data.objects)selection.Add(o.index);break;case KeyCode.S:Guard(SaveDraft);break;default:used=false;break;}
                 }
                 else used=false;
                 if(used){e.Use();Repaint();}
@@ -545,7 +630,7 @@ namespace Biofit.LevelEditing
             testX=EditorGUILayout.FloatField("Inicio X GD",testX);testY=EditorGUILayout.FloatField("Centro Y GD",testY);
             testMode=EditorGUILayout.Popup("Vehículo",testMode,new[]{"Cube","Ball","Spider","Auto por portales","Mini Cube"});
             testInvert=EditorGUILayout.Toggle("Gravedad invertida",testInvert);testRestart=EditorGUILayout.Toggle("Reiniciar aquí",testRestart);
-            if(GUILayout.Button("Elegir punto en mapa")){testPick=true;placing=false;}
+            if(GUILayout.Button("Elegir punto en mapa")){CancelFloatingPaste();testPick=true;placing=false;}
             if(GUILayout.Button("Usar centro de vista")){var v=World(canvas.center);testX=v.x;testY=v.y;}
             GUILayout.Label("Progreso: "+(100f*testX/data.endGD).ToString("F1")+" %");
             GUILayout.Space(8);GUILayout.Label("NIVEL",EditorStyles.boldLabel);
