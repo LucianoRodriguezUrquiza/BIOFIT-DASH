@@ -88,6 +88,7 @@ namespace Biofit.GeomeTryOriginal
         private int fpsFrames;
         private int fpsSamples;
         private int skinIndex;
+        private int skinTab,skinPage;
         private int focusLevel;
         private readonly Button[] selectorHotspots = new Button[5];
         private RectTransform selectorContentRoot;
@@ -1037,6 +1038,12 @@ namespace Biofit.GeomeTryOriginal
             Fill("BIOFIT personalizacion azul", canvasRoot, Blue);
             ArcadeCorners(canvasRoot);
             ArcadeLogo(canvasRoot);
+            for(int tab=0;tab<3;tab++)
+            {
+                int choice=tab;string label=new[]{"CUBO","BOLA","SPIDER"}[tab];
+                Button("V65 skin tab "+label,canvasRoot,label,new Vector2(.17f,.67f-tab*.12f),new Vector2(190,62),Vector2.zero,()=>{skinTab=choice;skinPage=0;BuildScreen(Custom);},skinTab==tab?Lime:Ice,24);
+            }
+            if(skinTab!=0){BuildV65VehicleSkins();return;}
 
             RectTransform title = ArcadePanel("Titulo personalizacion",
                 canvasRoot, new Vector2(.5f, .794f),
@@ -1106,6 +1113,25 @@ namespace Biofit.GeomeTryOriginal
             UpdateSkinSelectionOutline();
         }
 
+        private void BuildV65VehicleSkins()
+        {
+            BiofitMode mode=skinTab==1?BiofitMode.Ball:BiofitMode.Spider;
+            var names=BiofitV65Skins.Names(mode);
+            Text("V65 skin title",canvasRoot,skinTab==1?"PERSONALIZAR BOLA":"PERSONALIZAR SPIDER",new Vector2(.55f,.76f),new Vector2(780,60),Vector2.zero,36,Color.white);
+            if(names.Length==0){Text("V65 sin arte",canvasRoot,"IMPORTÁ EL ARTE LOCAL V6.5",new Vector2(.55f,.45f),new Vector2(780,110),Vector2.zero,30,Ice);return;}
+            int pages=Mathf.CeilToInt(names.Length/12f);skinPage=Mathf.Clamp(skinPage,0,pages-1);
+            for(int j=0;j<12;j++)
+            {
+                int index=skinPage*12+j;if(index>=names.Length)break;
+                var sprite=BiofitV65Skins.Get(mode,index);Vector2 pos=new Vector2(.36f+(j%4)*.13f,.62f-(j/4)*.17f);
+                var btn=Button("V65 skin "+index,canvasRoot,"",pos,new Vector2(145,130),Vector2.zero,()=>{BiofitV65Skins.Select(mode,index);BuildScreen(Custom);},index==BiofitV65Skins.Selected(mode)?Lime:Ice);
+                if(sprite!=null){var img=Rect("V65 icon",btn.transform,new Vector2(.5f,.58f),new Vector2(83,83),Vector2.zero).gameObject.AddComponent<RawImage>();img.texture=sprite.texture;img.raycastTarget=false;}
+                Text("V65 index",btn.transform,(index+1).ToString(),new Vector2(.5f,.13f),new Vector2(120,24),Vector2.zero,18,Navy);
+            }
+            Button("V65 prev",canvasRoot,"<",new Vector2(.38f,.12f),new Vector2(80,55),Vector2.zero,()=>{skinPage=Mathf.Max(0,skinPage-1);BuildScreen(Custom);},Lime);
+            Button("V65 next",canvasRoot,">",new Vector2(.73f,.12f),new Vector2(80,55),Vector2.zero,()=>{skinPage=Mathf.Min(pages-1,skinPage+1);BuildScreen(Custom);},Lime);
+            Text("V65 pages",canvasRoot,(skinPage+1)+" / "+pages,new Vector2(.55f,.12f),new Vector2(250,50),Vector2.zero,26,Color.white);
+        }
         private void AddSelectionStroke(Transform root, string name,
             Vector2 anchor, Vector2 size, Vector2 offset)
         {
