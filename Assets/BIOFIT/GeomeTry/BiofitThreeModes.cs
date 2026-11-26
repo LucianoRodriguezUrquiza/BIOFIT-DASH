@@ -377,8 +377,9 @@ namespace Biofit.GeomeTryOriginal
             Initialize();
             if (!initialized || !cube.isAlive || newMode == Mode) return;
             initialFacing=false;
+            bool wasMini=IsMini;
             Mode = newMode;
-            transform.localScale=IsMini?normalScale*MiniScale:normalScale;
+            if(IsMini||wasMini)transform.localScale=IsMini?normalScale*MiniScale:normalScale;
             flipped = false;
             shipBleHeldUntil = 0f;
             // Keep the incoming jump momentum at the local mode portal; do not edit Cube physics.
@@ -408,7 +409,7 @@ namespace Biofit.GeomeTryOriginal
             else
             {
                 cube.enabled = false;
-                icon.sprite = BiofitThreeModeArt.Make(newMode, false);
+                icon.sprite = (newMode==BiofitMode.Ball||newMode==BiofitMode.Spider?BiofitV65Skins.Current(newMode,false):null) ?? BiofitThreeModeArt.Make(newMode, false);
                 icon.color = Color.white;
                 icon.flipY = false;
                 icon.transform.localRotation = Quaternion.identity;
@@ -429,6 +430,11 @@ namespace Biofit.GeomeTryOriginal
 
         private void LateUpdate()
         {
+            if(initialized&&cube.isAlive&&(Mode==BiofitMode.Ball||Mode==BiofitMode.Spider))
+            {
+                var selected=BiofitV65Skins.Current(Mode,GameManager.Instance!=null&&GameManager.Instance.PlayMode);
+                if(selected!=null&&icon.sprite!=selected)icon.sprite=selected;
+            }
             // Correct initial falling/settling sprite only. Leave all subsequent jump rotations intact.
             if(!initialFacing || !initialized || Mode!=BiofitMode.Cube || !cube.isAlive) return;
             if(body.linearVelocity.y>.10f) {initialFacing=false;return;}
