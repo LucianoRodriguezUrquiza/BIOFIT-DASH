@@ -1,5 +1,5 @@
 {
-  "version": "V6.4 experimental",
+  "version": "V6.4 — aprobada por el usuario",
   "base": "597631a69eed15a064c96baa14759a06704d22ce",
   "maps_compact_sha256_matches": 5,
   "delta_roundtrip_real_maps": 5,
@@ -19,7 +19,7 @@
   "cube_orientation_live_test": false,
   "physical_ble_validation": null,
   "apk_validation": null,
-  "stable": false,
+  "stable": true,
   "user_evidence_20261126": {
     "editor_opened": true,
     "object_editing": true,
@@ -31,6 +31,26 @@
     "added": 86,
     "removed": 103,
     "active_local_verified": false,
-    "full_editor_feature_test": false
+    "full_editor_feature_test": false,
+    "spider_gap_corrected_reported": true,
+    "back_on_track_edited_published": true
+  },
+  "stable_scope": "Versión de trabajo aprobada por el usuario 26/11/2026; no certificación integral de Unity/Android/BLE",
+  "consolidation_authorized": true,
+  "published_target_records": {
+    "stereo_madness": 2991,
+    "back_on_track": 1920,
+    "polargeist": 2111,
+    "cant_let_go": 1871,
+    "jumper": 3351,
+    "total": 12244
+  },
+  "ci_verified_run": {
+    "run_id": 45847125910,
+    "head_sha": "73c6745c9fb8f8b734b468c6d579b7c2f6e6b221",
+    "jobs_success": 5,
+    "jobs_total": 5,
+    "regression_commands_success": 20,
+    "scope": "host only; before publisher adjustment and consolidation; verify latest HEAD separately"
   }
 }
