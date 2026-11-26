@@ -220,7 +220,8 @@ namespace Biofit.GeomeTryOriginal
                     var sr=Visual(root.transform,o.frames[k],sort);
                     if(o.editorScaleX>0 || o.editorScaleY>0) sr.transform.localScale=new Vector3(o.editorScaleX>0?o.editorScaleX:1,o.editorScaleY>0?o.editorScaleY:1,1);
                     if(outlines!=null && outlines.Contains(o)) sr.sprite=outlines.FillSprite;
-                    if(o.id==9) sr.color=Color.black;
+                    if(o.kind=="redPad") sr.color=new Color32(255,45,55,255);
+                    else if(o.id==9) sr.color=Color.black;
                     else if(o.id>=18&&o.id<=21) sr.color=new Color32(255,200,75,255);
                 }
                 Vector2 size=new Vector2(o.widthGD/Unit,o.heightGD/Unit);
@@ -277,7 +278,7 @@ namespace Biofit.GeomeTryOriginal
                         root.AddComponent<BiofitV5Interaction>().kind=o.kind;
                     else root.AddComponent<BiofitModePortal>().Target=o.kind=="ballPortal"?BiofitMode.Ball:o.kind=="spiderPortal"?BiofitMode.Spider:BiofitMode.Cube;
                 }
-                else if(o.kind=="pad"||o.kind=="pinkPad"||o.kind=="gravityPad"||o.kind=="orb")
+                else if(o.kind=="pad"||o.kind=="pinkPad"||o.kind=="redPad"||o.kind=="gravityPad"||o.kind=="orb")
                 {
                     var hit=root.AddComponent<BoxCollider2D>();hit.isTrigger=true;
                     hit.size=o.kind=="orb"?new Vector2(1.05f,1.05f):new Vector2(size.x,.30f);
@@ -313,6 +314,9 @@ namespace Biofit.GeomeTryOriginal
         private void LateUpdate()
         {
             if(!ready || cameraView==null) return;
+#if UNITY_EDITOR
+            BiofitV65EditorSession.Tick(this,cameraView,floorY,finalX);
+#endif
             if(player==null) {var p=GameObject.FindGameObjectWithTag("Player");if(p!=null)player=p.transform;}
             if(player!=null) {lastPlayerX=player.position.x; var cube=player.GetComponent<Cube>(); if(cube!=null && cube.isAlive && (player.position.y<floorY-5f || player.position.y>maxY+8f)) cube.Die();}
             // The upstream UIManager may create a second background over the world.
@@ -323,6 +327,9 @@ namespace Biofit.GeomeTryOriginal
                 {oldBackground.SetActive(false);oldBackgroundHidden=true;}
             }
             float x=Mathf.Max(OriginX,lastPlayerX);
+#if UNITY_EDITOR
+            if(BiofitV65EditorSession.IsPreview) x=Mathf.Clamp(cameraView.transform.position.x,OriginX,finalX);
+#endif
             Color bg=background.Evaluate(x),gr=ground.Evaluate(x);
             cameraView.backgroundColor=bg;
             float halfH=cameraView.orthographicSize,halfW=halfH*cameraView.aspect;
