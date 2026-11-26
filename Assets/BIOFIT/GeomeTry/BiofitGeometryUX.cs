@@ -168,6 +168,9 @@ namespace Biofit.GeomeTryOriginal
         private void Update()
         {
             if (!IsGeomeTryScene(currentScene)) return;
+#if UNITY_EDITOR
+            if(currentScene==Menu && GameManager.Instance!=null && BiofitV65EditorSession.TryTakeLaunch(out int slot)) StartLevel(slot-1);
+#endif
             float frameDuration = Time.unscaledDeltaTime;
             if (frameDuration > 0f && frameDuration < 1f)
             {
