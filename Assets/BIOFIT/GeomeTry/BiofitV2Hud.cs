@@ -10,7 +10,7 @@ namespace Biofit.GeomeTryOriginal
         public RawImage[] coins;
         private RectTransform fill;
         private Texture2D emptyCoin, fullCoin;
-        private int lastCoins=-1;
+        private int lastCoins=-1, lastTotal=-1;
         private Transform player,end;
         private void Start()
         {
@@ -47,10 +47,11 @@ namespace Biofit.GeomeTryOriginal
                 if(fill!=null) fill.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,Mathf.Max(0,(bar.rect.width-6)*value));
             }
             int count=BiofitStereoCoinPickup.Collected;
-            if(coins!=null && count!=lastCoins)
+            int total=BiofitStereoLocalRuntime.TotalCoins;
+            if(coins!=null && (count!=lastCoins || total!=lastTotal))
             {
-                for(int i=0;i<coins.Length;i++) if(coins[i]!=null) coins[i].texture=i<count?fullCoin:emptyCoin;
-                lastCoins=count;
+                for(int i=0;i<coins.Length;i++) if(coins[i]!=null) { coins[i].gameObject.SetActive(i<total); coins[i].texture=i<count?fullCoin:emptyCoin; }
+                lastCoins=count;lastTotal=total;
             }
             if(practiceStatus!=null) {
                 string feedback=BiofitStereoPractice.Feedback;
