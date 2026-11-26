@@ -28,8 +28,18 @@ assert "selectorFocusCard.localScale = Vector3.one;" not in ui, (
 assert "selectorFocusCard.anchoredPosition" in ui
 assert "1.045f" not in ui, "Do not enlarge focused card over neighbors"
 assert 'Button("BIOFIT " + MapTitles[i], board, ""' in ui
-assert '"NIVEL 1", "NIVEL 2", "NIVEL 3", "NIVEL 4", "NIVEL 5"' in ui
-assert '"CUBO / NAVE", "BOLA", "SPIDER", "TRES MODOS", "TRES MODOS"' in ui
+def string_array(name):
+    match = re.search(r"\b" + name + r"\s*=\s*\{([^}]+)\}", ui)
+    assert match, name
+    return re.findall(r'"([^"]*)"', match.group(1))
+
+assert string_array("MapTitles") == [
+    "STEREO MADNESS", "BACK ON TRACK", "POLARGEIST", "CAN'T LET GO", "JUMPER"]
+assert string_array("MapModes") == [
+    "CUBO / BOLA / SPIDER", "CUBO / BOLA", "CUBO / SPIDER",
+    "CUBO / BOLA", "CUBO / BOLA / SPIDER"]
+assert 'Text("Nombre " + MapTitles[i], btn.transform, MapTitles[i],' in ui
+assert 'Text("Modo " + MapTitles[i], btn.transform, MapModes[i],' in ui
 assert "BiofitThreeModeArt.Make(mode, false)" in ui
 assert "artwork.cards[i]" not in ui, "Baked legacy names must not show"
 assert "artwork != null ? artwork.background : null;" in ui
@@ -78,7 +88,8 @@ assert "image.texture = levelBackdrop;" not in ui
 assert "artwork.corners[i]" in ui
 assert "corner.pivot = new Vector2(right ? 1f : 0f, bottom ? 0f : 1f);" in ui
 assert "if (i == 0) raw.uvRect = new Rect(1f, 0f, -1f, 1f);" in ui
-assert 'new Vector2(.080f, .902f), new Vector2(88f, 94f)' in ui
+assert 'scene == LevelScene ? new Vector2(.06f, .93f) : new Vector2(.080f, .902f), new Vector2(88f, 88f)' in ui
+assert 'new Vector2(.051f, .913f), new Vector2(144f, 135f)' in ui
 assert 'Hotspot("VOLVER sobre flecha original"' in ui
 
 # 6. Aspect-correct, safe-area-aware layout for 16:9 / 20:9 / 4:3
@@ -195,6 +206,6 @@ assert "activeInputHandler: 0" in settings
 assert "StandaloneInputModule" in preflight
 assert "PrefabUtility.SaveAsPrefabAsset" in preflight
 
-print("PASS: live Spanish numbered selector, no duplicated indicators, 70 safe skins, alpha "
+print("PASS: live classic campaign selector, no duplicated indicators, 70 safe skins, alpha "
       "logo/corners, 16:9 safe-area, structured BLE, honest FPS; untouched "
       "source physics/legacy BLE. Editor/Android validation remains necessary.")
