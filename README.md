@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.4 aprobada como versión estable de trabajo
+
+**26/11/2026:** el usuario probó V6.4, aprobó su funcionamiento y autorizó incorporar todos los avances a main y retirar niveles-mejorados después de corregir CI. Main será la única rama de trabajo tras completar la integración. Leer [CONSOLIDACION_V64.md](docs/CONSOLIDACION_V64.md), [guía del editor](docs/LEVEL_EDITOR_V64.md), [índice de deltas](tools/level_editor/changes/INDEX.md) y [validación](tools/level_editor/VALIDACION_V64.json). Las secciones siguientes son historial (V6.3 y V6.4 experimental), no instrucciones vigentes para la rama. Verificar HEAD remoto para confirmar integración y retirada. Estado objetivo: Stereo Madness 2991, Back on Track 1920, Polargeist 2111, Can't Let Go 1871, Jumper 3351; total 12244 registros reconstruibles a partir de bases locales y deltas. No recrear ramas retiradas ni reinstalar desde cero. Mantener ICC/DIPL/RFD/BRO/FLM/RCA. Próximas modificaciones: esperar indicaciones del usuario. La aprobación es de trabajo, no certificación exhaustiva Unity/Android/BLE; no afirmar que Active local coincide sin comprobar sus hashes.
+
+---
+
 # BIOFIT DASH — V6.4 experimental / Level Editor 1.0
 
 Rama niveles-mejorados: herramienta de edición de niveles exclusiva de Unity y corrección visual inicial de Cube. **La versión estable sigue siendo V6.3 en main.** V6.4 está publicada en esta rama; el usuario ya abrió el editor, editó Stereo Madness y publicó su primer delta (2998 registros). Las pruebas completas de jugabilidad, APK, BLE y aplicación a Active local permanecen pendientes. Leer [guía del editor](docs/LEVEL_EDITOR_V64.md), [contexto actual](docs/CONTEXTO_ACTUAL.md) y [deltas experimentales](tools/level_editor/changes/INDEX.md). No fusionar sin validación y autorización.
