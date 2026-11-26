@@ -509,3 +509,18 @@ for angle in (0,15,90,180,270):
     x,y=rotate_gd(12,-7,-angle)
     assert abs(x-a)<1e-9 and abs(y+b)<1e-9
 print("PASS: selection transforms, undo and rigid reflection math")
+
+# V6.5 bulk function editing shares the single-object list, preserves geometry,
+# checks all changes first, and records one atomic history entry.
+assert 'DrawSelectionFunction(selected);' in editor
+assert 'EditorGUILayout.Popup("Función",shown,options)' in editor
+assert 'new[]{"— Funciones distintas —"}.Concat(Kinds).ToArray()' in editor
+assert 'if(next!=shown&&target>=0&&target<Kinds.Length)' in editor
+bulk=editor.split('void SetSelectionFunction(',1)[1].split('void DrawSelectionFunction(',1)[0]
+assert 'selected.Where(o=>o.kind!=kind)' in bulk
+assert 'data.objects.Count(o=>o.kind=="coin")+changed.Length>3' in bulk
+assert 'changed.Any(o=>o.frames==null||o.frames.Length==0)' in bulk
+assert bulk.count('Push();')==1 and bulk.index('Máximo 3 monedas')<bulk.index('Push();')
+assert 'o.kind=kind;' in bulk and 'o.collisionMode=0;' in bulk
+assert 'o.frames=' not in bulk and 'o.xGD=' not in bulk and 'o.yGD=' not in bulk
+print("PASS: bulk function editing, mixed selection and atomic undo")

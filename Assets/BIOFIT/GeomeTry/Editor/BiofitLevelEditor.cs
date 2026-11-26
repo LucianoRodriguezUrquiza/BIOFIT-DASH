@@ -802,6 +802,42 @@ namespace Biofit.LevelEditing
                 if(used){e.Use();Repaint();}
             }
         }
+        void SetSelectionFunction(Item[] selected,string kind)
+        {
+            if(!Kinds.Contains(kind))throw new Exception("Función inválida.");
+            var changed=selected.Where(o=>o.kind!=kind).ToArray();
+            if(changed.Length==0)return;
+            // Check the entire operation before changing the draft.
+            bool visible=kind!="backgroundColor"&&kind!="groundColor"&&kind!="enterEffect";
+            if(visible&&changed.Any(o=>o.frames==null||o.frames.Length==0))
+                throw new Exception("Hay objetos sin sprite. Asignales un sprite antes de convertirlos a una función visible.");
+            if(kind=="coin"&&data.objects.Count(o=>o.kind=="coin")+changed.Length>3)
+                throw new Exception("Máximo 3 monedas por nivel. No se modificó la selección.");
+            CancelFloatingPaste();
+            Push();
+            foreach(var o in changed)
+            {
+                o.kind=kind;
+                // A previous override could contradict the chosen function.
+                // Restore the runtime's standard collision for the new kind.
+                o.collisionMode=0;
+            }
+            status=changed.Length+" objeto(s): función "+kind+". Ctrl+Z para deshacer.";
+            Repaint();
+        }
+        void DrawSelectionFunction(Item[] selected)
+        {
+            int current=Array.IndexOf(Kinds,selected[0].kind);
+            bool mixed=current<0||selected.Any(o=>o.kind!=selected[0].kind);
+            // A mixed selection must never silently become the first function.
+            string[] options=mixed?new[]{"— Funciones distintas —"}.Concat(Kinds).ToArray():Kinds;
+            int shown=mixed?0:current;
+            int next=EditorGUILayout.Popup("Función",shown,options);
+            int target=mixed?next-1:next;
+            if(next!=shown&&target>=0&&target<Kinds.Length)
+                Guard(()=>SetSelectionFunction(selected,Kinds[target]));
+            EditorGUILayout.HelpBox("Cambia la función de todos los seleccionados. Los que cambian recuperan la colisión original del nuevo tipo; sus sprites y posiciones se conservan.",MessageType.None);
+        }
         void DrawInspector()
         {
             GUILayout.Label("PROPIEDADES",EditorStyles.boldLabel);
@@ -858,6 +894,7 @@ namespace Biofit.LevelEditing
             else if(selected.Length>1)
             {
                 EditorGUILayout.LabelField("Selección múltiple: "+selected.Length);
+                DrawSelectionFunction(selected);
                 if(GUILayout.Button("Mover +1 bloque X")){Push();foreach(var o in selected)Shift(o,30,0);}
                 if(GUILayout.Button("Mover -1 bloque X")){Push();foreach(var o in selected)Shift(o,-30,0);}
                 if(GUILayout.Button("Mover +1 bloque Y")){Push();foreach(var o in selected)Shift(o,0,30);}
