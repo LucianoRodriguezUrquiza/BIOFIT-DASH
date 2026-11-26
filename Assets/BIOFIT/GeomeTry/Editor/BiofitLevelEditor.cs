@@ -35,6 +35,8 @@ namespace Biofit.LevelEditing
         float zoom=1.2f, grid=30, dragGrid;
         bool snap=true, showGrid=true, showColliders=true, showTriggers=true, placing, dirty, dragging, panning, selecting;
         string query="",spriteName="";
+        int goIndex;
+        string lastDelta="";
         float maxLength;
         Rect canvas, marquee;
         Vector2 lastWorld=new Vector2(300,15);
@@ -122,7 +124,7 @@ namespace Biofit.LevelEditing
             to.Push(JsonUtility.ToJson(data));data=Parse(from.Pop());selection.RemoveWhere(i=>!data.objects.Any(o=>o.index==i));dirty=true;
         }
         Item[] Selected()=>data.objects.Where(o=>selection.Contains(o.index)).ToArray();
-        float Snap(float v)=>snap?Mathf.Round(v/grid)*grid:v;
+        float Snap(float v,float origin=0)=>snap?origin+Mathf.Round((v-origin)/grid)*grid:v;
         Vector2 Screen(Vector2 w)=>new Vector2(canvas.x+(w.x-pan.x)*zoom,canvas.y+(pan.y-w.y)*zoom);
         Vector2 World(Vector2 p)=>new Vector2(pan.x+(p.x-canvas.x)/zoom,pan.y-(p.y-canvas.y)/zoom);
         Rect ObjectRect(Item o)
@@ -142,7 +144,7 @@ namespace Biofit.LevelEditing
         int NextId()=>Math.Max(100000,Math.Max(data.objects.Select(o=>o.index).DefaultIfEmpty(0).Max(),baseRaw.Keys.DefaultIfEmpty(0).Max())+1);
         void Add(Item template,Vector2 pos)
         {
-            Push();var o=Clone(template);o.index=NextId();o.xGD=Snap(pos.x);o.yGD=Snap(pos.y);
+            Push();var o=Clone(template);o.index=NextId();o.xGD=Snap(pos.x,template.xGD%grid);o.yGD=Snap(pos.y,template.yGD%grid);
             o.portalMinGD=0;o.portalMaxGD=0; // new portal has local hitbox, not inherited corridor
             data.objects=data.objects.Concat(new[]{o}).ToArray();selection.Clear();selection.Add(o.index);
         }
@@ -198,8 +200,8 @@ namespace Biofit.LevelEditing
                 }
                 using(new EditorGUILayout.HorizontalScope())
                 {
-                    GUILayout.Label("Zoom",GUILayout.Width(35));zoom=GUILayout.HorizontalSlider(zoom,.035f,4f,GUILayout.Width(140));
-                    if(GUILayout.Button("Ver todo",GUILayout.Width(75))){zoom=Mathf.Clamp((position.width-300)/Mathf.Max(30,data.endGD),.035f,4);pan=new Vector2(0,400);}
+                    GUILayout.Label("Zoom",GUILayout.Width(35));zoom=GUILayout.HorizontalSlider(zoom,.01f,4f,GUILayout.Width(140));
+                    if(GUILayout.Button("Ver todo",GUILayout.Width(75))){zoom=Mathf.Clamp((canvas.width>0?canvas.width:position.width-500)/Mathf.Max(30,data.endGD),.01f,4);pan=new Vector2(0,400);}
                     GUILayout.Label("X",GUILayout.Width(15));pan.x=EditorGUILayout.FloatField(pan.x,GUILayout.Width(85));
                     GUILayout.Label("Y",GUILayout.Width(15));pan.y=EditorGUILayout.FloatField(pan.y,GUILayout.Width(70));
                     GUILayout.Label("Ir a %",GUILayout.Width(45));float pct=EditorGUILayout.Slider(Mathf.Clamp01(pan.x/data.endGD)*100,0,100);if(GUI.changed&&Mathf.Abs(pct-Mathf.Clamp01(pan.x/data.endGD)*100)>.001f)pan.x=pct*data.endGD/100;
@@ -220,6 +222,10 @@ namespace Biofit.LevelEditing
                 EditorGUILayout.LabelField(status+(dirty?" | borrador modificado":""),EditorStyles.wordWrappedMiniLabel);
             }
         }
+        static string Friendly(string kind)
+        {
+            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
+        }
         void DrawCatalog()
         {
             GUILayout.Label("CATÁLOGO LOCAL",EditorStyles.boldLabel);
@@ -227,7 +233,7 @@ namespace Biofit.LevelEditing
             paletteScroll=EditorGUILayout.BeginScrollView(paletteScroll);
             for(int i=0;i<catalog.Count;i++)
             {
-                var o=catalog[i];string label=o.kind+" #"+o.id+" "+string.Join(" ",o.frames??Array.Empty<string>());
+                var o=catalog[i];string label=Friendly(o.kind)+" / "+o.kind+" #"+o.id+" "+string.Join(" ",o.frames??Array.Empty<string>());
                 if(!label.ToLowerInvariant().Contains(query.ToLowerInvariant()))continue;
                 using(new EditorGUILayout.HorizontalScope())
                 {
@@ -285,14 +291,16 @@ namespace Biofit.LevelEditing
             Event e=Event.current;
             bool inside=canvas.Contains(e.mousePosition);
             if(inside)lastWorld=World(e.mousePosition);
-            if(e.type==EventType.ScrollWheel&&inside){Vector2 anchor=World(e.mousePosition);zoom=Mathf.Clamp(zoom*Mathf.Pow(1.12f,-e.delta.y),.035f,4);Vector2 after=World(e.mousePosition);pan+=anchor-after;e.Use();Repaint();return;}
+            if(e.type==EventType.ScrollWheel&&inside){Vector2 anchor=World(e.mousePosition);zoom=Mathf.Clamp(zoom*Mathf.Pow(1.12f,-e.delta.y),.01f,4);Vector2 after=World(e.mousePosition);pan+=anchor-after;e.Use();Repaint();return;}
             if(e.type==EventType.MouseDown&&inside)
             {
                 GUI.FocusControl(null);press=e.mousePosition;panStart=pan;
                 if(e.button==1||e.button==2){panning=true;e.Use();return;}
                 if(e.button!=0)return;
                 if(placing&&catalog.Count>0){Add(catalog[Mathf.Clamp(paletteIndex,0,catalog.Count-1)],lastWorld);e.Use();Repaint();return;}
-                var hit=data.objects.Where(o=>(showTriggers||!IsTrigger(o))&&Hit(o,e.mousePosition)).OrderByDescending(o=>o.layer*100+o.order).ThenByDescending(o=>o.index).FirstOrDefault();
+                var hits=data.objects.Where(o=>(showTriggers||!IsTrigger(o))&&Hit(o,e.mousePosition)).OrderByDescending(o=>o.layer*100+o.order).ThenByDescending(o=>o.index).ToArray();
+                var hit=hits.FirstOrDefault();
+                if(e.alt&&hits.Length>1){int prev=Array.FindIndex(hits,o=>selection.Contains(o.index));hit=hits[(prev+1)%hits.Length];}
                 if(hit==null){if(!e.shift)selection.Clear();selecting=true;marquee=new Rect(press,Vector2.zero);}
                 else
                 {
@@ -322,11 +330,13 @@ namespace Biofit.LevelEditing
                 if(selecting)foreach(var o in data.objects)if((showTriggers||!IsTrigger(o))&&marquee.Contains(Screen(new Vector2(o.xGD,o.yGD))))selection.Add(o.index);
                 dragStart=null;dragging=false;panning=false;selecting=false;e.Use();Repaint();
             }
-            else if(e.type==EventType.KeyDown&&inside&&GUI.GetNameOfFocusedControl()=="")
+            else if(e.type==EventType.KeyDown&&inside&&!EditorGUIUtility.editingTextField)
             {
                 bool used=true;
                 if(e.keyCode==KeyCode.Delete||e.keyCode==KeyCode.Backspace)Delete();
                 else if(e.keyCode==KeyCode.Escape){placing=false;selection.Clear();}
+                else if(e.keyCode==KeyCode.LeftArrow||e.keyCode==KeyCode.RightArrow||e.keyCode==KeyCode.UpArrow||e.keyCode==KeyCode.DownArrow)
+                {if(selection.Count>0){Push();float step=e.shift?1:grid;foreach(var o in Selected())Shift(o,e.keyCode==KeyCode.LeftArrow?-step:e.keyCode==KeyCode.RightArrow?step:0,e.keyCode==KeyCode.DownArrow?-step:e.keyCode==KeyCode.UpArrow?step:0);}}
                 else if(e.control||e.command)
                 {
                     switch(e.keyCode){case KeyCode.Z:History(!e.shift);break;case KeyCode.Y:History(false);break;case KeyCode.C:Copy();break;case KeyCode.V:Paste(new Vector2(grid,0));break;case KeyCode.D:Copy();Paste(new Vector2(grid,0));break;case KeyCode.A:foreach(var o in data.objects)selection.Add(o.index);break;case KeyCode.S:Guard(SaveDraft);break;default:used=false;break;}
@@ -339,6 +349,8 @@ namespace Biofit.LevelEditing
         {
             GUILayout.Label("PROPIEDADES",EditorStyles.boldLabel);
             inspectorScroll=EditorGUILayout.BeginScrollView(inspectorScroll);
+            goIndex=EditorGUILayout.IntField("Buscar índice",goIndex);
+            if(GUILayout.Button("Seleccionar / centrar índice"))Guard(()=>{var found=data.objects.FirstOrDefault(o=>o.index==goIndex);if(found==null)throw new Exception("Índice inexistente.");selection.Clear();selection.Add(found.index);pan=new Vector2(found.xGD-canvas.width/(2*zoom),found.yGD+canvas.height/(2*zoom));});
             var selected=Selected();
             if(selected.Length==1)
             {
@@ -381,6 +393,7 @@ namespace Biofit.LevelEditing
                     data.objects[Array.IndexOf(data.objects,o)]=n;
                 }
                 spriteName=EditorGUILayout.TextField("Sprite local",spriteName);
+                if(GUILayout.Button("Seleccionar todos del mismo ID")){int id=o.id;foreach(var v in data.objects)if(v.id==id)selection.Add(v.index);}
                 if(GUILayout.Button("Añadir sprite al objeto"))Guard(()=>{if(Tex(spriteName)==null)throw new Exception("Sprite inexistente.");Push();var v=Selected()[0];v.frames=(v.frames??Array.Empty<string>()).Concat(new[]{spriteName}).ToArray();});
             }
             else if(selected.Length>1)
@@ -400,6 +413,8 @@ namespace Biofit.LevelEditing
             if(length!=data.endGD){Push();data.endGD=Mathf.Clamp(length,300,maxLength);}
             if(GUILayout.Button("Restaurar último Active"))Guard(RestorePrevious);
             if(GUILayout.Button("Importar PNG propio local"))Guard(ImportPng);
+            if(GUILayout.Button("Cancelar prueba preparada")){SessionState.EraseString("BIOFIT_EDITOR_TEST_PATH");SessionState.EraseInt("BIOFIT_EDITOR_TEST_SLOT");status="Prueba desactivada; Play utiliza Active.";}
+            if(GUILayout.Button("Publicar delta experimental"))Guard(PublishDelta);
             if(GUILayout.Button("Abrir carpeta de trabajo"))EditorUtility.RevealInFinder(Work);
             EditorGUILayout.HelpBox("Probar borrador no cambia Active. Aplicar modifica solo Active.json. Original.json y Level.json permanecen intactos. Exportar genera diferencias en tools/level_editor/changes; publicar con el script documentado.",MessageType.Info);
             EditorGUILayout.EndScrollView();
@@ -491,6 +506,17 @@ namespace Biofit.LevelEditing
             Atomic(Active,s);activeHash=Hash(s);File.WriteAllText(KnownActive,activeHash);
             AssetDatabase.Refresh();status="Mapa aplicado. Abrí el menú original, Play, elegí "+Names[slot]+". Exportá diferencias antes de recargar.";
         }
+        void PublishDelta()
+        {
+            if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
+            string dir=Path.Combine(Root,"tools","level_editor","changes");Directory.CreateDirectory(dir);
+            string f=File.Exists(lastDelta)?lastDelta:EditorUtility.OpenFilePanel("Elegir delta exportado",dir,"json");if(string.IsNullOrEmpty(f))return;
+            if(!EditorUtility.DisplayDialog("Publicar en niveles-mejorados","Se verificará el delta y se publicará únicamente su JSON e índice documental. main y recursos originales no se publican. ¿Continuar?","Publicar","Cancelar"))return;
+            string Quote(string v)=>"\x27"+v.Replace("\x27","\x27\x27")+"\x27";
+            string cmd="& py -3 "+Quote(Path.Combine(Root,"tools","level_editor","level_delta.py"))+" --proyecto "+Quote(Root)+" --delta "+Quote(f)+" --publicar";
+            var start=new System.Diagnostics.ProcessStartInfo("powershell.exe","-NoExit -Command \""+cmd.Replace("\"","\\\"")+"\""){UseShellExecute=true};
+            System.Diagnostics.Process.Start(start);status="Publicación iniciada en PowerShell. Confirmá OK DELTA PUBLICADO; no se da por publicada hasta entonces.";
+        }
         void Export()
         {
             Validate();SaveDraft();
@@ -510,7 +536,7 @@ namespace Biofit.LevelEditing
             string exportDir=Path.Combine(Root,"tools","level_editor","changes");Directory.CreateDirectory(exportDir);
             string f=EditorUtility.SaveFilePanel("Exportar cambios (solo diferencia)",exportDir,"BIOFIT_level_"+(slot+1)+"_"+DateTime.Now.ToString("yyyyMMdd_HHmmss"),"json");
             if(string.IsNullOrEmpty(f))return;
-            Atomic(f,RawJson.Join(header));status="Cambios exportados: "+f+" | "+(up.Count+edits.Count)+" registros nuevos/editados, "+removed.Count+" eliminados.";
+            Atomic(f,RawJson.Join(header));lastDelta=f;status="Cambios exportados: "+f+" | "+(up.Count+edits.Count)+" registros nuevos/editados, "+removed.Count+" eliminados.";
         }
     }
     // Minimal raw JSON reader: keeps unknown source fields (including 'raw')
