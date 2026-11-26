@@ -397,3 +397,24 @@ assert 'snap?origin+Mathf.Round((v-origin)/grid)*grid:v' in editor
 assert 'while(step*zoom<12)step*=2' in editor
 assert 'float step=e.shift?1:grid' in editor
 print("PASS: custom positive snap step, persistence, drag and paste contracts")
+
+# V6.5 four optional orbs use the existing one-use input and same collision
+# zone; the original yellow/pad branch and BLE bridge remain in place.
+for i, kind in enumerate(("pinkOrb","redOrb","blueOrb","greenOrb"),900002):
+    assert f'value=="{kind}"' in interaction
+    assert f'Template({i},"{kind}",30,30,new[]{{"ring_01"}},3,12)' in editor
+    assert f'case "{kind}":' in editor
+assert 'private bool IsOrb => IsOrbKind(kind)' in interaction
+assert 'if(!IsOrb) Activate(other)' in interaction
+assert 'used==cube' in interaction and 'used=cube;' in interaction
+assert 'PinkOrbImpulse=12.5f, RedOrbImpulse=9.5f, GreenOrbImpulse=13.5f' in interaction
+assert 'motor.SetCubeGravity(invert);' in interaction
+assert 'kind=="greenOrb"?(invert?1f:-1f)*GreenOrbImpulse:0f' in interaction
+assert 'kind=="pinkOrb"?PinkOrbImpulse:RedOrbImpulse' in interaction
+assert 'hit.size=BiofitV5Interaction.IsOrbKind(o.kind)?new Vector2(1.05f,1.05f)' in runtime
+assert 'if(!motor.IsCubeMode) return;' in interaction
+assert 'else if(BiofitOrbArt.IsVariant(o.kind)) sr.sprite=ColoredOrbSprite' in runtime
+assert editor.count('BiofitOrbArt.Texture(t,o.kind)')==2
+flm = (root / "Assets/BIOFIT/GeomeTry/Editor/BiofitEditorFlm.cs").read_text()
+assert 'BiofitOrbArt.Texture(t,o.kind)' in flm and 'colored?o.kind+":"+f:f' in flm
+print("PASS: V6.5 optional colored orbs, gravity direction, activation and art contracts")

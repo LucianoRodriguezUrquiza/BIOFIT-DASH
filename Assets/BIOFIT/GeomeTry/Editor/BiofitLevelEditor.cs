@@ -16,7 +16,7 @@ namespace Biofit.LevelEditing
     public sealed class BiofitLevelEditor : EditorWindow
     {
         static readonly string[] Names={"Stereo Madness","Back on Track","Polargeist","Can't Let Go","Jumper"};
-        static readonly string[] Kinds={"solid","hazard","decoration","cubePortal","ballPortal","spiderPortal","miniPortal","normalSizePortal","gravityUp","gravityDown","pad","pinkPad","redPad","gravityPad","orb","coin","backgroundColor","groundColor","enterEffect"};
+        static readonly string[] Kinds={"solid","hazard","decoration","cubePortal","ballPortal","spiderPortal","miniPortal","normalSizePortal","gravityUp","gravityDown","pad","pinkPad","redPad","gravityPad","orb","pinkOrb","redOrb","blueOrb","greenOrb","coin","backgroundColor","groundColor","enterEffect"};
         static readonly string[] Collisions={"Original (según tipo)","Decoración / sin contacto","Plataforma sin muerte lateral","Letal al tocar (caja)","Plataforma + muerte lateral"};
         static readonly string[] Mask={"Cube / invertido","Ball","Spider","Ship"};
         const string SpriteDir="Assets/BIOFIT/Resources/BiofitStereoLocal/Sprites/";
@@ -66,7 +66,7 @@ namespace Biofit.LevelEditing
         string KnownActive=>Path.Combine(Work,"Active.sha256");
         static string Hash(string s){using(var h=SHA256.Create())return BitConverter.ToString(h.ComputeHash(Encoding.UTF8.GetBytes(s))).Replace("-","").ToLowerInvariant();}
         static Item Clone(Item i)=>JsonUtility.FromJson<Item>(JsonUtility.ToJson(i));
-        static bool IsInteraction(Item i)=>i.kind.EndsWith("Portal")||i.kind=="gravityUp"||i.kind=="gravityDown"||i.kind=="pad"||i.kind=="pinkPad"||i.kind=="redPad"||i.kind=="gravityPad"||i.kind=="orb"||i.kind=="coin";
+        static bool IsInteraction(Item i)=>i.kind.EndsWith("Portal")||i.kind=="gravityUp"||i.kind=="gravityDown"||i.kind=="pad"||i.kind=="pinkPad"||i.kind=="redPad"||i.kind=="gravityPad"||Biofit.GeomeTryOriginal.BiofitV5Interaction.IsOrbKind(i.kind)||i.kind=="coin";
         static bool IsTrigger(Item i)=>i.kind=="backgroundColor"||i.kind=="groundColor"||i.kind=="enterEffect";
         [MenuItem("BIOFIT/Level Editor/Abrir editor")]
         static void Open(){var w=GetWindow<BiofitLevelEditor>("BIOFIT Level Editor");w.minSize=new Vector2(870,510);w.Show();}
@@ -128,6 +128,10 @@ namespace Biofit.LevelEditing
             Template(8,"hazard",30,30,new[]{"spike_01"});Template(9,"hazard",30.25f,26,new[]{"pit_01"});Template(39,"hazard",30,13.5f,new[]{"spike_02"});Template(103,"hazard",20,19,new[]{"spike_03"});
             Template(40,"solid",30,13.5f,new[]{"plank_01"});Template(62,"solid",30,16,new[]{"square_b_01"});Template(68,"solid",30,16,new[]{"square_b_06"});
             Template(35,"pad",25,4,new[]{"bump_01"},3,12);Template(140,"pinkPad",25,5,new[]{"bump_03"},3,12);Template(900001,"redPad",25,4,new[]{"bump_03"},3,12);Template(67,"gravityPad",25,6,new[]{"gravbump_01"},3,12);Template(36,"orb",30,30,new[]{"ring_01"},3,12);
+            Template(900002,"pinkOrb",30,30,new[]{"ring_01"},3,12);
+            Template(900003,"redOrb",30,30,new[]{"ring_01"},3,12);
+            Template(900004,"blueOrb",30,30,new[]{"ring_01"},3,12);
+            Template(900005,"greenOrb",30,30,new[]{"ring_01"},3,12);
             Template(142,"coin",40,40,new[]{"secretCoin_01"},5,9);
             Template(10,"gravityDown",34.5f,77,new[]{"portal_01_back","portal_01_front"},5,10);Template(11,"gravityUp",34.5f,77,new[]{"portal_02_back","portal_02_front"},5,10);Template(12,"cubePortal",44.5f,85.5f,new[]{"portal_03_back","portal_03_front"},5,10);Template(47,"ballPortal",44.5f,85.5f,new[]{"portal_07_back","portal_07_front"},5,10);Template(1331,"spiderPortal",44.5f,84.5f,new[]{"portal_17_back","portal_17_front"},5,10);
             Template(99,"miniPortal",44,89.5f,new[]{"gd_portal_09_back","gd_portal_09_front"},5,10);Template(101,"normalSizePortal",44,89.5f,new[]{"gd_portal_08_back","gd_portal_08_front"},5,10);
@@ -370,7 +374,7 @@ namespace Biofit.LevelEditing
         }
         static string Friendly(string kind)
         {
-            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "miniPortal":return "Portal mini (rosa)";case "normalSizePortal":return "Portal tamaño normal (verde)";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (9,5)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
+            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "miniPortal":return "Portal mini (rosa)";case "normalSizePortal":return "Portal tamaño normal (verde)";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (9,5)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "pinkOrb":return "Orbe rosa (12,5)";case "redOrb":return "Orbe rojo (9,5)";case "blueOrb":return "Orbe celeste (gravedad)";case "greenOrb":return "Orbe verde (gravedad + 13,5)";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
         }
         // Categories are presentation only: never change the kind, collider or sprite.
         static int CatalogCategory(Item o)
@@ -383,7 +387,7 @@ namespace Biofit.LevelEditing
                         || frame.StartsWith("gd_plank",StringComparison.OrdinalIgnoreCase)?2:1;
                 case "hazard":return 3;
                 case "cubePortal":case "ballPortal":case "spiderPortal":case "miniPortal":case "normalSizePortal":case "gravityUp":case "gravityDown":return 5;
-                case "pad":case "pinkPad":case "redPad":case "gravityPad":case "orb":return 6;
+                case "pad":case "pinkPad":case "redPad":case "gravityPad":case "orb":case "pinkOrb":case "redOrb":case "blueOrb":case "greenOrb":return 6;
                 case "coin":return 7;
                 case "backgroundColor":case "groundColor":case "enterEffect":return 8;
                 default:return 4;
@@ -439,6 +443,7 @@ namespace Biofit.LevelEditing
                     EditorGUI.DrawRect(image,new Color(.12f,.14f,.17f));
                     var t=o.frames!=null&&o.frames.Length>0?Tex(o.frames[0]):null;
                     Color oldColor=GUI.color;if(t!=null&&o.kind=="redPad")t=Biofit.GeomeTryOriginal.BiofitRedPadArt.Texture(t);
+                    else if(t!=null&&Biofit.GeomeTryOriginal.BiofitOrbArt.IsVariant(o.kind))t=Biofit.GeomeTryOriginal.BiofitOrbArt.Texture(t,o.kind);
                     if(t!=null)GUI.DrawTexture(image,t,ScaleMode.ScaleToFit,true);
                     else GUI.Label(image,"—",detailStyle);
                     GUI.color=oldColor;
@@ -489,6 +494,7 @@ namespace Biofit.LevelEditing
                     Rect sr=new Rect(r.center.x-sw*.5f,r.center.y-sh*.5f,sw,sh);
                     Color before=GUI.color;
                     if(o.kind=="redPad")t=Biofit.GeomeTryOriginal.BiofitRedPadArt.Texture(t);
+                    else if(Biofit.GeomeTryOriginal.BiofitOrbArt.IsVariant(o.kind))t=Biofit.GeomeTryOriginal.BiofitOrbArt.Texture(t,o.kind);
                     if(ghost)GUI.color=new Color(before.r,before.g,before.b,.65f);
                     GUI.DrawTextureWithTexCoords(sr,t,new Rect(o.flipX?1:0,o.flipY?1:0,o.flipX?-1:1,o.flipY?-1:1));GUI.color=before;painted=true;
                 }

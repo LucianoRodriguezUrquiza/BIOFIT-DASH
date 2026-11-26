@@ -65,7 +65,9 @@ namespace Biofit.LevelEditing
                 float sx=o.editorScaleX>0?o.editorScaleX:1,sy=o.editorScaleY>0?o.editorScaleY:1;
                 foreach(string f in o.frames)
                 {
-                    if(!cache.TryGetValue(f,out var p)){var t=tex(f);if(t==null)continue;p=Read(t);cache.Add(f,p);}
+                    bool colored=Biofit.GeomeTryOriginal.BiofitOrbArt.IsVariant(o.kind);
+                    string key=colored?o.kind+":"+f:f;
+                    if(!cache.TryGetValue(key,out var p)){var t=tex(f);if(t==null)continue;if(colored)t=Biofit.GeomeTryOriginal.BiofitOrbArt.Texture(t,o.kind);p=Read(t);cache.Add(key,p);}
                     float hw=p.w*.25f*sx,hh=p.h*.25f*sy;
                     float radius=Mathf.Sqrt(hw*hw+hh*hh);
                     if(o.xGD+radius<x0||o.xGD-radius>x1)continue;

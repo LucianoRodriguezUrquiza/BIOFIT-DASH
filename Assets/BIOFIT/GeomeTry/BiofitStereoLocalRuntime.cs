@@ -166,6 +166,14 @@ namespace Biofit.GeomeTryOriginal
             var sprite=Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),new Vector2(.5f,.5f),original.pixelsPerUnit,0,SpriteMeshType.FullRect);
             sprites.Add(key,sprite);return sprite;
         }
+        private Sprite ColoredOrbSprite(string frame,string kind)
+        {
+            string key="BIOFIT_ORB:"+kind+":"+frame;
+            if(sprites.TryGetValue(key,out var cached))return cached;
+            var original=GetSprite(frame);var texture=BiofitOrbArt.Texture(original.texture,kind);
+            var sprite=Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),new Vector2(.5f,.5f),original.pixelsPerUnit,0,SpriteMeshType.FullRect);
+            sprites.Add(key,sprite);return sprite;
+        }
         private SpriteRenderer Visual(Transform parent,string frame,int sorting)
         {
             var child=new GameObject(frame); child.transform.SetParent(parent,false);
@@ -229,6 +237,7 @@ namespace Biofit.GeomeTryOriginal
                     if(o.editorScaleX>0 || o.editorScaleY>0) sr.transform.localScale=new Vector3(o.editorScaleX>0?o.editorScaleX:1,o.editorScaleY>0?o.editorScaleY:1,1);
                     if(outlines!=null && outlines.Contains(o)) sr.sprite=outlines.FillSprite;
                     if(o.kind=="redPad") sr.sprite=RedPadSprite(o.frames[k]);
+                    else if(BiofitOrbArt.IsVariant(o.kind)) sr.sprite=ColoredOrbSprite(o.frames[k],o.kind);
                     else if(o.id==9) sr.color=Color.black;
                     else if(o.id>=18&&o.id<=21) sr.color=new Color32(255,200,75,255);
                 }
@@ -286,10 +295,10 @@ namespace Biofit.GeomeTryOriginal
                         root.AddComponent<BiofitV5Interaction>().kind=o.kind;
                     else root.AddComponent<BiofitModePortal>().Target=o.kind=="ballPortal"?BiofitMode.Ball:o.kind=="spiderPortal"?BiofitMode.Spider:BiofitMode.Cube;
                 }
-                else if(o.kind=="pad"||o.kind=="pinkPad"||o.kind=="redPad"||o.kind=="gravityPad"||o.kind=="orb")
+                else if(o.kind=="pad"||o.kind=="pinkPad"||o.kind=="redPad"||o.kind=="gravityPad"||BiofitV5Interaction.IsOrbKind(o.kind))
                 {
                     var hit=root.AddComponent<BoxCollider2D>();hit.isTrigger=true;
-                    hit.size=o.kind=="orb"?new Vector2(1.05f,1.05f):new Vector2(size.x,.30f);
+                    hit.size=BiofitV5Interaction.IsOrbKind(o.kind)?new Vector2(1.05f,1.05f):new Vector2(size.x,.30f);
                     root.AddComponent<BiofitV5Interaction>().kind=o.kind;
                 }
                 else if(o.kind=="coin")
@@ -397,6 +406,53 @@ namespace Biofit.GeomeTryOriginal
             }
             result.SetPixels32(output);result.filterMode=source.filterMode;result.wrapMode=TextureWrapMode.Clamp;
             result.hideFlags=HideFlags.HideAndDontSave;result.Apply(false,true);cache[source]=result;return result;
+        }
+    }
+
+    // Local recolour of the existing yellow orb. Preserve alpha, white highlights
+    // and neutral dark details; no new external art or collider dimensions.
+    public static class BiofitOrbArt
+    {
+        static readonly Dictionary<(Texture2D,string),Texture2D> cache=new Dictionary<(Texture2D,string),Texture2D>();
+        public static bool IsVariant(string kind)=>kind=="pinkOrb"||kind=="redOrb"||kind=="blueOrb"||kind=="greenOrb";
+        static Color32 Hue(string kind)
+        {
+            switch(kind)
+            {
+                case "pinkOrb":return new Color32(255,70,218,255);
+                case "redOrb":return new Color32(255,50,58,255);
+                case "blueOrb":return new Color32(45,225,255,255);
+                default:return new Color32(82,255,40,255);
+            }
+        }
+        public static Texture2D Texture(Texture2D source,string kind)
+        {
+            if(source==null||!IsVariant(kind))return source;
+            var key=(source,kind);
+            if(cache.TryGetValue(key,out var existing)&&existing!=null)return existing;
+            int w=source.width,h=source.height;
+            var result=new Texture2D(w,h,TextureFormat.RGBA32,false);
+            Color32[] pixels;
+            if(source.isReadable)pixels=source.GetPixels32();
+            else
+            {
+                var previous=RenderTexture.active;
+                var rt=RenderTexture.GetTemporary(w,h,0,RenderTextureFormat.ARGB32);
+                try{Graphics.Blit(source,rt);RenderTexture.active=rt;result.ReadPixels(new Rect(0,0,w,h),0,0,false);pixels=result.GetPixels32();}
+                finally{RenderTexture.active=previous;RenderTexture.ReleaseTemporary(rt);}
+            }
+            var hue=Hue(kind);
+            for(int i=0;i<pixels.Length;i++)
+            {
+                var q=pixels[i];
+                int hi=Mathf.Max(q.r,Mathf.Max(q.g,q.b)),lo=Mathf.Min(q.r,Mathf.Min(q.g,q.b));
+                if(q.a==0||hi-lo<12)continue;
+                // Replace the chromatic component without tinting neutral outlines.
+                int chroma=hi-lo;
+                pixels[i]=new Color32((byte)(lo+chroma*hue.r/255),(byte)(lo+chroma*hue.g/255),(byte)(lo+chroma*hue.b/255),q.a);
+            }
+            result.SetPixels32(pixels);result.filterMode=source.filterMode;result.wrapMode=TextureWrapMode.Clamp;
+            result.hideFlags=HideFlags.HideAndDontSave;result.Apply(false,true);cache[key]=result;return result;
         }
     }
 }
