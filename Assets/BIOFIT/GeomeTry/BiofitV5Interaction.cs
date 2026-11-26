@@ -13,19 +13,20 @@ namespace Biofit.GeomeTryOriginal
             if(!IsOrb) { if(kind=="gravityUp"||kind=="gravityDown") Activate(other); return; }
             Cube cube=other.GetComponent<Cube>(); if(cube==null || !cube.isAlive || used==cube) return;
             var motor=cube.GetComponent<BiofitModeMotor>();
-            if(motor==null || (motor.Mode!=BiofitMode.Cube && motor.Mode!=BiofitMode.InvertedCube)) return;
+            if(motor==null || !motor.IsCubeMode) return;
             if(Input.GetKey(KeyCode.Space) || (Input.GetMouseButton(0) && !BiofitStereoPracticeButton.BlocksGameplayPointer()) || BiofitVrBoxInput.AnyHeld || (motor.Mode==BiofitMode.Cube && BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse())) Activate(other);
         }
         private void Activate(Collider2D other)
         {
             var cube=other.GetComponent<Cube>(); if(cube==null || !cube.isAlive || used==cube || GameManager.Instance==null || !GameManager.Instance.PlayMode) return;
             var motor=cube.GetComponent<BiofitModeMotor>();var rb=cube.GetComponent<Rigidbody2D>();if(motor==null || rb==null) return;
-            if(motor.Mode!=BiofitMode.Cube && motor.Mode!=BiofitMode.InvertedCube) return;
+            if(!motor.IsCubeMode) return;
             used=cube;
-            if(kind=="gravityUp"||kind=="gravityDown") {motor.SetMode(kind=="gravityUp"?BiofitMode.InvertedCube:BiofitMode.Cube);return;}
-            if(kind=="gravityPad") {motor.SetMode(motor.Mode==BiofitMode.InvertedCube?BiofitMode.Cube:BiofitMode.InvertedCube);return;}
+            if(kind=="miniPortal"||kind=="normalSizePortal") {motor.SetMini(kind=="miniPortal");return;}
+            if(kind=="gravityUp"||kind=="gravityDown") {motor.SetCubeGravity(kind=="gravityUp");return;}
+            if(kind=="gravityPad") {motor.SetCubeGravity(!motor.StereoInverted);return;}
             // GeomeTry yellow pad/orb 20; pink pad 12.5. Opposite of current gravity.
-            rb.linearVelocity=new Vector2(rb.linearVelocity.x,(motor.Mode==BiofitMode.InvertedCube?-1f:1f)*(kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f));
+            rb.linearVelocity=new Vector2(rb.linearVelocity.x,(motor.StereoInverted?-1f:1f)*(kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f));
         }
         public bool TryInvertedOrb(Cube cube)
         {
