@@ -38,6 +38,11 @@ namespace Biofit.LevelEditing
         int goIndex;
         string lastDelta="";
         float maxLength;
+        [Serializable] sealed class ArtEntry {public string name,kind;public float widthGD,heightGD;}
+        [Serializable] sealed class ArtIndex {public ArtEntry[] items;}
+        int catalogPage; string priorQuery="";
+        readonly Dictionary<string,Texture2D> externalTextures=new Dictionary<string,Texture2D>();
+        string ArtDir=>Path.Combine(Root,"Builds","BiofitV65Art");
         float testX=300,testY=15;int testMode=0;bool testInvert,testRestart=true,testPick;
         Rect canvas, marquee;
         Vector2 lastWorld=new Vector2(300,15);
@@ -99,7 +104,7 @@ namespace Biofit.LevelEditing
         static Data Parse(string s){var d=JsonUtility.FromJson<Data>(s);if(d==null||d.objects==null||d.unitsPerBlock!=30)throw new Exception("JSON de nivel no reconocido.");return d;}
         void BuildCatalog()
         {
-            catalog.Clear();
+            catalog.Clear();catalogPage=0;
             var seen=new HashSet<string>();
             void Template(int id,string kind,float w,float h,string[] frames,int layer=5,int order=2)
             {
@@ -135,13 +140,44 @@ namespace Biofit.LevelEditing
                 var t=Tex(name);if(t==null)continue;
                 catalog.Add(new Item{id=0,kind="decoration",frames=new[]{name},widthGD=t.width*.5f,heightGD=t.height*.5f,layer=3,order=0});
             }
+            string index=Path.Combine(ArtDir,"Catalog.json");
+            if(File.Exists(index))
+            {
+                var source=JsonUtility.FromJson<ArtIndex>(File.ReadAllText(index));
+                if(source!=null&&source.items!=null)foreach(var e in source.items)
+                {
+                    if(e==null||string.IsNullOrEmpty(e.name)||!e.name.StartsWith("gd_")||e.widthGD<=0||e.heightGD<=0||catalog.Any(x=>x.frames!=null&&x.frames.Contains(e.name)))continue;
+                    catalog.Add(new Item{id=0,kind=e.kind=="solid"?"solid":"decoration",frames=new[]{e.name},widthGD=e.widthGD,heightGD=e.heightGD,layer=e.kind=="solid"?5:3,order=0,yGD=e.heightGD/2});
+                }
+            }
             catalog.Sort((a,b)=>{int x=Array.IndexOf(Kinds,a.kind).CompareTo(Array.IndexOf(Kinds,b.kind));return x!=0?x:a.id.CompareTo(b.id);});
         }
         Texture2D Tex(string name)
         {
             if(string.IsNullOrEmpty(name))return null;
             if(!textures.TryGetValue(name,out var t)){t=AssetDatabase.LoadAssetAtPath<Texture2D>(SpriteDir+name+".png");textures[name]=t;}
-            return t;
+            if(t!=null)return t;
+            if(!name.StartsWith("gd_")||name.IndexOfAny(Path.GetInvalidFileNameChars())>=0)return null;
+            if(externalTextures.TryGetValue(name,out t))return t;
+            string f=Path.Combine(ArtDir,"Catalog",name+".png");
+            if(!File.Exists(f))return null;
+            if(externalTextures.Count>=100){foreach(var image in externalTextures.Values)if(image!=null)DestroyImmediate(image);externalTextures.Clear();}
+            t=new Texture2D(2,2,TextureFormat.RGBA32,false);
+            if(!t.LoadImage(File.ReadAllBytes(f))){DestroyImmediate(t);return null;}
+            t.hideFlags=HideFlags.HideAndDontSave;externalTextures[name]=t;return t;
+        }
+        void EnsureFrame(string name)
+        {
+            if(string.IsNullOrEmpty(name)||name.IndexOfAny(Path.GetInvalidFileNameChars())>=0)throw new Exception("Nombre de sprite inválido.");
+            string relative=SpriteDir+name+".png",dst=Path.Combine(Root,relative);
+            if(File.Exists(dst))return;
+            string source=Path.Combine(ArtDir,"Catalog",name+".png");
+            if(!name.StartsWith("gd_")||!File.Exists(source))throw new Exception("Falta sprite: "+name);
+            var info=new System.Diagnostics.ProcessStartInfo("git","check-ignore -q -- \""+relative+"\""){WorkingDirectory=Root,UseShellExecute=false,CreateNoWindow=true};
+            using(var proc=System.Diagnostics.Process.Start(info)){proc.WaitForExit();if(proc.ExitCode!=0)throw new Exception("Sprite no excluido por Git: "+relative);}
+            File.Copy(source,dst);
+            AssetDatabase.ImportAsset(relative,ImportAssetOptions.ForceSynchronousImport);textures.Remove(name);
+
         }
         void Push(){undo.Push(JsonUtility.ToJson(data));if(undo.Count>60){var kept=undo.Take(60).Reverse().ToArray();undo.Clear();foreach(var x in kept)undo.Push(x);}redo.Clear();dirty=true;}
         void History(bool back)
@@ -170,6 +206,7 @@ namespace Biofit.LevelEditing
         int NextId()=>Math.Max(100000,Math.Max(data.objects.Select(o=>o.index).DefaultIfEmpty(0).Max(),baseRaw.Keys.DefaultIfEmpty(0).Max())+1);
         void Add(Item template,Vector2 pos)
         {
+            foreach(string f in template.frames??Array.Empty<string>())EnsureFrame(f);
             Push();var o=Clone(template);o.index=NextId();o.xGD=Snap(pos.x,template.xGD%grid);o.yGD=Snap(pos.y,template.yGD%grid);
             o.portalMinGD=0;o.portalMaxGD=0; // new portal has local hitbox, not inherited corridor
             data.objects=data.objects.Concat(new[]{o}).ToArray();selection.Clear();selection.Add(o.index);
@@ -258,11 +295,20 @@ namespace Biofit.LevelEditing
         {
             GUILayout.Label("CATÁLOGO LOCAL",EditorStyles.boldLabel);
             query=EditorGUILayout.TextField("Buscar",query);
-            paletteScroll=EditorGUILayout.BeginScrollView(paletteScroll);
-            for(int i=0;i<catalog.Count;i++)
+            if(query!=priorQuery){priorQuery=query;catalogPage=0;paletteScroll=Vector2.zero;}
+            string Label(Item o)=>Friendly(o.kind)+" / "+o.kind+" #"+o.id+" "+string.Join(" ",o.frames??Array.Empty<string>());
+            var matched=Enumerable.Range(0,catalog.Count).Where(i=>Label(catalog[i]).IndexOf(query,StringComparison.OrdinalIgnoreCase)>=0).ToArray();
+            int pages=Mathf.Max(1,Mathf.CeilToInt(matched.Length/60f));catalogPage=Mathf.Clamp(catalogPage,0,pages-1);
+            using(new EditorGUILayout.HorizontalScope())
             {
-                var o=catalog[i];string label=Friendly(o.kind)+" / "+o.kind+" #"+o.id+" "+string.Join(" ",o.frames??Array.Empty<string>());
-                if(!label.ToLowerInvariant().Contains(query.ToLowerInvariant()))continue;
+                if(GUILayout.Button("<",GUILayout.Width(30))){catalogPage=Mathf.Max(0,catalogPage-1);paletteScroll=Vector2.zero;}
+                GUILayout.Label((catalogPage+1)+"/"+pages+" · "+matched.Length+" objetos");
+                if(GUILayout.Button(">",GUILayout.Width(30))){catalogPage=Mathf.Min(pages-1,catalogPage+1);paletteScroll=Vector2.zero;}
+            }
+            paletteScroll=EditorGUILayout.BeginScrollView(paletteScroll);
+            foreach(int i in matched.Skip(catalogPage*60).Take(60))
+            {
+                var o=catalog[i];string label=Label(o);
                 using(new EditorGUILayout.HorizontalScope())
                 {
                     var t=o.frames!=null&&o.frames.Length>0?Tex(o.frames[0]):null;
@@ -300,7 +346,8 @@ namespace Biofit.LevelEditing
                     var t=Tex(f);if(t==null)continue;
                     float sw=t.width*zoom*.5f*(o.editorScaleX>0?o.editorScaleX:1),sh=t.height*zoom*.5f*(o.editorScaleY>0?o.editorScaleY:1);
                     Rect sr=new Rect(r.center.x-sw*.5f,r.center.y-sh*.5f,sw,sh);
-                    GUI.DrawTextureWithTexCoords(sr,t,new Rect(o.flipX?1:0,o.flipY?1:0,o.flipX?-1:1,o.flipY?-1:1));painted=true;
+                    Color before=GUI.color;if(o.kind=="redPad")GUI.color=new Color(1f,.2f,.2f);
+                    GUI.DrawTextureWithTexCoords(sr,t,new Rect(o.flipX?1:0,o.flipY?1:0,o.flipX?-1:1,o.flipY?-1:1));GUI.color=before;painted=true;
                 }
                 if(!painted){EditorGUI.DrawRect(r,new Color(.7f,.45f,.1f,.65f));GUI.Label(r,o.kind,EditorStyles.miniLabel);}
                 if(showColliders||selection.Contains(o.index))
@@ -311,6 +358,7 @@ namespace Biofit.LevelEditing
                 }
                 GUI.matrix=prior;
             }
+            var marker=Screen(new Vector2(testX,testY));Outline(new Rect(marker.x-7,marker.y-7,14,14),Color.cyan);
             if(selecting)Outline(new Rect(marquee.x-old.x,marquee.y-old.y,marquee.width,marquee.height),Color.yellow);
             GUI.Label(new Rect(5,2,250,20),"GD "+lastWorld.x.ToString("F0")+", "+lastWorld.y.ToString("F0"));
             canvas=old;GUI.EndGroup();
@@ -328,7 +376,7 @@ namespace Biofit.LevelEditing
                 if(e.button==1||e.button==2){panning=true;e.Use();return;}
                 if(e.button!=0)return;
                 if(testPick){testX=Snap(lastWorld.x);testY=Snap(lastWorld.y);testPick=false;e.Use();Repaint();return;}
-                if(placing&&catalog.Count>0){Add(catalog[Mathf.Clamp(paletteIndex,0,catalog.Count-1)],lastWorld);e.Use();Repaint();return;}
+                if(placing&&catalog.Count>0){Guard(()=>Add(catalog[Mathf.Clamp(paletteIndex,0,catalog.Count-1)],lastWorld));e.Use();Repaint();return;}
                 var hits=data.objects.Where(o=>(showTriggers||!IsTrigger(o))&&Hit(o,e.mousePosition)).OrderByDescending(o=>o.layer*100+o.order).ThenByDescending(o=>o.index).ToArray();
                 var hit=hits.FirstOrDefault();
                 if(e.alt&&hits.Length>1){int prev=Array.FindIndex(hits,o=>selection.Contains(o.index));hit=hits[(prev+1)%hits.Length];}
@@ -469,7 +517,7 @@ namespace Biofit.LevelEditing
                 if(!ids.Add(o.index)||!Kinds.Contains(o.kind)||o.frames==null||o.widthGD<=0||o.heightGD<=0||o.collisionMode<0||o.collisionMode>4||o.deathMask<0||o.deathMask>15)throw new Exception("Registro inválido #"+o.index);
                 foreach(float f in new[]{o.xGD,o.yGD,o.rotationGD,o.widthGD,o.heightGD,o.portalMinGD,o.portalMaxGD,o.duration,o.editorScaleX,o.editorScaleY})if(float.IsNaN(f)||float.IsInfinity(f))throw new Exception("Número inválido #"+o.index);
                 if((!baseTyped.TryGetValue(o.index,out var existing)||existing!=JsonUtility.ToJson(o)||data.endGD<previousLength) && (o.xGD<0||o.xGD>data.endGD))throw new Exception("Fuera del área del nivel #"+o.index);
-                foreach(string f in o.frames)if(Tex(f)==null)throw new Exception("Sprite local no encontrado: "+f);
+                foreach(string f in o.frames){EnsureFrame(f);if(Tex(f)==null)throw new Exception("Sprite local no encontrado: "+f);}
                 if(!IsTrigger(o)&&o.frames.Length==0)throw new Exception("Objeto visible sin sprite #"+o.index);
             }
         }
@@ -563,7 +611,7 @@ namespace Biofit.LevelEditing
             if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
             string dir=Path.Combine(Root,"tools","level_editor","changes");Directory.CreateDirectory(dir);
             string f=File.Exists(lastDelta)?lastDelta:EditorUtility.OpenFilePanel("Elegir delta exportado",dir,"json");if(string.IsNullOrEmpty(f))return;
-            if(!EditorUtility.DisplayDialog("Publicar delta en la rama actual","Se verificará el delta y se publicará únicamente su JSON e índice documental en la rama autorizada actual (main tras la consolidación). Los recursos originales no se publican. ¿Continuar?","Publicar","Cancelar"))return;
+            if(!EditorUtility.DisplayDialog("Publicar delta en la rama actual","Se verificará el delta y se publicará únicamente su JSON e índice documental en la rama autorizada actual (v6.5-desarrollo o main, según rama actual). Los recursos originales no se publican. ¿Continuar?","Publicar","Cancelar"))return;
             string Quote(string v)=>"\x27"+v.Replace("\x27","\x27\x27")+"\x27";
             string cmd="& py -3 "+Quote(Path.Combine(Root,"tools","level_editor","level_delta.py"))+" --proyecto "+Quote(Root)+" --delta "+Quote(f)+" --publicar";
             var start=new System.Diagnostics.ProcessStartInfo("powershell.exe","-NoExit -Command \""+cmd.Replace("\"","\\\"")+"\""){UseShellExecute=true};
