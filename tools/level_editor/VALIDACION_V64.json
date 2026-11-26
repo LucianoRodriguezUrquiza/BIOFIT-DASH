@@ -46,11 +46,20 @@
     "total": 12244
   },
   "ci_verified_run": {
-    "run_id": 45847125910,
-    "head_sha": "73c6745c9fb8f8b734b468c6d579b7c2f6e6b221",
+    "run_id": 45847462408,
+    "head_sha": "adca92814be943b1cc3e05218de81005fe44e2f4",
     "jobs_success": 5,
     "jobs_total": 5,
     "regression_commands_success": 20,
-    "scope": "host only; before publisher adjustment and consolidation; verify latest HEAD separately"
+    "scope": "host only; incluye pruebas actualizadas, sintaxis V6.4, deltas y publicación selectiva main/experimental en Git temporal. Los commits posteriores de consolidación son documentación; comprobar CI del HEAD final."
+  },
+  "publisher_fixture": {
+    "main": true,
+    "legacy_branch": true,
+    "selective_paths": true,
+    "deleted_branch_guard": true,
+    "reconstruct": true,
+    "raw_preserved": true,
+    "wrong_base_rejected": true
   }
 }
