@@ -412,9 +412,38 @@ assert 'motor.SetCubeGravity(invert);' in interaction
 assert 'kind=="greenOrb"?(invert?1f:-1f)*GreenOrbImpulse:0f' in interaction
 assert 'kind=="pinkOrb"?PinkOrbImpulse:RedOrbImpulse' in interaction
 assert 'hit.size=BiofitV5Interaction.IsOrbKind(o.kind)?new Vector2(1.05f,1.05f)' in runtime
-assert 'if(!motor.IsCubeMode) return;' in interaction
+assert 'if(!motor.IsCubeMode && !(motor.IsBallSpiderMode && (IsPad||IsOrb))) return;' in interaction
+assert 'if(motor==null || !motor.IsCubeMode) return;' in interaction
 assert 'else if(BiofitOrbArt.IsVariant(o.kind)) sr.sprite=ColoredOrbSprite' in runtime
 assert editor.count('BiofitOrbArt.Texture(t,o.kind)')==2
 flm = (root / "Assets/BIOFIT/GeomeTry/Editor/BiofitEditorFlm.cs").read_text()
 assert 'BiofitOrbArt.Texture(t,o.kind)' in flm and 'colored?o.kind+":"+f:f' in flm
 print("PASS: V6.5 optional colored orbs, gravity direction, activation and art contracts")
+
+# V6.5: Ball/Spider use the same optional pad/orb effect and one accepted
+# action. The orb takes priority before checking support; the automatic
+# pad path never consumes a BLE pulse. Size portals and Ship stay excluded.
+assert 'private bool IsPad => kind=="pad" || kind=="pinkPad" || kind=="redPad" || kind=="gravityPad"' in interaction
+assert 'public bool IsBallSpiderMode => Mode==BiofitMode.Ball || Mode==BiofitMode.Spider' in motor
+assert 'if(!motor.IsCubeMode && !(motor.IsBallSpiderMode && (IsPad||IsOrb))) return;' in interaction
+assert 'if(!IsOrb) Activate(other)' in interaction
+assert 'if(motor==null || !motor.IsCubeMode) return;' in interaction
+assert 'public bool TryBallSpiderOrb(Cube cube)' in interaction
+assert 'var distance=trigger.Distance(col);' in interaction
+assert 'if(!distance.isValid || distance.distance>0f) return false;' in interaction
+assert 'if(!IsOrb || cube==null || used==cube || !cube.isAlive) return false;' in interaction
+assert 'else motor.SetBallSpiderGravity(invert);' in interaction
+assert 'motor.SetBallSpiderGravity(!motor.StereoInverted);' in interaction
+assert 'kind=="greenOrb"?(invert?1f:-1f)*GreenOrbImpulse:0f' in interaction
+assert 'public void SetBallSpiderGravity(bool inverted)' in motor
+gravity_method=motor.split('public void SetBallSpiderGravity(bool inverted)',1)[1].split('public bool StereoInverted',1)[0]
+assert 'body.gravityScale=flipped?-BallSpiderGravity:BallSpiderGravity;' in gravity_method
+assert 'if(Mode==BiofitMode.Spider) icon.flipY=flipped;' in gravity_method
+assert 'SetMode(' not in gravity_method and 'body.position' not in gravity_method
+pulse=motor.split('public bool TryPulse()',1)[1].split('private IEnumerator GravityFlipEffect',1)[0]
+assert pulse.index('Time.unscaledTime - lastManualAction < .12f') < pulse.index('interaction.TryBallSpiderOrb(cube)') < pulse.index('if (!SurfaceContact(support)) return false;')
+assert 'lastManualAction=Time.unscaledTime;\n                        return true;' in pulse
+assert 'if (Vector2.Distance(destination, body.position) < 1.0f) return false;' in pulse
+assert 'body.position = destination;' in pulse and 'StartCoroutine(SpiderEffect(oldPosition, transform.position));' in pulse
+assert 'bool applied = motor.TryPulse();' in orb_bridge
+print("PASS: Ball/Spider pad and orb dispatch, actual contact, priority and preserved teleport contracts")

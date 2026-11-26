@@ -320,6 +320,15 @@ namespace Biofit.GeomeTryOriginal
         private int ActiveGroundMask => BiofitStereoPractice.Available ? GroundMask | (1 << 6) : GroundMask;
         public bool IsMini => Mode==BiofitMode.MiniCube || Mode==BiofitMode.MiniInvertedCube;
         public bool IsCubeMode => Mode==BiofitMode.Cube || Mode==BiofitMode.InvertedCube || IsMini;
+        public bool IsBallSpiderMode => Mode==BiofitMode.Ball || Mode==BiofitMode.Spider;
+        // External pads/orbs change gravity without changing vehicle or teleporting.
+        public void SetBallSpiderGravity(bool inverted)
+        {
+            if(!initialized || !IsBallSpiderMode) return;
+            flipped=inverted;
+            body.gravityScale=flipped?-BallSpiderGravity:BallSpiderGravity;
+            if(Mode==BiofitMode.Spider) icon.flipY=flipped;
+        }
         public bool StereoInverted => Mode==BiofitMode.InvertedCube || Mode==BiofitMode.MiniInvertedCube || flipped;
         public const float MiniScale=.60f, MiniSpeed=7.8f, MiniJump=10.5f;
         private Vector3 normalScale;
@@ -547,6 +556,21 @@ namespace Biofit.GeomeTryOriginal
                 if(!SurfaceContact(Vector2.up)) return false;
                 body.linearVelocity=new Vector2(body.linearVelocity.x,-13.5f);
                 lastManualAction=Time.unscaledTime; return true;
+            }
+            // An accepted pulse may activate a contacted orb in the air.
+            // Give it priority over the normal Ball flip/Spider teleport.
+            if(IsBallSpiderMode && playerCollider!=null)
+            {
+                var bounds=playerCollider.bounds;
+                foreach(var hit in Physics2D.OverlapBoxAll(bounds.center,bounds.size,0f))
+                {
+                    var interaction=hit.GetComponent<BiofitV5Interaction>();
+                    if(interaction!=null && interaction.TryBallSpiderOrb(cube))
+                    {
+                        lastManualAction=Time.unscaledTime;
+                        return true;
+                    }
+                }
             }
             Vector2 support = flipped ? Vector2.up : Vector2.down;
             if (!SurfaceContact(support)) return false;
