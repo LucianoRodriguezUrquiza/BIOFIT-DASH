@@ -111,27 +111,35 @@ namespace Biofit.GeomeTryOriginal
         void OnGUI()
         {
             if(!Active)return;
+            if(!IsPreview)
+            {
+                // Compact, editor-only controls; no panel covering the playfield.
+                const float margin=8f,gap=5f,height=24f;
+                float width=Mathf.Min(150f,(Screen.width-2*margin-gap)*.5f);
+                if(width<=0)return;
+                float right=Screen.width-margin, bottom=Screen.height-margin-height;
+                var restart=new Rect(right-width,bottom,width,height);
+                var back=new Rect(restart.x-gap-width,bottom,width,height);
+                if(GUI.Button(back,"Volver al editor"))EditorApplication.isPlaying=false;
+                if(GUI.Button(restart,"Reiniciar desde aquí"))SceneManager.LoadScene("Level");
+                return;
+            }
             GUILayout.BeginArea(new Rect(12,Screen.height-92,Mathf.Max(300,Screen.width-24),80),GUI.skin.box);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(IsPreview?"VISTA REAL • sin física":"PRUEBA LOCAL • físicas reales");
+            GUILayout.Label("VISTA REAL • sin física");
             if(GUILayout.Button("Volver al editor",GUILayout.Width(145)))EditorApplication.isPlaying=false;
-            if(!IsPreview&&GUILayout.Button("Reiniciar desde aquí",GUILayout.Width(155)))SceneManager.LoadScene("Level");
             GUILayout.EndHorizontal();
-            if(IsPreview)
-            {
-                GUILayout.BeginHorizontal();
-                float pct=100*(x-Character.InitialPosition)/Mathf.Max(1,end-Character.InitialPosition);
-                GUILayout.Label(pct.ToString("F1")+"%",GUILayout.Width(55));
-                float next=GUILayout.HorizontalSlider(pct,0,100);
-                if(!Mathf.Approximately(next,pct))x=Mathf.Lerp(Character.InitialPosition,end,next/100);
-                auto=GUILayout.Toggle(auto,"Recorrer",GUILayout.Width(80));
-                hud=GUILayout.Toggle(hud,"HUD",GUILayout.Width(55));
-                if(GUILayout.Button(speed.ToString("0.##")+"×",GUILayout.Width(55)))speed=speed==.25f?.5f:speed==.5f?1:speed==1?2:.25f;
-                if(GUILayout.Button("Cámara original",GUILayout.Width(120)))view.orthographicSize=originalSize;
-                GUILayout.EndHorizontal();
-                GUILayout.Label("Flechas: mover • rueda: zoom • vista del motor real, colores según X");
-            }
-            else GUILayout.Label("Controles reales • el inicio se repone al reaparecer si se marcó Reiniciar aquí.");
+            GUILayout.BeginHorizontal();
+            float pct=100*(x-Character.InitialPosition)/Mathf.Max(1,end-Character.InitialPosition);
+            GUILayout.Label(pct.ToString("F1")+"%",GUILayout.Width(55));
+            float next=GUILayout.HorizontalSlider(pct,0,100);
+            if(!Mathf.Approximately(next,pct))x=Mathf.Lerp(Character.InitialPosition,end,next/100);
+            auto=GUILayout.Toggle(auto,"Recorrer",GUILayout.Width(80));
+            hud=GUILayout.Toggle(hud,"HUD",GUILayout.Width(55));
+            if(GUILayout.Button(speed.ToString("0.##")+"×",GUILayout.Width(55)))speed=speed==.25f?.5f:speed==.5f?1:speed==1?2:.25f;
+            if(GUILayout.Button("Cámara original",GUILayout.Width(120)))view.orthographicSize=originalSize;
+            GUILayout.EndHorizontal();
+            GUILayout.Label("Flechas: mover • rueda: zoom • vista del motor real, colores según X");
             GUILayout.EndArea();
         }
         void OnDestroy()

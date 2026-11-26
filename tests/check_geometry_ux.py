@@ -369,3 +369,16 @@ assert 'new Color32(255,255,255,p.a)' in runtime
 assert editor.count('BiofitRedPadArt.Texture(t)')==2
 assert 'kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f' in interaction
 print("PASS: clipboard placement and visual-only Red Pad contract")
+
+# V6.5 compact test controls and existing bodily orb input route.
+assert 'if(!IsPreview)' in session and 'Screen.height-margin-height' in session
+assert 'GUI.Button(back,"Volver al editor")' in session
+assert 'GUI.Button(restart,"Reiniciar desde aquí")' in session
+assert 'PRUEBA LOCAL • físicas reales' not in session
+assert 'Controles reales • el inicio' not in session
+assert 'VISTA REAL • sin física' in session and 'GUILayout.HorizontalSlider(pct,0,100)' in session
+orb_bridge = (root / "Assets/BIOFIT/GeomeTry/BiofitGeomeTryLegacyBridge.cs").read_text()
+assert 'orbPulseId++;' in orb_bridge and 'orbPulseDeadline = Time.fixedTime + Time.fixedDeltaTime * 1.5f;' in orb_bridge
+assert 'motor.Mode==BiofitMode.Cube && BiofitGeomeTryLegacyBridge.TryConsumeOrbPulse()' in interaction
+assert 'interaction.TryInvertedOrb(cube)' in motor
+print("PASS: compact editor-only test HUD and existing BLE orb dispatch contract")
