@@ -38,8 +38,10 @@ namespace Biofit.GeomeTryOriginal
         }
         public static void Clear()
         {
+            bool wasActive=Active;
             SessionState.SetBool(Prefix+"ACTIVE",false);SessionState.SetBool(Prefix+"LAUNCH",false);
             SessionState.SetBool(Prefix+"PREVIEW",false);
+            if(!wasActive)return;
             string previous=SessionState.GetString(Prefix+"PREV_START_SCENE","");
             EditorSceneManager.playModeStartScene=string.IsNullOrEmpty(previous)?null:AssetDatabase.LoadAssetAtPath<SceneAsset>(previous);
             SessionState.EraseString(Prefix+"PREV_START_SCENE");
@@ -97,7 +99,8 @@ namespace Biofit.GeomeTryOriginal
             if(spawned&&!SessionState.GetBool(Prefix+"RESTART",true))return;
             int mode=SessionState.GetInt(Prefix+"MODE",0);bool invert=SessionState.GetBool(Prefix+"INVERT",false);
             motor.SetMode(mode==1?BiofitMode.Ball:mode==2?BiofitMode.Spider:invert?BiofitMode.InvertedCube:BiofitMode.Cube);
-            if(mode!=0)motor.RestoreStereoGravity(invert);
+            if(mode==4){motor.SetMini(true);motor.SetCubeGravity(invert);}
+            else if(mode!=0)motor.RestoreStereoGravity(invert);
             rb.position=new Vector2(x,y);player.transform.position=new Vector3(x,y,player.transform.position.z);rb.linearVelocity=Vector2.zero;
             Physics2D.SyncTransforms();
             view.transform.position=new Vector3(x+5,Mathf.Max(4,y),view.transform.position.z);
