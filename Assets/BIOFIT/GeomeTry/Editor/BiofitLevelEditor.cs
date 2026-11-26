@@ -60,7 +60,7 @@ namespace Biofit.LevelEditing
         [MenuItem("BIOFIT/Level Editor/Abrir editor")]
         static void Open(){var w=GetWindow<BiofitLevelEditor>("BIOFIT Level Editor");w.minSize=new Vector2(870,510);w.Show();}
         void OnEnable(){wantsMouseMove=true;Undo.undoRedoPerformed+=Repaint;}
-        void OnDisable(){Undo.undoRedoPerformed-=Repaint; if(data!=null&&dirty){try{SaveDraft();}catch(Exception ex){Debug.LogError(ex);}}}
+        void OnDisable(){Undo.undoRedoPerformed-=Repaint; if(data!=null&&dirty){try{SaveDraft();}catch(Exception ex){Debug.LogError(ex);}}foreach(var image in externalTextures.Values)if(image!=null)DestroyImmediate(image);externalTextures.Clear();}
         void Guard(Action a){try{a();}catch(Exception ex){status="ERROR: "+ex.Message;Debug.LogException(ex);}Repaint();}
         void Load(int n,bool resume)
         {
@@ -575,7 +575,25 @@ namespace Biofit.LevelEditing
         }
         [InitializeOnLoadMethod] static void ClearTestAfterPlay()
         {
-            EditorApplication.playModeStateChanged+=state=>{if(state==PlayModeStateChange.EnteredEditMode){SessionState.EraseString("BIOFIT_EDITOR_TEST_PATH");SessionState.EraseInt("BIOFIT_EDITOR_TEST_SLOT");Biofit.GeomeTryOriginal.BiofitV65EditorSession.Clear();}};
+            EditorApplication.playModeStateChanged+=state=>
+            {
+                bool test=SessionState.GetBool("BIOFIT_V65_ACTIVE",false);
+                if(state==PlayModeStateChange.EnteredPlayMode&&test)
+                    EditorApplication.delayCall+=()=>EditorApplication.ExecuteMenuItem("Window/General/Game");
+                if(state!=PlayModeStateChange.EnteredEditMode)return;
+                int returnSlot=SessionState.GetInt("BIOFIT_EDITOR_TEST_SLOT",1)-1;
+                float x=SessionState.GetFloat("BIOFIT_V65_X",300),y=SessionState.GetFloat("BIOFIT_V65_Y",15);
+                int mode=SessionState.GetInt("BIOFIT_V65_MODE",0);
+                bool invert=SessionState.GetBool("BIOFIT_V65_INVERT",false);
+                SessionState.EraseString("BIOFIT_EDITOR_TEST_PATH");SessionState.EraseInt("BIOFIT_EDITOR_TEST_SLOT");
+                Biofit.GeomeTryOriginal.BiofitV65EditorSession.Clear();
+                if(test)EditorApplication.delayCall+=()=>
+                {
+                    var w=GetWindow<BiofitLevelEditor>("BIOFIT Level Editor");
+                    w.Show();w.Focus();
+                    w.Guard(()=>{w.Load(Mathf.Clamp(returnSlot,0,4),true);w.testX=x;w.testY=y;w.testMode=mode;w.testInvert=invert;w.pan=new Vector2(Mathf.Max(0,x-300),y+200);});
+                };
+            };
         }
         void RestorePrevious()
         {
