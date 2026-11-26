@@ -535,7 +535,7 @@ namespace Biofit.LevelEditing
             if(EditorApplication.isPlayingOrWillChangePlaymode)throw new Exception("Detené Play Mode.");
             string dir=Path.Combine(Root,"tools","level_editor","changes");Directory.CreateDirectory(dir);
             string f=File.Exists(lastDelta)?lastDelta:EditorUtility.OpenFilePanel("Elegir delta exportado",dir,"json");if(string.IsNullOrEmpty(f))return;
-            if(!EditorUtility.DisplayDialog("Publicar en niveles-mejorados","Se verificará el delta y se publicará únicamente su JSON e índice documental. main y recursos originales no se publican. ¿Continuar?","Publicar","Cancelar"))return;
+            if(!EditorUtility.DisplayDialog("Publicar delta en la rama actual","Se verificará el delta y se publicará únicamente su JSON e índice documental en la rama autorizada actual (main tras la consolidación). Los recursos originales no se publican. ¿Continuar?","Publicar","Cancelar"))return;
             string Quote(string v)=>"\x27"+v.Replace("\x27","\x27\x27")+"\x27";
             string cmd="& py -3 "+Quote(Path.Combine(Root,"tools","level_editor","level_delta.py"))+" --proyecto "+Quote(Root)+" --delta "+Quote(f)+" --publicar";
             var start=new System.Diagnostics.ProcessStartInfo("powershell.exe","-NoExit -Command \""+cmd.Replace("\"","\\\"")+"\""){UseShellExecute=true};
