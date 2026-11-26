@@ -1,0 +1,23 @@
+{
+  "version": "V6.4 experimental",
+  "base": "597631a69eed15a064c96baa14759a06704d22ce",
+  "maps_compact_sha256_matches": 5,
+  "delta_roundtrip_real_maps": 5,
+  "delta_wrong_base_rejected": 5,
+  "raw_preserved": 5,
+  "installer_fixture": {
+    "git_preflight": true,
+    "fast_forward": true,
+    "return_to_main": true,
+    "local_maps_unchanged": true,
+    "selective_delta_publish": true,
+    "main_unchanged": true,
+    "fixture_code_not_unity": true
+  },
+  "unity_compilation": false,
+  "unity_ui_test": false,
+  "cube_orientation_live_test": false,
+  "physical_ble_validation": null,
+  "apk_validation": null,
+  "stable": false
+}
