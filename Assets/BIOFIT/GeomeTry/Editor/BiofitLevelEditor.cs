@@ -47,6 +47,8 @@ namespace Biofit.LevelEditing
         int goIndex;
         string lastDelta="";
         float maxLength;
+        float groupAngle=90f;
+        bool transformAsGroup=true;
         [Serializable] sealed class ArtEntry {public string name,kind;public float widthGD,heightGD;}
         [Serializable] sealed class ArtIndex {public ArtEntry[] items;}
         int catalogPage; string priorQuery="";
@@ -252,6 +254,82 @@ namespace Biofit.LevelEditing
         {
             o.xGD+=dx;o.yGD+=dy;
             if(o.portalMaxGD>o.portalMinGD){o.portalMinGD+=dy;o.portalMaxGD+=dy;}
+        }
+        // GD angles are clockwise in the editor, negative Z in Unity world.
+        static Vector2 GroupPivot(Item[] items)
+        {
+            return new Vector2((items.Min(o=>o.xGD)+items.Max(o=>o.xGD))*.5f,
+                (items.Min(o=>o.yGD)+items.Max(o=>o.yGD))*.5f);
+        }
+        static Vector2 RotateGD(Vector2 delta,float angle)
+        {
+            float a=angle*Mathf.Deg2Rad,c=Mathf.Cos(a),sn=Mathf.Sin(a);
+            return new Vector2(c*delta.x+sn*delta.y,-sn*delta.x+c*delta.y);
+        }
+        static float CleanTransform(float v)
+        {
+            // Remove floating-point noise from exact quarter-turns only.
+            float nearest=Mathf.Round(v);
+            return Mathf.Abs(v-nearest)<.0001f?nearest:v;
+        }
+        void TransformSelection(float angle,bool mirrorX,bool mirrorY,bool group)
+        {
+            if(HasFloatingPaste||dragging||selecting)return;
+            var items=Selected();if(items.Length==0)return;
+            if(float.IsNaN(angle)||float.IsInfinity(angle))throw new Exception("Ángulo inválido.");
+            angle=angle%360f;
+            if(angle==0&&!mirrorX&&!mirrorY)return;
+            Vector2 pivot=GroupPivot(items);
+            var positions=new Vector2[items.Length];
+            for(int i=0;i<items.Length;i++)
+            {
+                var o=items[i];var original=new Vector2(o.xGD,o.yGD);
+                Vector2 d=original-pivot;
+                if(group)
+                {
+                    if(mirrorX)d.x=-d.x;
+                    if(mirrorY)d.y=-d.y;
+                    d=RotateGD(d,angle);
+                }
+                var next=group?pivot+d:original;
+                if(group)next=new Vector2(CleanTransform(next.x),CleanTransform(next.y));
+                if(float.IsNaN(next.x)||float.IsInfinity(next.x)||float.IsNaN(next.y)||float.IsInfinity(next.y)||next.x<0||next.x>data.endGD)
+                    throw new Exception("Transformación fuera del nivel. No se cambió ningún objeto.");
+                positions[i]=next;
+            }
+            Push();
+            for(int i=0;i<items.Length;i++)
+            {
+                var o=items[i];
+                if(group)
+                {
+                    // World-axis reflection conjugates the local rotation.
+                    if(mirrorX!=mirrorY)o.rotationGD=-o.rotationGD;
+                    Shift(o,positions[i].x-o.xGD,positions[i].y-o.yGD);
+                }
+                if(mirrorX)o.flipX=!o.flipX;
+                if(mirrorY)o.flipY=!o.flipY;
+                o.rotationGD=CleanTransform(Mathf.Repeat(o.rotationGD+angle,360f));
+            }
+            status=items.Length+" objeto(s) transformado(s). Ctrl+Z para deshacer.";
+            Repaint();
+        }
+        void DrawSelectionTransforms()
+        {
+            GUILayout.Space(6);GUILayout.Label("TRANSFORMAR SELECCIÓN",EditorStyles.boldLabel);
+            transformAsGroup=EditorGUILayout.ToggleLeft("Como grupo (centro común)",transformAsGroup);
+            GUILayout.Label(transformAsGroup?"Mueve y orienta la estructura completa.":"Cada objeto gira/refleja en su propio centro.",EditorStyles.wordWrappedMiniLabel);
+            using(new EditorGUILayout.HorizontalScope())
+            {
+                if(GUILayout.Button("Girar -90°"))Guard(()=>TransformSelection(-90f,false,false,transformAsGroup));
+                if(GUILayout.Button("Girar +90°"))Guard(()=>TransformSelection(90f,false,false,transformAsGroup));
+            }
+            if(GUILayout.Button("Girar 180°"))Guard(()=>TransformSelection(180f,false,false,transformAsGroup));
+            groupAngle=EditorGUILayout.DelayedFloatField("Ángulo GD",groupAngle);
+            if(GUILayout.Button("Aplicar ángulo"))Guard(()=>TransformSelection(groupAngle,false,false,transformAsGroup));
+            if(GUILayout.Button("Espejo X (izq. ↔ der.)"))Guard(()=>TransformSelection(0,true,false,transformAsGroup));
+            if(GUILayout.Button("Espejo Y (arriba ↔ abajo)"))Guard(()=>TransformSelection(0,false,true,transformAsGroup));
+            GUILayout.Label("Q / E: ±90° · Shift: ±15° · Ctrl+Z: deshacer",EditorStyles.wordWrappedMiniLabel);
         }
         void Delete(){CancelFloatingPaste();if(selection.Count==0)return;Push();data.objects=data.objects.Where(o=>!selection.Contains(o.index)).ToArray();selection.Clear();}
         void Copy()
@@ -714,6 +792,8 @@ namespace Biofit.LevelEditing
                 else if(e.keyCode==KeyCode.Escape){if(HasFloatingPaste){CancelFloatingPaste();status="Pegado cancelado. El portapapeles se conserva.";}else{placing=false;selection.Clear();}}
                 else if(e.keyCode==KeyCode.LeftArrow||e.keyCode==KeyCode.RightArrow||e.keyCode==KeyCode.UpArrow||e.keyCode==KeyCode.DownArrow)
                 {if(selection.Count>0){Push();float step=e.shift?1:grid;foreach(var o in Selected())Shift(o,e.keyCode==KeyCode.LeftArrow?-step:e.keyCode==KeyCode.RightArrow?step:0,e.keyCode==KeyCode.DownArrow?-step:e.keyCode==KeyCode.UpArrow?step:0);}}
+                else if(!e.control&&!e.command&&!e.alt&&(e.keyCode==KeyCode.Q||e.keyCode==KeyCode.E))
+                {if(selection.Count>0)Guard(()=>TransformSelection((e.keyCode==KeyCode.Q?-1f:1f)*(e.shift?15f:90f),false,false,transformAsGroup));}
                 else if(e.control||e.command)
                 {
                     switch(e.keyCode){case KeyCode.Z:History(!e.shift);break;case KeyCode.Y:History(false);break;case KeyCode.X:Cut();break;case KeyCode.C:Copy();break;case KeyCode.V:BeginFloatingPaste();break;case KeyCode.D:if(selection.Count>0){Copy();Guard(()=>Paste(new Vector2(grid,0)));}break;case KeyCode.A:foreach(var o in data.objects)selection.Add(o.index);break;case KeyCode.S:Guard(SaveDraft);break;default:used=false;break;}
@@ -769,6 +849,7 @@ namespace Biofit.LevelEditing
                     if(n.yGD!=o.yGD&&n.portalMinGD==o.portalMinGD&&n.portalMaxGD==o.portalMaxGD&&o.portalMaxGD>o.portalMinGD){n.portalMinGD+=n.yGD-o.yGD;n.portalMaxGD+=n.yGD-o.yGD;}
                     data.objects[Array.IndexOf(data.objects,o)]=n;
                 }
+                DrawSelectionTransforms();
                 if(IsTrajectoryObject(n))DrawTrajectoryInspector(n);
                 spriteName=EditorGUILayout.TextField("Sprite local",spriteName);
                 if(GUILayout.Button("Seleccionar todos del mismo ID")){int id=o.id;foreach(var v in data.objects)if(v.id==id)selection.Add(v.index);}
@@ -781,7 +862,7 @@ namespace Biofit.LevelEditing
                 if(GUILayout.Button("Mover -1 bloque X")){Push();foreach(var o in selected)Shift(o,-30,0);}
                 if(GUILayout.Button("Mover +1 bloque Y")){Push();foreach(var o in selected)Shift(o,0,30);}
                 if(GUILayout.Button("Mover -1 bloque Y")){Push();foreach(var o in selected)Shift(o,0,-30);}
-                if(GUILayout.Button("Rotar 90° individual")){Push();foreach(var o in selected)o.rotationGD+=90;}
+                DrawSelectionTransforms();
             }
             else EditorGUILayout.HelpBox("Seleccioná objetos o elegí una plantilla del catálogo y activá Colocar.",MessageType.Info);
             GUILayout.Space(8);GUILayout.Label("PRUEBA V6.5",EditorStyles.boldLabel);

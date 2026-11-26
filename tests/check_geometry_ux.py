@@ -479,3 +479,33 @@ for v, expected_h, expected_range in ((20,5.10,6.63),(12.5,1.99,4.14),(9.5,1.15,
 assert math.isclose(.5*g,19.62)
 assert math.isclose(13.5+.5*g,33.12)
 print("PASS: selected-only trajectory guide and ideal kinematics")
+
+# V6.5 selection transforms: GD clockwise, rigid group pivot, local/world mirror.
+assert 'static Vector2 GroupPivot(Item[] items)' in editor
+assert 'c*delta.x+sn*delta.y,-sn*delta.x+c*delta.y' in editor
+assert 'if(mirrorX!=mirrorY)o.rotationGD=-o.rotationGD;' in editor
+assert 'if(mirrorX)o.flipX=!o.flipX;' in editor and 'if(mirrorY)o.flipY=!o.flipY;' in editor
+assert 'Shift(o,positions[i].x-o.xGD,positions[i].y-o.yGD);' in editor
+assert 'next.x<0||next.x>data.endGD' in editor
+assert 'if(group)next=new Vector2(CleanTransform(next.x),CleanTransform(next.y));' in editor
+assert editor.count('DrawSelectionTransforms();')==2
+assert 'Como grupo (centro común)' in editor
+assert 'e.keyCode==KeyCode.Q||e.keyCode==KeyCode.E' in editor
+assert 'e.shift?15f:90f' in editor
+transform=editor.split('void TransformSelection(',1)[1].split('void DrawSelectionTransforms()',1)[0]
+assert transform.count('Push();')==1
+assert transform.index('Transformación fuera del nivel')<transform.index('Push();')
+assert 'Snap(' not in transform
+# Independent math checks for clockwise rigid rotation and world reflection.
+import math
+def rotate_gd(x,y,deg):
+    a=math.radians(deg)
+    return (math.cos(a)*x+math.sin(a)*y,-math.sin(a)*x+math.cos(a)*y)
+assert all(abs(a-b)<1e-9 for a,b in zip(rotate_gd(30,0,90),(0,-30)))
+for angle in (0,15,90,180,270):
+    a,b=rotate_gd(12,7,angle)
+    x,y=rotate_gd(-12,7,-angle)
+    assert abs(x+a)<1e-9 and abs(y-b)<1e-9
+    x,y=rotate_gd(12,-7,-angle)
+    assert abs(x-a)<1e-9 and abs(y+b)<1e-9
+print("PASS: selection transforms, undo and rigid reflection math")
