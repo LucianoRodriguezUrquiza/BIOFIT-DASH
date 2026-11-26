@@ -245,7 +245,7 @@ namespace Biofit.GeomeTryOriginal
             if (currentScene != LevelScene || cubeRenderer == null || activeCube == null ||
                 atlas == null || !activeCube.isAlive) return;
             BiofitModeMotor currentMotor = activeCube.GetComponent<BiofitModeMotor>();
-            if (currentMotor != null && currentMotor.Mode != BiofitMode.Cube) return;
+            if (currentMotor != null && currentMotor.Mode != BiofitMode.Cube && !currentMotor.IsMini) return;
             Sprite selected = GetSkin(skinIndex);
             if (selected != null && cubeRenderer.sprite != selected)
             {
