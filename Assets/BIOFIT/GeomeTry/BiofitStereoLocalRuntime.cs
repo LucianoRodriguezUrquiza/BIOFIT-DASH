@@ -180,7 +180,7 @@ namespace Biofit.GeomeTryOriginal
             GameObject tile=Resources.Load<GameObject>("Prefabs/Decors/TilePrefab");
             GameObject spike=Resources.Load<GameObject>("Prefabs/Decors/SpikePrefab");
             if(tile==null || spike==null) throw new InvalidOperationException("Faltan prefabs de colision originales.");
-            var outlines = slot==1 && d.editorRevision==0 ? new BiofitV63Outline(d, transform, floorY, unlit, GetSprite("square_05")) : null;
+            var outlines = slot==1 ? new BiofitV63Outline(d, transform, floorY, unlit, GetSprite("square_05")) : null;
             float maxGD=0f;
             foreach(Item o in d.objects)
             {
