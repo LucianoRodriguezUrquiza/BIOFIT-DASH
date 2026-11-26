@@ -12,7 +12,7 @@ namespace Biofit.GeomeTryOriginal
         private readonly float floor;
         private readonly Material mat;
         public Sprite FillSprite{get;private set;}
-        private static bool Full(BiofitStereoLocalRuntime.Item o)=>o.kind=="solid" && o.collisionMode==0 && Mathf.Abs(o.widthGD-30)<.1f && Mathf.Abs(o.heightGD-30)<.1f;
+        private static bool Full(BiofitStereoLocalRuntime.Item o)=>o.kind=="solid" && o.collisionMode==0 && o.editorScaleX==0 && o.editorScaleY==0 && o.frames!=null && o.frames.Length==1 && o.frames[0].StartsWith("square_0") && Mathf.Abs(o.widthGD-30)<.1f && Mathf.Abs(o.heightGD-30)<.1f;
         private static Vector2Int Key(BiofitStereoLocalRuntime.Item o)=>new Vector2Int(Mathf.RoundToInt(o.xGD),Mathf.RoundToInt(o.yGD));
         private static bool Region(BiofitStereoLocalRuntime.Item o)=>(o.xGD>=12495 && o.xGD<=12585 && o.yGD>=225)||(o.xGD>=12915 && o.xGD<=14505 && o.yGD<=270);
         public BiofitV63Outline(BiofitStereoLocalRuntime.Data data,Transform root,float y,Material m,Sprite fill)
