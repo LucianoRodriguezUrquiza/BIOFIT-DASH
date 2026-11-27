@@ -443,6 +443,22 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     /// Los callbacks llegan al hilo principal desde ReadEvent().
     /// </summary>
     public event Action<byte, float, float> AnkleUpCandidate;
+    // Neutral, observational interface for future games. No new commands or
+    // thresholds: MOV/LIFT are evidence, not confirmed steps or running.
+    public enum MotionKind : byte { ActivityOn=1, ActivityOff=2, UpImpulse=3, LiftOnset=4 }
+    public readonly struct MotionObservation
+    {
+        public readonly byte Foot,Flags;
+        public readonly MotionKind Kind;
+        public readonly ushort Sequence;
+        public readonly uint SensorMs;
+        public readonly double PhoneSeconds;
+        public readonly float VerticalG,GyroDps;
+        public readonly bool Aligned,Bilateral;
+        public MotionObservation(byte foot,byte flags,MotionKind kind,ushort seq,uint ms,double seconds,float up,float gyro,bool aligned,bool bilateral)
+        {Foot=foot;Flags=flags;Kind=kind;Sequence=seq;SensorMs=ms;PhoneSeconds=seconds;VerticalG=up;GyroDps=gyro;Aligned=aligned;Bilateral=bilateral;}
+    }
+    public event Action<MotionObservation> MotionObserved;
 
     // Se mantiene una unica instancia BLE mientras alternamos diagnostico y Dash.
     public bool BothTrackersConnected =>
@@ -1203,6 +1219,12 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             sequence, millis, gyroDps, verticalG, paired,
             queueDelayMs, callbackSeconds, pairSeconds,
             timeAligned, relativeDelayMs);
+
+        if(fresh&&bmdAllowed&&MotionObserved!=null)
+        {
+            try{MotionObserved.Invoke(new MotionObservation(state.id,b[3],(MotionKind)eventType,sequence,millis,pairSeconds,verticalG,gyroDps,timeAligned,paired));}
+            catch(Exception ex){Debug.LogWarning("BIOFIT MotionObserver: "+ex.Message);}
+        }
 
         string eventName = eventType == 1 ? "MOV_ON" :
                            eventType == 2 ? "MOV_OFF" : eventType==4 ? "LIFT_ONSET" : "UP_IMPULSE";

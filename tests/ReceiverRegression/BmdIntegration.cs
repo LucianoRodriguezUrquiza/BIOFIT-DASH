@@ -78,7 +78,8 @@ static class BmdIntegration
         Check(m.StartGameCapture(),"GFA recording start");
         m.GfaAttempt("test");m.GfaAction("NO_JUMP","NO_SUPPORT");m.GfaDeath("test","Cube",12,1,10,false,0);
         Check(m.GfaSummary=="GFA intentos=1 muertes=1","GFA counts active only");
-        Check(m.StopGameCapture(),"GFA capture stop");await m.RawOperation;
+        Check(m.StopGameCapture(),"GFA capture stop");await m.CaptureCompletion;
+        Check(BiofitCaptureArchive.VerifyFileStreaming(m.SavedCapturePath)&&System.IO.File.ReadAllText(m.SavedCapturePath).Contains("GAMEPLAY_FAILURE"),"GFA persisted with SHA");
         m.GfaDeath("test","Cube",12,1,10,false,0);Check(m.GfaSummary=="GFA intentos=1 muertes=1","GFA inactive ignored");
         Console.WriteLine("PASS BMD real monitor integration: bilateral apply, partial failure, restore, two-foot trace, cancellation, disconnect");
     }

@@ -25,7 +25,8 @@ public sealed partial class BiofitBLEMonitor
     public float BmdProgress {get;private set;}
     public string BmdAutoStatus {get;private set;}="GFA auto OFF";
     private bool autoAcceptMarkers,autoSaved=true;
-    private int autoToken,autoSavedToken;
+    private int autoToken,autoSavedToken,autoExpectedFailures;
+    public bool BmdAutoPending=>autoToken!=0&&!autoSaved;
     private string autoOwner="";
     private uint autoBootL,autoBootR,autoSavedBootL,autoSavedBootR;
     private bool autoArmedL,autoArmedR;
@@ -76,6 +77,7 @@ public sealed partial class BiofitBLEMonitor
         if(!GameCaptureActive)return;
         if(gfaAttempts==0){gfaAttempts=1;gfaAttemptAt=gfaStarted;RecordControlDiagnostic("GFA_ATTEMPT attempt=1 partial=True level="+GfaSafe(level));}
         ++gfaDeaths;
+        if(autoAcceptMarkers)autoExpectedFailures=Math.Min(gfaDeaths,BiofitBmdProtocol.MaxAutoSlots);
         double now=MonotonicNow,da=now-gfaDecisionAt,oa=now-gfaOutcomeAt;
         string decision=da<=1.5?gfaDecision:"NO_RECENT_DECISION",outcome=oa<=1.5?gfaOutcome:"NO_RECENT_ACTION";
         // Evidence label only: a death never proves an intended physical action.
@@ -272,7 +274,7 @@ public sealed partial class BiofitBLEMonitor
         if(!autoSaved&&autoToken!=0){BmdAutoStatus="GFA previo pendiente: descargar antes de nueva captura";AutoLog("GFA_AUTO_SKIPPED "+BmdAutoStatus);return;}
         autoToken=(Guid.NewGuid().GetHashCode()&65535);if(autoToken==0)autoToken=1;
         if(autoToken==autoSavedToken)autoToken=autoToken%65535+1;
-        autoOwner=sessionFile.Path;autoSaved=false;autoAcceptMarkers=true;autoArmedL=autoArmedR=false;autoBootL=autoBootR=0;
+        autoExpectedFailures=0;autoOwner=sessionFile.Path;autoSaved=false;autoAcceptMarkers=true;autoArmedL=autoArmedR=false;autoBootL=autoBootR=0;
         autoGenL=left.generation;autoGenR=right.generation;
         ClearBmdDownloadCache();BmdTracePath="";
         AutoLog("GFA_AUTO_BEGIN token="+autoToken+" preMs=3000 postMs=1000 maxSlots=16");
@@ -284,17 +286,35 @@ public sealed partial class BiofitBLEMonitor
         await rawTransition.WaitAsync();
         try
         {
+            // Read BOTH banks before arming either. An app restart must not destroy
+            // a previous unsaved capture, even if the other tracker is empty.
+            var links=new[]{l,r};var nonces=new uint[2];
+            try{
+                for(int side=0;side<2;side++){
+                    int k=side;
+                    await links[k].Batch(async x=>{
+                        nonces[k]=await x.GetNonce(default);
+                        var old=await x.AutoCommand("D,A",default);
+                        uint savedBoot=k==0?autoSavedBootL:autoSavedBootR;
+                        if(old.Armed||old.Count>0&&(old.Token!=autoSavedToken||nonces[k]!=savedBoot))
+                            throw new InvalidOperationException("Banco anterior sin recuperar pie="+(k+1));
+                    },default);
+                }
+                CheckBmdConnection(l,r,autoGenL,autoGenR,default);
+            }catch(Exception ex){
+                BmdAutoStatus="GFA: "+ex.Message+"; descargar banco anterior";
+                AutoLog("GFA_AUTO_PREFLIGHT_ERROR "+ex.Message);
+                autoAcceptMarkers=false;autoSaved=true;autoToken=0;autoOwner="";
+                autoBootL=autoBootR=0;autoExpectedFailures=0;return;
+            }
+            autoBootL=nonces[0];autoBootR=nonces[1];
             for(int side=1;side<=2;side++)
             {
-                int foot=side;var link=foot==1?l:r;
+                int foot=side;var link=links[foot-1];
                 try{
                     await link.Batch(async x=>{
                         uint nonce=await x.GetNonce(default);
-                        var old=await x.AutoCommand("D,A",default);
-                        uint savedBoot=foot==1?autoSavedBootL:autoSavedBootR;
-                        if(old.Armed||old.Count>0&&(old.Token!=autoSavedToken||nonce!=savedBoot))
-                            throw new InvalidOperationException("Banco anterior sin recuperar");
-                        if(foot==1)autoBootL=nonce;else autoBootR=nonce;
+                        if(nonce!=nonces[foot-1])throw new InvalidOperationException("Tracker reiniciado");
                         var state=await x.AutoCommand("D,A,"+id,default);
                         if(state.Token!=id||!state.Armed)throw new InvalidOperationException("Armado no confirmado");
                         if(foot==1&&leftBmd==l&&left.generation==autoGenL)autoArmedL=true;
@@ -375,11 +395,16 @@ public sealed partial class BiofitBLEMonitor
         // Recovery after an app restart: only accept an unambiguous shared
         // token or a single bank. Never merge different sessions silently.
         if(target==0){
-            if(states[0].Token!=0&&states[1].Token!=0&&states[0].Token!=states[1].Token)
+            bool hasL=states[0].Armed||states[0].Count>0,hasR=states[1].Armed||states[1].Count>0;
+            if(hasL&&hasR&&states[0].Token!=states[1].Token)
                 throw new InvalidOperationException("Bancos GFA de sesiones distintas; no mezclar");
-            target=states[0].Token!=0?states[0].Token:states[1].Token;
+            target=hasL?states[0].Token:hasR?states[1].Token:states[0].Token!=0?states[0].Token:states[1].Token;
         }
         if(target==0)throw new InvalidOperationException("No existe banco GFA");
+        if(!(states[0].Token==target&&(autoBootL==0||autoBootL==boot[0]))&&
+           !(states[1].Token==target&&(autoBootR==0||autoBootR==boot[1])))
+            throw new InvalidOperationException("Ningún banco corresponde a la sesión solicitada; no se generó archivo");
+        var seen=new[]{new HashSet<int>(),new HashSet<int>()};
         var rows=new List<string>(2*BiofitBmdProtocol.MaxAutoSlots*1025);
         bool both=true;int sampleTotal=0,completeSnapshots=0,partialSnapshots=0;
         var watch=System.Diagnostics.Stopwatch.StartNew();int transferred=0;
@@ -395,6 +420,7 @@ public sealed partial class BiofitBLEMonitor
                 for(int slot=0;slot<states[k].Count;slot++){
                     CheckBmdConnection(l,r,lg,rg,token);
                     var snap=await x.GetSnapshot(foot,slot,token);
+                    if(!seen[k].Add(snap.FailureId))throw new InvalidOperationException("ID de fallo duplicado");
                     rows.Add(BiofitBmdProtocol.AutoMetadata(foot,snap,"SNAPSHOT"));
                     if(snap.State!=3||snap.Flags!=0)partialSnapshots++;else completeSnapshots++;
                     string key=foot+":"+boot[k]+":"+snap.Generation+":"+snap.Count;
@@ -413,6 +439,13 @@ public sealed partial class BiofitBLEMonitor
             },token);
         }
         CheckBmdConnection(l,r,lg,rg,token);
+        var expected=new SortedSet<int>(seen[0]);expected.UnionWith(seen[1]);
+        for(int id=1;id<=autoExpectedFailures;id++)expected.Add(id);
+        int missing=0;
+        foreach(int id in expected)for(int k=0;k<2;k++)if(!seen[k].Contains(id)){
+            ++missing;both=false;
+            rows.Add(BiofitBmdProtocol.AutoMetadata((byte)(k+1),new BiofitBmdProtocol.Snapshot{FailureId=id},"MISSING_SNAPSHOT"));
+        }
         if(rows.Count==0)throw new InvalidOperationException("Banco GFA sin metadatos");
         string stem=string.IsNullOrEmpty(autoOwner)?"BIOFIT_GFA_"+target:Path.GetFileNameWithoutExtension(autoOwner)+"_TRACE_GFA_"+target;
         string path=Path.Combine(Application.persistentDataPath,"BMD",stem+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv");
@@ -422,7 +455,7 @@ public sealed partial class BiofitBLEMonitor
         if(file.Error.Length!=0||!BiofitCaptureArchive.VerifyFileStreaming(path))throw new IOException("GFA no verificado: "+file.Error);
         BmdTracePath=path;BmdProgress=1;autoSaved=true;autoSavedToken=target;autoSavedBootL=boot[0];autoSavedBootR=boot[1];
         autoToken=target;ClearBmdDownloadCache();
-        BmdStatus="GFA SHA256 OK: "+sampleTotal+" muestras | ventanas completas="+completeSnapshots+" parciales="+partialSnapshots+(both?"":" | BANCO BILATERAL INCOMPLETO");
+        BmdStatus="GFA SHA256 OK: "+sampleTotal+" muestras | ventanas completas="+completeSnapshots+" parciales="+partialSnapshots+" faltantes="+missing+(both?"":" | BANCO BILATERAL INCOMPLETO");
         BmdAutoStatus=BmdStatus;
     }
     private void CheckBmdConnection(BiofitBmdLink l,BiofitBmdLink r,int lg,int rg,CancellationToken token)

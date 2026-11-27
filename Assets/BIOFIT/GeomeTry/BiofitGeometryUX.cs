@@ -1296,7 +1296,7 @@ namespace Biofit.GeomeTryOriginal
         private void BmdAction(int action)
         {
             var m=GetMonitor();if(m==null)return;
-            switch(action){case 0:m.RequestBmd("query");break;case 1:m.RequestBmd("profile",bmdSelected);break;case 2:bmdSelected=0;m.RequestBmd("profile",0);break;case 3:m.RequestBmd("start");break;case 4:m.RequestBmd("freeze");break;case 5:m.RequestBmd(m.BmdAutoEnabled?"autoDownloadExport":"downloadExport");break;case 6:m.ExportBmdTrace();break;case 7:m.CancelBmd();break;}
+            switch(action){case 0:m.RequestBmd("query");break;case 1:m.RequestBmd("profile",bmdSelected);break;case 2:bmdSelected=0;m.RequestBmd("profile",0);break;case 3:m.RequestBmd("start");break;case 4:m.RequestBmd("freeze");break;case 5:m.RequestBmd((m.BmdAutoEnabled||m.BmdAutoPending)?"autoDownloadExport":"downloadExport");break;case 6:m.ExportBmdTrace();break;case 7:m.CancelBmd();break;}
             RefreshBmd();
         }
         private void RefreshBmd()
