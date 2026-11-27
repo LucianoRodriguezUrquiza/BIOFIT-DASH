@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.5 + BMD V1.1 / GFA y UX arcade (aceptación Unity)
+
+**27/11/2026:** versión de trabajo aprobada por el usuario en Unity, código `edc873860dfa88e38213aee27e8c95f57976938c`, CI 5/5. Rama activa `feat/bmd-v231`; `main` permanece en V6.5 anterior. [Registro de aceptación y organización de ramas](docs/ACEPTACION_BMD231_UX.md). La APK aprobada previamente corresponde a una revisión anterior; recompilación y validación Android de los menús actuales pendientes. Las secciones siguientes son historial. No fusionar ni eliminar ramas sin autorización expresa.
+
+---
+
 # BIOFIT DASH — V6.5 + BMD experimental
 
 Rama feat/bmd-v230. Se añade BMD V1 con configuración FW230, diagnóstico sombra y exportación de trace; [procedimiento, alcance y límites](docs/BMD_V1.md). Main V6.5 intacta. Pruebas host y APK/ensayo físico pendientes al publicar.

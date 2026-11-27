@@ -1,3 +1,8 @@
+# Estado vigente — 27/11/2026
+
+Aceptación de trabajo en Unity y CI 5/5: [ACEPTACION_BMD231_UX.md](ACEPTACION_BMD231_UX.md). La rama activa es feat/bmd-v231; main y firmware intactos. Se conservan deltas de niveles, arte local y detector. La APK final y ensayos de hardware no se certifican mediante esta aceptación. No reinstalar ni consolidar sin autorización.
+
+---
 
 ## RCA 27/11/2026 — sistema visual arcade común (Configuración y Personajes)
 Usuario solicita eliminar apariencia plana, conservar estructura C y selector, usar esquinas redondeadas y fuente del juego; prioridad texto contenido. Se implementan máscaras redondeadas RGBA generadas en ejecución y sprites de nueve cortes, cache por radio y liberación al destruir UI. Doble marco oscuro/cian, base opaca azul petróleo, relieve superior e inferior en botones verde/cian, mismos componentes para los dos menús. Se conservan PNG locales, navegación, 30 skins por página, selección, BMD y lógica de registro/exportación. Etiquetas con padding 8 px horizontal/4 vertical adicionales, TMP autosize y ellipsis de respaldo, y ajuste uniforme de vértices reales BMFont (no solo avances), habilitado exclusivamente en las etiquetas de estos menús. Se reduce ligeramente arte de preview y celdas para respetar márgenes de marco; nombre de categoría queda dentro del mismo botón. Pruebas de geometría, estilo y límites de tinta actualizadas. No se distribuyen assets externos ni se requiere copiar nuevos PNG. No se alteran niveles, físicas, BLE, firmware ni main. Validación visual Unity y Android pendiente. Actualizar con Unity cerrado mediante git pull --ff-only en feat/bmd-v231.
