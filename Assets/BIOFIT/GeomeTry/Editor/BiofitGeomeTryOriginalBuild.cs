@@ -185,6 +185,10 @@ namespace Biofit.GeomeTryOriginal.Editor
             foreach (string name in new[] {"CubePrefab", "ShipPrefab", "WavePrefab"})
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(Prefix + "Resources/Prefabs/Player/" + name + ".prefab") == null)
                     throw new InvalidOperationException("Falta prefab original: " + name);
+            string gfaCharacter=Path.Combine("Assets/GeomeTryOriginal/Assets","Scripts/GameMechanics/CharacterType/Character.cs");
+            string gfaCube=Path.Combine("Assets/GeomeTryOriginal/Assets","Scripts/GameMechanics/CharacterType/Cube.cs");
+            if(!File.ReadAllText(gfaCharacter).Contains("BIOFIT_GFA_DEATH")||!File.ReadAllText(gfaCharacter).Contains("BIOFIT_GFA_SPAWN")||!File.ReadAllText(gfaCube).Contains("BIOFIT_GFA_SUPPORT"))
+                throw new InvalidOperationException("Faltan hooks BMD GFA. Cerra Unity y ejecuta tools/apply_geometry_compat.ps1.");
             VerifyNavigationAndResources();
             UnityEngine.Debug.Log("BIOFIT GeomeTry original: escenas, personajes y los cuatro mapas RAW verificados sin modificar.");
         }

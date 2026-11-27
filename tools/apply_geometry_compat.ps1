@@ -262,5 +262,32 @@ if ($uiCode.Contains("BIOFIT_CANVAS_LOAD_RACE_FIX")) {
     Write-Host "OK: UIManager omite error de Canvas transitorio (sin alterar fondos del nivel)."
 }
 
+
+# BMD GFA: insert two observation hooks in Character and observe the already
+# evaluated Cube support predicate once. No original physics/map modifications.
+$gfaChar = Join-Path $imported "Scripts\GameMechanics\CharacterType\Character.cs"
+$gfaCharOriginal = Join-Path $original "Scripts\GameMechanics\CharacterType\Character.cs"
+$gfaExpected = [Text.RegularExpressions.Regex]::Replace([IO.File]::ReadAllText($gfaCharOriginal),'(?<![A-Za-z0-9_])Camera(?![A-Za-z0-9_])','GeometryCamera')
+$gfaExpected = $gfaExpected.Replace("`r`n","`n")
+$gfaCode = [IO.File]::ReadAllText($gfaChar).Replace("`r`n","`n")
+$spawnAnchor = 'rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;'
+$deathAnchor = 'isAlive = false;'
+if (($gfaExpected.Split([string[]]@($spawnAnchor),[StringSplitOptions]::None)).Count -ne 2 -or
+    ($gfaExpected.Split([string[]]@($deathAnchor),[StringSplitOptions]::None)).Count -ne 2) { throw "GFA: anclas de Character inesperadas" }
+$gfaPatched = $gfaExpected.Replace($spawnAnchor,$spawnAnchor+"`n        Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.NotifyGfaSpawn(this); // BIOFIT_GFA_SPAWN")
+$gfaPatched = $gfaPatched.Replace($deathAnchor,"Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.NotifyGfaDeath(this); // BIOFIT_GFA_DEATH`n        "+$deathAnchor)
+if ($gfaCode -eq $gfaExpected) { [IO.File]::WriteAllText($gfaChar,$gfaPatched,(New-Object System.Text.UTF8Encoding($false))) }
+elseif ($gfaCode -ne $gfaPatched) { throw "GFA: Character.cs tiene cambios inesperados; no se sobrescribe" }
+$gfaCube = Join-Path $imported "Scripts\GameMechanics\CharacterType\Cube.cs"
+$gfaCubeOriginal = Join-Path $original "Scripts\GameMechanics\CharacterType\Cube.cs"
+$cubeExpected = [IO.File]::ReadAllText($gfaCubeOriginal).Replace("`r`n","`n")
+$cubeCode = [IO.File]::ReadAllText($gfaCube).Replace("`r`n","`n")
+$cubeAnchor = "private void Jump()`n    {`n        if (CheckGrounded())"
+if (!$cubeExpected.Contains($cubeAnchor)) { throw "GFA: ancla Cube inesperada" }
+$cubePatched = $cubeExpected.Replace($cubeAnchor,"private void Jump()`n    {`n        bool supported = CheckGrounded();`n        Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.RecordCubeSupport(supported); // BIOFIT_GFA_SUPPORT`n        if (supported)")
+if ($cubeCode -eq $cubeExpected) { [IO.File]::WriteAllText($gfaCube,$cubePatched,(New-Object System.Text.UTF8Encoding($false))) }
+elseif ($cubeCode -ne $cubePatched) { throw "GFA: Cube.cs tiene cambios inesperados; no se sobrescribe" }
+Write-Host "OK: hooks GFA de inicio/muerte/apoyo, sin modificar mecanica."
+
 Write-Host "OK: reparacion visual y de camara completada. Fuente original sin modificar."
 Write-Host "Ya podes abrir Unity 6000.3.28f1 y comprobar la consola."

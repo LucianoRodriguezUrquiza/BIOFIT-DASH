@@ -523,14 +523,17 @@ namespace Biofit.GeomeTryOriginal
             return false;
         }
 
+        public string LastPulseReason {get;private set;}="UNKNOWN";
+        private bool RejectPulse(string reason){LastPulseReason=reason;return false;}
         public bool TryPulse()
         {
+            LastPulseReason="APPLIED";
             Initialize();
             if (!initialized || Mode == BiofitMode.Cube || !cube.isAlive ||
-                GameManager.Instance == null || !GameManager.Instance.PlayMode) return false;
+                GameManager.Instance == null || !GameManager.Instance.PlayMode) return RejectPulse("STATE_GUARD");
             // Protect against the *same* simultaneous touch and BLE pulse, not a
             // replacement for the unchanged 900-ms bilateral receiver cooldown.
-            if (Time.unscaledTime - lastManualAction < .12f) return false;
+            if (Time.unscaledTime - lastManualAction < .12f) return RejectPulse("MANUAL_ACTION_DEDUP");
             if (Mode == BiofitMode.Ship)
             {
                 shipBleHeldUntil = Mathf.Max(shipBleHeldUntil,
@@ -542,7 +545,7 @@ namespace Biofit.GeomeTryOriginal
             {
                 foreach(var hit in Physics2D.OverlapCircleAll(body.position,.5f))
                 {var interaction=hit.GetComponent<BiofitV5Interaction>();if(interaction!=null && interaction.TryInvertedOrb(cube)){lastManualAction=Time.unscaledTime;return true;}}
-                if(!MiniSupport())return false;
+                if(!MiniSupport())return RejectPulse("NO_MINI_SUPPORT");
                 body.linearVelocity=new Vector2(body.linearVelocity.x,(StereoInverted?-1:1)*MiniJump);
                 lastManualAction=Time.unscaledTime;return true;
             }
@@ -553,7 +556,7 @@ namespace Biofit.GeomeTryOriginal
                     var interaction=hit.GetComponent<BiofitV5Interaction>();
                     if(interaction!=null && interaction.TryInvertedOrb(cube)) { lastManualAction=Time.unscaledTime; return true; }
                 }
-                if(!SurfaceContact(Vector2.up)) return false;
+                if(!SurfaceContact(Vector2.up)) return RejectPulse("NO_UPPER_SUPPORT");
                 body.linearVelocity=new Vector2(body.linearVelocity.x,-13.5f);
                 lastManualAction=Time.unscaledTime; return true;
             }
@@ -573,7 +576,7 @@ namespace Biofit.GeomeTryOriginal
                 }
             }
             Vector2 support = flipped ? Vector2.up : Vector2.down;
-            if (!SurfaceContact(support)) return false;
+            if (!SurfaceContact(support)) return RejectPulse("NO_SUPPORT");
             if (Mode == BiofitMode.Ball)
             {
                 flipped = !flipped;
@@ -587,12 +590,12 @@ namespace Biofit.GeomeTryOriginal
             Vector2 destinationDirection = -support;
             RaycastHit2D destinationHit = Physics2D.Raycast(
                 body.position, destinationDirection, 16f, ActiveGroundMask);
-            if (destinationHit.collider == null) return false;
+            if (destinationHit.collider == null) return RejectPulse("NO_DESTINATION");
             float halfHeight = playerCollider == null ? .5f :
                 Mathf.Max(.2f, playerCollider.bounds.extents.y);
             Vector2 destination = new Vector2(body.position.x,
                 destinationHit.point.y - destinationDirection.y * (halfHeight + .035f));
-            if (Vector2.Distance(destination, body.position) < 1.0f) return false;
+            if (Vector2.Distance(destination, body.position) < 1.0f) return RejectPulse("DESTINATION_TOO_CLOSE");
 
             // Avoid teleportation into hazards or blocks near the receiving surface.
             Collider2D[] overlaps = Physics2D.OverlapBoxAll(destination,
@@ -601,7 +604,7 @@ namespace Biofit.GeomeTryOriginal
             {
                 if (collision == playerCollider || collision == destinationHit.collider ||
                     collision.isTrigger) continue;
-                return false;
+                return RejectPulse("DESTINATION_OCCUPIED");
             }
 
             Vector3 oldPosition = transform.position;

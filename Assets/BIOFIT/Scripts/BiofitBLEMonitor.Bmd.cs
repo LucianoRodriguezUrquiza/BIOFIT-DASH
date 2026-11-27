@@ -40,6 +40,44 @@ public sealed partial class BiofitBLEMonitor
     public string BmdShadowSummary=>bmdShadow.Summary();
     public string BmdTrackerSummary=>"I FW "+left.firmwareVersion+" | D FW "+right.firmwareVersion+
         " | perfil confirmado: "+(bmdVerified?bmdMask.ToString():"--");
+    private int gfaAttempts,gfaDeaths;
+    private double gfaStarted,gfaAttemptAt,gfaDecisionAt=-10000,gfaOutcomeAt=-10000;
+    private string gfaDecision="",gfaOutcome="";
+    public string GfaSummary=>"GFA intentos="+gfaAttempts+" muertes="+gfaDeaths;
+    private void GfaBegin(){gfaAttempts=gfaDeaths=0;gfaStarted=MonotonicNow;gfaAttemptAt=gfaStarted;gfaDecisionAt=gfaOutcomeAt=-10000;gfaDecision=gfaOutcome="";}
+    public void GfaAttempt(string level)
+    {
+        if(!GameCaptureActive)return;
+        ++gfaAttempts;gfaAttemptAt=MonotonicNow;gfaDecisionAt=gfaOutcomeAt=-10000;gfaDecision=gfaOutcome="";
+        RecordControlDiagnostic("GFA_ATTEMPT attempt="+gfaAttempts+" level="+GfaSafe(level));
+    }
+    private static string GfaSafe(string s)=>(s??"").Replace(';',',').Replace('\r',' ').Replace('\n',' ').Replace(' ','_');
+    private void GfaObserve(string decision){if(GameCaptureActive){gfaDecision=decision;gfaDecisionAt=MonotonicNow;}}
+    public void GfaAction(string outcome,string reason)
+    {
+        if(!GameCaptureActive)return;
+        gfaOutcome=outcome+"/"+reason;gfaOutcomeAt=MonotonicNow;
+        RecordControlDiagnostic("GFA_ACTION outcome="+GfaSafe(outcome)+" reason="+GfaSafe(reason)+" "+CurrentEventTrace);
+    }
+    public void GfaDeath(string level,string mode,float x,float y,float progress,bool practice,float vy)
+    {
+        if(!GameCaptureActive)return;
+        if(gfaAttempts==0)GfaAttempt(level); // recording begun during a live attempt
+        ++gfaDeaths;
+        double now=MonotonicNow,da=now-gfaDecisionAt,oa=now-gfaOutcomeAt;
+        string decision=da<=1.5?gfaDecision:"NO_RECENT_DECISION",outcome=oa<=1.5?gfaOutcome:"NO_RECENT_ACTION";
+        // Evidence label only: a death never proves an intended physical action.
+        string suspect="UNDETERMINED";
+        if(oa<=.65&&outcome.StartsWith("NO_",StringComparison.Ordinal))suspect="ACTION_NOT_EXECUTED";
+        else if(da<=.65)switch(decision){
+            case "BelowThreshold":suspect="BELOW_THRESHOLD";break;
+            case "OutsideWindow":suspect="OUTSIDE_WINDOW";break;
+            case "SameAnkleRefractory":suspect="REFRACTORY_REJECTED";break;
+            case "PairCooldown":suspect="COOLDOWN_REJECTED";break;
+            case "ClockNotReady":case "BMD_BLOCKED":suspect="BLE_OR_CONTROL_BLOCKED";break;
+        }
+        RecordControlDiagnostic(FormattableString.Invariant($"GAMEPLAY_FAILURE id={gfaDeaths} attempt={gfaAttempts} sessionS={now-gfaStarted:F6} attemptS={now-gfaAttemptAt:F6} monoS={now:F6} level={GfaSafe(level)} mode={GfaSafe(mode)} x={x:F3} y={y:F3} progressPct={progress:F2} vy={vy:F3} practice={practice} profile={BmdMask} cooldownMs={PairCooldownMilliseconds} evidence={suspect} decision={decision} decisionAgeMs={(da<=1.5?da*1000:-1):F1} outcome={GfaSafe(outcome)} outcomeAgeMs={(oa<=1.5?oa*1000:-1):F1} physicalIntent=UNKNOWN"));
+    }
     public string BmdDetectorSummary=>"I UP="+left.upImpulses+" D UP="+right.upImpulses+
         " | pares="+TotalPairs+" | "+(BmdControlBlocked?"CONTROL BLE BLOQUEADO":"CONTROL BLE HABILITADO");
     public int BmdMask=>bmdVerified?bmdMask:-1;

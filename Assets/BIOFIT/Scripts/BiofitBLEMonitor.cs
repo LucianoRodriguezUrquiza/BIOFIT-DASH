@@ -515,6 +515,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         RawStatus="RAW OFF: sesion iniciada, pulsar RAW para activar";
         if (!eventCapture.BeginGame(Time.realtimeSinceStartup)) return false;
         gameCaptureActive = true;
+        GfaBegin();
         bmdShadow.Begin(PairCooldownMilliseconds,jumpDetector.MaxPairGapWindowSeconds);
         if(BmdTraceArmed&&string.IsNullOrEmpty(bmdTraceOwner))bmdTraceOwner=sessionFile.Path;
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,"BMD_CAPTURE profile="+BmdMask+" verified="+bmdVerified+
@@ -641,8 +642,9 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
 
     public bool StopGameCapture()
     {
-        if (!gameCaptureActive ||
-            !eventCapture.FinishGame(Time.realtimeSinceStartup)) return false;
+        if(!gameCaptureActive)return false;
+        RecordControlDiagnostic("GFA_SUMMARY "+GfaSummary);
+        if(!eventCapture.FinishGame(Time.realtimeSinceStartup))return false;
         gameCaptureActive = false;
         lastGameSummary = "BIOFIT DASH | RESUMEN EXPERIMENTAL\n" +
             "IZQ MOV_ON=" + (left.movOn - gLeftOn) +
@@ -666,7 +668,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             " (acumulados desde inicio=" + TimeCompressedEvents + ")" +
             "\n" + TransportSummary + "\n" + FirmwareSummary +
             "\n" + ReadinessSummary + "\n" + left.detector + " / " + right.detector +
-            "\n"+BmdShadowSummary+"\nNO son pasos ni saltos humanos confirmados.\n";
+            "\n"+BmdShadowSummary+"\n"+GfaSummary+"\nNO son pasos ni saltos humanos confirmados.\n";
         eventCapture.RowSink=null;
         sessionFile.Add("DIAG;FINAL;;0;"+lastGameSummary.Replace(';',',').Replace('\n',' ').Replace('\r',' ')+";;;;;;;;;;");
         CaptureFileStatus="Cerrando CSV y RAW...";
@@ -1149,6 +1151,8 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG,
                 phaseEvidence, PhaseFastPairs);
         LastPairedWasFastPhase = paired && jumpDetector.LastPairUsedFastPhase;
+        if(fresh&&eventType==3&&!LiftCycleMode)
+            GfaObserve(!bmdAllowed?"BMD_BLOCKED":timeAligner.IsReady(callbackSeconds)?jumpDetector.LastDecision.ToString():"ClockNotReady");
         if (fresh && eventType == 3 && !LiftCycleMode)
             eventCapture.RecordDiagnostic(receivedSeconds, state.id,
                 "BILATERAL_DECISION=" + (!bmdAllowed ? "BMD_BLOCKED" : timeAligner.IsReady(callbackSeconds) ?

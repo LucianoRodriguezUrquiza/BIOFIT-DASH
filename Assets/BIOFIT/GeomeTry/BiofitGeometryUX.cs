@@ -1301,7 +1301,7 @@ namespace Biofit.GeomeTryOriginal
         private void RefreshBmd()
         {
             var m=GetMonitor();
-            if(bmdStatusLabel!=null)bmdStatusLabel.text=m==null?"Receptor no disponible":m.BmdTrackerSummary+"\n"+m.BmdDetectorSummary+"\n"+m.BmdShadowSummary+"\n"+m.BmdStatus+"\n"+m.ExportStatus;
+            if(bmdStatusLabel!=null)bmdStatusLabel.text=m==null?"Receptor no disponible":m.BmdTrackerSummary+"\n"+m.BmdDetectorSummary+"\n"+m.BmdShadowSummary+" | "+m.GfaSummary+"\n"+m.BmdStatus+"\n"+m.ExportStatus;
             if(bmdSelectedLabel!=null)bmdSelectedLabel.text="SELECCIÓN: "+bmdSelected+" · "+(bmdSelected==0?"LEGACY":"EXPERIMENTAL")+" · "+(m==null?"":(m.BmdTraceSeconds==0?"4.6s":m.BmdTraceSeconds+"s")+" · "+m.BmdPlacement);
             for(int i=0;i<bmdOptions.Length;i++)if(bmdOptions[i]!=null)
             {

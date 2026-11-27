@@ -75,6 +75,11 @@ static class BmdIntegration
         var left=typeof(BiofitBLEMonitor).GetField("left",Private).GetValue(m);
         typeof(BiofitBLEMonitor).GetMethod("BmdDisconnected",Private).Invoke(m,new[]{left});
         Check(m.BmdControlBlocked&&!m.BmdFirmwareReady,"disconnect invalidates verification");
+        Check(m.StartGameCapture(),"GFA recording start");
+        m.GfaAttempt("test");m.GfaAction("NO_JUMP","NO_SUPPORT");m.GfaDeath("test","Cube",12,1,10,false,0);
+        Check(m.GfaSummary=="GFA intentos=1 muertes=1","GFA counts active only");
+        Check(m.StopGameCapture(),"GFA capture stop");await m.RawOperation;
+        m.GfaDeath("test","Cube",12,1,10,false,0);Check(m.GfaSummary=="GFA intentos=1 muertes=1","GFA inactive ignored");
         Console.WriteLine("PASS BMD real monitor integration: bilateral apply, partial failure, restore, two-foot trace, cancellation, disconnect");
     }
 }

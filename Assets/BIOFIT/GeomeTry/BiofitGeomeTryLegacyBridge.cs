@@ -15,6 +15,29 @@ namespace Biofit.GeomeTryOriginal
     public sealed class BiofitGeomeTryLegacyBridge : MonoBehaviour
     {
         private BiofitBLEMonitor monitor;
+        private static BiofitGeomeTryLegacyBridge gfaBridge;
+        private static bool samplingCubeSupport;
+        private static string cubeSupport="UNKNOWN";
+        public static void RecordCubeSupport(bool supported){if(samplingCubeSupport)cubeSupport=supported?"SUPPORTED":"NO_SUPPORT";}
+        // Called by the exact upstream Start/Die hooks, never by collision polling.
+        public static void NotifyGfaSpawn(Character avatar)
+        {
+            var b=gfaBridge;
+            if(b==null||b.monitor==null||!b.monitor.GameCaptureActive||SceneManager.GetActiveScene().name!=LevelScene)return;
+            b.monitor.GfaAttempt(GfaLevel());
+        }
+        private static string GfaLevel()=>GameManager.Instance==null||GameManager.Instance.SelectedLevelFile==null?"UNKNOWN":GameManager.Instance.SelectedLevelFile.name;
+        public static void NotifyGfaDeath(Character avatar)
+        {
+            var b=gfaBridge;
+            if(b==null||b.monitor==null||!b.monitor.GameCaptureActive||avatar==null||SceneManager.GetActiveScene().name!=LevelScene)return;
+            try {
+                var motor=avatar.GetComponent<BiofitModeMotor>();var body=avatar.GetComponent<Rigidbody2D>();
+                var pos=avatar.transform.position;var end=GameObject.FindWithTag("EndOfMap");
+                float progress=end==null?-1:100f*Mathf.Clamp01((pos.x-Character.InitialPosition)/Mathf.Max(1,end.transform.position.x-Character.InitialPosition));
+                b.monitor.GfaDeath(GfaLevel(),motor==null?avatar.GetType().Name:motor.Mode.ToString(),pos.x,pos.y,progress,BiofitStereoPractice.Enabled,body==null?0:body.linearVelocity.y);
+            } catch(Exception ex){UnityEngine.Debug.LogWarning("BIOFIT GFA: "+ex.Message);}
+        }
         private static readonly FieldInfo KeyPressed =
             typeof(Character).GetField("keyPressed", BindingFlags.Instance | BindingFlags.NonPublic);
         private const string LevelScene = "Level";
@@ -108,6 +131,7 @@ namespace Biofit.GeomeTryOriginal
             monitor = GetComponent<BiofitBLEMonitor>();
             if (monitor == null) { enabled = false; return; }
             VerifyMenuNavigationInEditor();
+            gfaBridge=this;
             monitor.ShowDiagnostics = false;
             monitor.PhaseFastPairs = false;
             monitor.LiftCycleMode = false;
@@ -121,6 +145,7 @@ namespace Biofit.GeomeTryOriginal
             if (monitor != null)
                 monitor.BilateralJumpCandidate -= OnBilateralLegacyCandidate;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            if(gfaBridge==this)gfaBridge=null;
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -158,6 +183,7 @@ namespace Biofit.GeomeTryOriginal
                 KeyPressed == null)
             {
                 ignored++;
+                monitor?.GfaAction("NO_ACTION","BRIDGE_GUARD");
                 return;
             }
 
@@ -169,6 +195,7 @@ namespace Biofit.GeomeTryOriginal
                 // Preserve the upstream Cube.onClick path for Cube unchanged below.
                 bool applied = motor.TryPulse();
                 if (applied) executed++; else ignored++;
+                monitor.GfaAction(applied?"APPLIED":"NO_ACTION",motor.LastPulseReason);
                 if (monitor.GameCaptureActive)
                     monitor.RecordControlDiagnostic(
                         "GEOMETRY_THREE_MODES BLE_LEGACY_" + motor.Mode +
@@ -182,7 +209,7 @@ namespace Biofit.GeomeTryOriginal
             if (cube == null || !cube.isAlive)
             {
                 // Ship/Wave continue to work as in original GeomeTry with held touch.
-                ignored++;
+                ignored++;monitor.GfaAction("NO_ACTION","NO_LIVE_CUBE");
                 return;
             }
 
@@ -200,14 +227,17 @@ namespace Biofit.GeomeTryOriginal
             try
             {
                 KeyPressed.SetValue(cube, true);
+                cubeSupport="UNKNOWN";samplingCubeSupport=monitor.GameCaptureActive;
                 cube.onClick();
             }
             finally
             {
+                samplingCubeSupport=false;
                 KeyPressed.SetValue(cube, old);
             }
             bool jumped = body != null && body.linearVelocity.y > beforeY + .05f;
             if (jumped) executed++; else ignored++;
+            monitor.GfaAction(jumped?"JUMP_APPLIED":"NO_JUMP",jumped?"VELOCITY_INCREASE":cubeSupport);
             if (monitor.GameCaptureActive)
                 monitor.RecordControlDiagnostic(
                     "GEOMETRY_ORIGINAL BLE_LEGACY_CUBE gapMs=" +
