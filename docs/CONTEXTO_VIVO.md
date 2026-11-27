@@ -1,3 +1,11 @@
+## 27/11/2026 — Aceptación de APK y referencia para siguientes cambios
+- Usuario confirma que la APK compilada e instalada funciona bien y autoriza considerarla validada como APK/base de trabajo de Unity (V6.5 + BMD V1.1/GFA), antes de continuar con el diseño de niveles y estética de menús.
+- Referencia de código instalada: `a234fb2dc676f3069b408dc010f0b84e20d4a213` en `feat/bmd-v231`. Capturas previas acreditan migración PowerShell satisfactoria con conservación del guard de práctica y hooks GFA, ejecución del editor e interfaz BMD V1.1. CI de esa revisión: [46035142939](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/46035142939), 5/5. La aprobación de la APK es declarada por el usuario, no una verificación independiente del binario; no se dispone de su hash ni registro exhaustivo de casos.
+- Alcance: aceptación funcional de la APK como referencia de desarrollo, no certificación de GFA, TRACE, PSRAM, rendimiento BLE o detección biomecánica. El usuario anuncia que ahora instalará ambos firmwares FW231; todavía no informa instalación exitosa ni ensayos físicos de FW231. Firmware de referencia: `58372c5927c75792395a68606ff9f40fd061fc5b`, CI 3/3 [46026399937](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-Firmware/actions/runs/46026399937).
+- Próximos cambios previstos por el usuario: niveles y estética de menús. Mantener ICC, DIPL, RFD, BRO, FLM y RCA, conservar la referencia aprobada y el detector corporal, registrar los deltas y verificar regresiones. No se aprueba aún la promoción de toda la infraestructura diagnóstica a main. No se modifican código, mapas, recursos, firmware ni main en este registro.
+
+---
+
 # BMD V1.1 + GFA — rama experimental feat/bmd-v231
 
 Actualización diagnóstica sobre V6.5, compatible con FW230 (legacy) y FW231 (bloques CRC32, PSRAM, banco GFA). [Contrato, instalación y validación](BMD_V1_1.md). Conserva main, detector y físicas; locomoción definitiva pendiente de montaje de tobillos. No promover a estable antes de comprobar APK y placas físicas.
