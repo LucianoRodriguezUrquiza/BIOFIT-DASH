@@ -62,6 +62,7 @@ namespace Biofit.GeomeTryOriginal
         private bool bmdPage;
         private int bmdSelected;
         private TMP_Text bmdStatusLabel,bmdSelectedLabel,bmdPauseLabel;
+        private RectTransform bmdProgressFill;
         private readonly Button[] bmdOptions=new Button[4];
         private float bmdRefreshAt;
         // Discovery only: listen to legacy Unity input while the Joystick diagnostic
@@ -1275,6 +1276,10 @@ namespace Biofit.GeomeTryOriginal
             Fill("BMD fondo",canvasRoot,Blue);ArcadeCorners(canvasRoot);
             Text("BMD titulo",canvasRoot,"BMD V1.1 · BIOFIT MOTION DIAGNOSTICS",new Vector2(.5f,.90f),new Vector2(1200,65),Vector2.zero,36,Lime);
             bmdStatusLabel=Text("BMD estado",canvasRoot,"",new Vector2(.5f,.748f),new Vector2(1380,176),Vector2.zero,22,Color.white);
+            var progress=Rect("BMD progreso",canvasRoot,new Vector2(.5f,.625f),new Vector2(900,10),Vector2.zero);
+            Fill("BMD pista",progress,new Color32(22,35,57,255));
+            bmdProgressFill=Fill("BMD avance",progress,Lime);
+            bmdProgressFill.anchorMax=new Vector2(0,1);
             string[] labels={"UMBRAL 0,12 g","REARME SUPERVISADO","GRAVEDAD ADAPTATIVA","AISLAR LIFT TX"};
             for(int i=0;i<4;i++)
             {
@@ -1303,6 +1308,7 @@ namespace Biofit.GeomeTryOriginal
         {
             var m=GetMonitor();
             if(bmdStatusLabel!=null)bmdStatusLabel.text=m==null?"Receptor no disponible":m.BmdTrackerSummary+"\n"+m.BmdDetectorSummary+"\n"+m.GfaSummary+" | "+(m.BmdAutoEnabled?"AUTO ON":"AUTO OFF")+"\n"+m.BmdStatus+" ("+(m.BmdProgress*100).ToString("F0")+"%)\n"+m.BmdAutoStatus+" | "+m.ExportStatus;
+            if(bmdProgressFill!=null)bmdProgressFill.anchorMax=new Vector2(m==null?0:Mathf.Clamp01(m.BmdProgress),1);
             if(bmdSelectedLabel!=null)bmdSelectedLabel.text="SELECCIÓN: "+bmdSelected+" · "+(bmdSelected==0?"LEGACY":"EXPERIMENTAL")+" · "+(m==null?"":(m.BmdTraceSeconds==0?"4.6s":m.BmdTraceSeconds+"s")+" · "+m.BmdPlacement);
             for(int i=0;i<bmdOptions.Length;i++)if(bmdOptions[i]!=null)
             {

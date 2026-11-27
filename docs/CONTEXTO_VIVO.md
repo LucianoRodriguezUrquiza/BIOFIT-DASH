@@ -1,3 +1,9 @@
+# BMD V1.1 + GFA — rama experimental feat/bmd-v231
+
+Actualización diagnóstica sobre V6.5, compatible con FW230 (legacy) y FW231 (bloques CRC32, PSRAM, banco GFA). [Contrato, instalación y validación](BMD_V1_1.md). Conserva main, detector y físicas; locomoción definitiva pendiente de montaje de tobillos. No promover a estable antes de comprobar APK y placas físicas.
+
+---
+
 # BIOFIT DASH — V6.5 + BMD experimental
 
 Rama feat/bmd-v230. Se añade BMD V1 con configuración FW230, diagnóstico sombra y exportación de trace; [procedimiento, alcance y límites](BMD_V1.md). Main V6.5 intacta. Pruebas host y APK/ensayo físico pendientes al publicar.
