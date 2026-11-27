@@ -28,12 +28,13 @@ public sealed partial class BiofitBLEMonitor
     public string BmdDetectorSummary=>"I UP="+left.upImpulses+" D UP="+right.upImpulses+
         " | pares="+TotalPairs+" | "+(BmdControlBlocked?"CONTROL BLE BLOQUEADO":"CONTROL BLE HABILITADO");
     public int BmdMask=>bmdVerified?bmdMask:-1;
+    public bool BmdTraceArmed {get;private set;}
     public void CancelBmd(){bmdCancel?.Cancel();}
     private void BmdDisconnected(Tracker tracker)
     {
         if(tracker.id==1)leftBmd=null;else rightBmd=null;
         if(bmdVerified||bmdUncertain||tracker.firmwareVersion==230){bmdUncertain=true;bmdVerified=false;}
-        CancelBmd();
+        BmdTraceArmed=false;CancelBmd();
     }
     private void BmdResetBoundary()
     {
@@ -98,11 +99,13 @@ public sealed partial class BiofitBLEMonitor
             else if(op=="start"||op=="freeze")
             {
                 string cmd=op=="start"?"D,T,1":"D,T,0";
+                if(op=="start")BmdTraceArmed=true; // may be partially delivered; keep freeze accessible
                 BiofitBmdProtocol.Trace a=default,b=default;
                 await l.Batch(async x=>a=await x.TraceCommand(cmd,token),token);
                 await r.Batch(async x=>b=await x.TraceCommand(cmd,token),token);
                 CheckBmdConnection(l,r,lg,rg,token);
                 if(op=="freeze"&&(a.State!=2||b.State!=2))throw new InvalidOperationException("No hay dos trazas congeladas");
+                BmdTraceArmed=op=="start";
                 BmdStatus="Trace I "+a+" | D "+b;
                 RecordControlDiagnostic("BMD_TRACE "+op+" I "+a+" D "+b);
             }

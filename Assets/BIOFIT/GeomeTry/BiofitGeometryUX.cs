@@ -61,7 +61,7 @@ namespace Biofit.GeomeTryOriginal
         private bool cooldownPage;
         private bool bmdPage;
         private int bmdSelected;
-        private TMP_Text bmdStatusLabel,bmdSelectedLabel;
+        private TMP_Text bmdStatusLabel,bmdSelectedLabel,bmdPauseLabel;
         private readonly Button[] bmdOptions=new Button[4];
         private float bmdRefreshAt;
         // Discovery only: listen to legacy Unity input while the Joystick diagnostic
@@ -214,6 +214,8 @@ namespace Biofit.GeomeTryOriginal
 
             if(currentScene==Settings && bmdPage && Time.unscaledTime>=bmdRefreshAt)
             {bmdRefreshAt=Time.unscaledTime+.4f;RefreshBmd();}
+            if(paused&&bmdPauseLabel!=null&&Time.unscaledTime>=bmdRefreshAt)
+            {bmdRefreshAt=Time.unscaledTime+.4f;var m=GetMonitor();bmdPauseLabel.text=m==null?"BMD no disponible":m.BmdStatus;}
             if (currentScene == Settings && joystickPage)
                 RefreshJoystickDiagnostics();
             if (currentScene == Settings && statusLabel != null &&
@@ -319,7 +321,7 @@ namespace Biofit.GeomeTryOriginal
         private void BuildScreen(string sceneName)
         {
             currentScene = sceneName;
-            bmdStatusLabel=null;bmdSelectedLabel=null;
+            bmdStatusLabel=null;bmdSelectedLabel=null;bmdPauseLabel=null;
             for(int i=0;i<bmdOptions.Length;i++)bmdOptions[i]=null;
             statusLabel = null;
             commandFeedbackLabel = null;
@@ -1665,6 +1667,7 @@ namespace Biofit.GeomeTryOriginal
         private void TogglePause()
         {
             if (currentScene != LevelScene) return;
+            if(paused&&GetMonitor()?.BmdBusy==true)return;
             if (paused) { RestorePause(); BuildScreen(LevelScene); }
             else { EnterPause(); BuildPauseScreen(); }
         }
@@ -1694,7 +1697,7 @@ namespace Biofit.GeomeTryOriginal
         {
             RectTransform veil=Fill("pause dimmer",canvasRoot,new Color(0f,0f,0f,.83f));
             Text("pause title",veil,"PAUSA",new Vector2(.5f,.82f),new Vector2(560,85),Vector2.zero,62,Color.white);
-            ImageButton("RESUME",veil,BiofitV2BitmapText.Art("play"),"PLAY",new Vector2(.5f,.57f),new Vector2(150,150),Vector2.zero,()=>{RestorePause();BuildScreen(LevelScene);});
+            ImageButton("RESUME",veil,BiofitV2BitmapText.Art("play"),"PLAY",new Vector2(.5f,.57f),new Vector2(150,150),Vector2.zero,()=>{if(GetMonitor()?.BmdBusy==true)return;RestorePause();BuildScreen(LevelScene);});
             ImageButton("RESTART",veil,BiofitV2BitmapText.Art("restart"),"RETRY",new Vector2(.34f,.57f),new Vector2(115,115),Vector2.zero,RestartLevel);
             ImageButton("BACK SELECT",veil,BiofitV2BitmapText.Art("menu"),"MENU",new Vector2(.66f,.57f),new Vector2(115,115),Vector2.zero,()=>Navigate(Select));
             Text("resume caption",veil,"CONTINUAR",new Vector2(.5f,.43f),new Vector2(230,50),Vector2.zero,28,Color.white);
@@ -1707,6 +1710,12 @@ namespace Biofit.GeomeTryOriginal
                 Text("mode caption",veil,practice?"MODO NORMAL":"MODO PRACTICA",new Vector2(.55f,.25f),new Vector2(350,48),Vector2.zero,31,Color.white);
                 if(practice)
                     Button("Auto checkpoint",veil,"AUTO CHECKPOINT: "+(BiofitStereoPractice.Auto?"SI":"NO"),new Vector2(.5f,.105f),new Vector2(450,64),Vector2.zero,()=>{BiofitStereoPractice.ToggleAuto();BuildScreen(LevelScene);BuildPauseScreen();},Ice,25);
+            }
+            var bmd=GetMonitor();
+            if(bmd!=null&&bmd.BmdTraceArmed)
+            {
+                Button("BMD pausa congelar",veil,"CONGELAR TRACE",new Vector2(.84f,.25f),new Vector2(330,68),Vector2.zero,()=>bmd.RequestBmd("freeze"),Ice,23);
+                bmdPauseLabel=Text("BMD pausa estado",veil,bmd.BmdStatus,new Vector2(.84f,.135f),new Vector2(410,100),Vector2.zero,18,Color.white);
             }
             BuildBackButton(LevelScene);
         }

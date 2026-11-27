@@ -59,7 +59,7 @@ public static class BiofitCaptureArchive
             using(var reader=new StreamReader(path,new UTF8Encoding(false,true),true))
             using(var digest=SHA256.Create())
             {
-                int rows=0,events=0,total=-1,expectedEvents=-1;
+                int rows=0,events=0,total=-1,expectedEvents=-1,columns=15;
                 bool finished=false,header=false;
                 string line;
                 while((line=reader.ReadLine())!=null)
@@ -74,7 +74,8 @@ public static class BiofitCaptureArchive
                     }
                     if(!header)
                     {
-                        if(!line.StartsWith("tipo;etapa;",StringComparison.Ordinal))return false;
+                        if(line=="foot;generation;index;sensor_ms;up_mg;velocity_mm_s;activity_mg;gyro_x10;ax_mg;ay_mg;az_mg;gx_x10;gy_x10;gz_x10;flags;block_mask;profile;events;legacy_up_mg;adaptive_up_mg;dt_us")columns=21;
+                        else if(!line.StartsWith("tipo;etapa;",StringComparison.Ordinal))return false;
                         header=true;
                     }
                     else if(line.StartsWith("# filas_total=",StringComparison.Ordinal))
@@ -90,7 +91,7 @@ public static class BiofitCaptureArchive
                     }
                     else if(!line.StartsWith("#",StringComparison.Ordinal))
                     {
-                        if(line.Split(';').Length!=15)return false;
+                        if(line.Split(';').Length!=columns)return false;
                         rows++; if(line.StartsWith("EV;",StringComparison.Ordinal))events++;
                     }
                     byte[] part=Utf8.GetBytes(line+"\n");

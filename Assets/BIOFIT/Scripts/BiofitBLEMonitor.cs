@@ -661,7 +661,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             " (acumulados desde inicio=" + TimeCompressedEvents + ")" +
             "\n" + TransportSummary + "\n" + FirmwareSummary +
             "\n" + ReadinessSummary + "\n" + left.detector + " / " + right.detector +
-            "\nNO son pasos ni saltos humanos confirmados.\n";
+            "\n"+BmdShadowSummary+"\nNO son pasos ni saltos humanos confirmados.\n";
         eventCapture.RowSink=null;
         sessionFile.Add("DIAG;FINAL;;0;"+lastGameSummary.Replace(';',',').Replace('\n',' ').Replace('\r',' ')+";;;;;;;;;;");
         CaptureFileStatus="Cerrando CSV y RAW...";

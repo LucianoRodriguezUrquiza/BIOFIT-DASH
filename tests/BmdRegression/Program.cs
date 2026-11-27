@@ -45,6 +45,20 @@ class Program
         string s=shadow.Summary();Check(s.Contains("100mg=1")&&s.Contains("110mg=0")&&s.Contains("120mg=0"),s);
         shadow.ClearPending();shadow.Observe(1,2,.12f,400,.18f);shadow.Observe(2,2.03,.12f,400,.18f);
         Check(shadow.Summary().Contains("120mg=1"),"independent state");
-        Console.WriteLine("PASS BMD strict protocol, ACK/readback, trace decode, isolated shadow state");
+        string dir=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"biofit-bmd-test-"+Guid.NewGuid().ToString("N"));
+        try {
+            string path=System.IO.Path.Combine(dir,"trace.csv");
+            var archive=new BiofitSessionFile(path,BiofitBmdProtocol.TraceHeader);
+            Check(archive.Add("1;7;3;0;-123;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;4500"),"queue row");
+            await archive.Finish();
+            Check(archive.Error==""&&BiofitCaptureArchive.VerifyFileStreaming(path),"trace SHA "+archive.Error);
+            System.IO.File.AppendAllText(path,"tamper");
+            Check(!BiofitCaptureArchive.VerifyFileStreaming(path),"reject tamper");
+            string bad=System.IO.Path.Combine(dir,"bad.csv");
+            var invalid=new BiofitSessionFile(bad,BiofitBmdProtocol.TraceHeader);
+            invalid.Add("1;7;3");await invalid.Finish();
+            Check(invalid.Error.Length>0&&!System.IO.File.Exists(bad),"reject wrong schema");
+        } finally {if(System.IO.Directory.Exists(dir))System.IO.Directory.Delete(dir,true);}
+        Console.WriteLine("PASS BMD strict protocol, ACK/readback, trace decode, isolated shadow state, archive SHA/schema");
     }
 }
