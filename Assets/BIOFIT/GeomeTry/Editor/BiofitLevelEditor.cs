@@ -456,7 +456,7 @@ namespace Biofit.LevelEditing
         }
         static string Friendly(string kind)
         {
-            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "miniPortal":return "Portal mini (rosa)";case "normalSizePortal":return "Portal tamaño normal (verde)";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (13,5 · salto Cube)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "pinkOrb":return "Orbe rosa (12,5)";case "redOrb":return "Orbe rojo (9,5)";case "blueOrb":return "Orbe celeste (gravedad)";case "greenOrb":return "Orbe verde (gravedad + 13,5)";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
+            switch(kind){case "solid":return "Bloque / plataforma";case "hazard":return "Pincho / peligro";case "decoration":return "Decoración";case "cubePortal":return "Portal Cube";case "ballPortal":return "Portal Ball";case "spiderPortal":return "Portal Spider";case "miniPortal":return "Portal mini (rosa)";case "normalSizePortal":return "Portal tamaño normal (verde)";case "pad":return "Impulso amarillo";case "pinkPad":return "Impulso rosa";case "redPad":return "Impulso rojo (9,5)";case "gravityPad":return "Impulso gravedad";case "orb":return "Orbe amarillo";case "pinkOrb":return "Orbe rosa (12,5)";case "redOrb":return "Orbe rojo (9,5)";case "blueOrb":return "Orbe celeste (gravedad)";case "greenOrb":return "Orbe verde (gravedad + 13,5)";case "gravityUp":return "Gravedad invertida";case "gravityDown":return "Gravedad normal";case "coin":return "Moneda secreta";case "backgroundColor":return "Color fondo";case "groundColor":return "Color suelo";default:return kind;}
         }
         // Categories are presentation only: never change the kind, collider or sprite.
         static int CatalogCategory(Item o)
@@ -610,8 +610,7 @@ namespace Biofit.LevelEditing
             switch(kind)
             {
                 case "pinkPad":case "pinkOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.PinkOrbImpulse;
-                case "redPad":return Biofit.GeomeTryOriginal.BiofitV5Interaction.RedPadImpulse;
-                case "redOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.RedOrbImpulse;
+                case "redPad":case "redOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.RedOrbImpulse;
                 case "gravityPad":case "blueOrb":return 0f;
                 case "greenOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.GreenOrbImpulse;
                 default:return 20f;

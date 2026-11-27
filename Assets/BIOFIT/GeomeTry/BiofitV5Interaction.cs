@@ -10,8 +10,6 @@ namespace Biofit.GeomeTryOriginal
         private bool IsOrb => IsOrbKind(kind);
         private bool IsPad => kind=="pad" || kind=="pinkPad" || kind=="redPad" || kind=="gravityPad";
         public const float PinkOrbImpulse=12.5f, RedOrbImpulse=9.5f, GreenOrbImpulse=13.5f;
-        // Same initial vertical speed as Character.jumpForce (normal Cube).
-        public const float RedPadImpulse=13.5f;
         private void OnTriggerEnter2D(Collider2D other) { if(!IsOrb) Activate(other); }
         private void OnTriggerStay2D(Collider2D other)
         {
@@ -60,7 +58,7 @@ namespace Biofit.GeomeTryOriginal
                 return;
             }
             // GeomeTry yellow pad/orb 20; pink pad 12.5. Opposite of current gravity.
-            rb.linearVelocity=new Vector2(rb.linearVelocity.x,(motor.StereoInverted?-1f:1f)*(kind=="redPad"?RedPadImpulse:kind=="pinkPad"?12.5f:20f));
+            rb.linearVelocity=new Vector2(rb.linearVelocity.x,(motor.StereoInverted?-1f:1f)*(kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f));
         }
         // Ball/Spider require actual contact with the orb trigger; no extra
         // activation radius, queued input or automatic gravity action.

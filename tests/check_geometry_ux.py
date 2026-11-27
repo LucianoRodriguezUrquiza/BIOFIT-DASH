@@ -74,6 +74,10 @@ assert 'skinPages[choice]=SkinSelected(choice)/SkinsPerPage' in ui
 assert 'SkinArrow("Pagina anterior",-1,pages);SkinArrow("Pagina siguiente",1,pages);' in ui
 assert 'if(index==selected)SkinFrame(tile.transform);' in ui
 assert 'SkinBackground()' in ui
+assert 'Resources.Load<Texture2D>("BiofitUi/VehicleMenu/vehicle_menu_bg")' in ui
+assert 'bg.texture=vehicleBackground!=null?vehicleBackground:SkinBackground();' in ui
+assert 'bg.raycastTarget=false;' in ui
+assert 'vehicleBackground!=null?.66f:.31f' in ui
 selector=ui[ui.index("private void BuildSkinSelection()"):ui.index("private void BuildSettings()")]
 for excluded in ("Lock", "Shop", "Monedas", "Diamond", "Unlock", "PlayerName"):
     assert excluded not in selector
@@ -212,8 +216,6 @@ for name in ("Character", "Cube", "Ship", "Wave"):
 character = (original / "Scripts/GameMechanics/CharacterType/Character.cs").read_text()
 cube = (original / "Scripts/GameMechanics/CharacterType/Cube.cs").read_text()
 assert "DefaultSpeed = 6.5f" in character
-assert "jumpForce = 13.5f" in character
-assert "DefaultGravityScale = 4.0f" in character
 assert "Time.timeScale = 1.5f" in character
 assert "rb.linearVelocity = new Vector2(rb.linearVelocityX, jumpForce);" in cube
 assert "activeInputHandler: 0" in settings
@@ -348,7 +350,7 @@ assert "BIOFIT_EDITOR_TEST_PATH" in session and "SessionState" in session
 assert "BiofitV65EditorSession.Tick" in runtime and "BiofitV65EditorSession.TryTakeLaunch" in ui
 assert "Vista real" in editor and "Jugar desde aquí" in editor
 assert "TextAnchor.MiddleLeft" in editor and "Catalog.json" in editor
-assert 'kind=="redPad"?RedPadImpulse:kind=="pinkPad"?12.5f:20f' in interaction
+assert 'kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f' in interaction
 assert 'MiniScale=.60f, MiniSpeed=7.8f, MiniJump=10.5f' in motor
 assert 'OriginalSpeed = 6.5f' in motor and 'BallSpiderGravity = 4f' in motor
 assert 'if(IsMini||wasMini)' in motor and "MiniSupport()" in motor
@@ -381,7 +383,7 @@ assert 'public static class BiofitRedPadArt' in runtime
 assert 'if(o.kind=="redPad") sr.sprite=RedPadSprite' in runtime
 assert 'new Color32(255,255,255,p.a)' in runtime
 assert editor.count('BiofitRedPadArt.Texture(t)')==2
-assert 'kind=="redPad"?RedPadImpulse:kind=="pinkPad"?12.5f:20f' in interaction
+assert 'kind=="redPad"?9.5f:kind=="pinkPad"?12.5f:20f' in interaction
 print("PASS: clipboard placement and visual-only Red Pad contract")
 
 # V6.5 compact test controls and existing bodily orb input route.
@@ -474,10 +476,6 @@ assert 'speed*time,vy*time+.5f*acceleration*time*time' in editor
 assert '2f*TrajectoryImpulse(kind)/gravity' in editor
 assert 'float acceleration=(flips?side:-side)*gravity' in editor
 assert 'BiofitV5Interaction.PinkOrbImpulse' in editor and 'BiofitV5Interaction.RedOrbImpulse' in editor and 'BiofitV5Interaction.GreenOrbImpulse' in editor
-assert 'public const float RedPadImpulse=13.5f;' in interaction
-assert 'case "redPad":return Biofit.GeomeTryOriginal.BiofitV5Interaction.RedPadImpulse;' in editor
-assert 'case "redOrb":return Biofit.GeomeTryOriginal.BiofitV5Interaction.RedOrbImpulse;' in editor
-assert 'Impulso rojo (13,5 · salto Cube)' in editor
 assert 'case "gravityPad":case "blueOrb":return 0f;' in editor
 assert '"Cube / Ball / Spider"' in editor and '"Mini Cube"' in editor
 assert 'BiofitModeMotor.MiniSpeed' in editor and 'BiofitModeMotor.MiniScale' in editor
@@ -485,7 +483,7 @@ assert 'trajectoryGravityTime,.25f,2f' in editor
 assert 'finally {GUI.matrix=saved;}' in editor
 # Independent numerical checks of the documented ideal model.
 import math
-for v, expected_h, expected_range in ((20,5.10,6.63),(12.5,1.99,4.14),(9.5,1.15,3.15),(13.5,2.32,4.47)):
+for v, expected_h, expected_range in ((20,5.10,6.63),(12.5,1.99,4.14),(9.5,1.15,3.15)):
     g=9.81*4
     t=2*v/g
     assert abs(v*t-.5*g*t*t)<1e-9

@@ -1147,8 +1147,18 @@ namespace Biofit.GeomeTryOriginal
         private void BuildSkinSelection()
         {
             // Rebuilds in the existing 1600x900 safe-area stage, only this scene.
-            var bg=Rect("Fondo gris personalizacion",canvasRoot,new Vector2(.5f,.5f),new Vector2(1600,900),Vector2.zero).gameObject.AddComponent<RawImage>();
-            bg.texture=SkinBackground();bg.raycastTarget=false;
+            var vehicleBackground=Resources.Load<Texture2D>("BiofitUi/VehicleMenu/vehicle_menu_bg");
+            var bg=Rect("Fondo personalizacion",canvasRoot,new Vector2(.5f,.5f),new Vector2(1600,900),Vector2.zero).gameObject.AddComponent<RawImage>();
+            bg.texture=vehicleBackground!=null?vehicleBackground:SkinBackground();
+            bg.raycastTarget=false;
+            // Only a tiny aspect-fill crop for the supplied 1672x941 image.
+            if(vehicleBackground!=null){
+                float aspect=vehicleBackground.width/(float)vehicleBackground.height;
+                float target=1600f/900f;
+                float w=Mathf.Min(1f,target/aspect),h=Mathf.Min(1f,aspect/target);
+                bg.uvRect=new Rect((1f-w)*.5f,(1f-h)*.5f,w,h);
+                bg.color=new Color(.82f,.82f,.82f,1f);
+            }
             ArcadeCorners(canvasRoot);
             Text("Titulo personajes",canvasRoot,"PERSONAJE",new Vector2(.5f,.89f),new Vector2(820,80),Vector2.zero,65,Color.white);
             string[] labels={"CUBO","BALL","SPIDER"};
@@ -1174,7 +1184,7 @@ namespace Biofit.GeomeTryOriginal
                 Text("Nombre categoria",canvasRoot,labels[tab],new Vector2(pos.x,.48f),new Vector2(175,26),Vector2.zero,21,Color.white);
             }
             var panel=Rect("Panel de skins",canvasRoot,new Vector2(.5f,.295f),new Vector2(1100,300),Vector2.zero);
-            var panelImage=panel.gameObject.AddComponent<Image>();panelImage.color=new Color(0,0,0,.31f);panelImage.raycastTarget=false;
+            var panelImage=panel.gameObject.AddComponent<Image>();panelImage.color=new Color(0,0,0,vehicleBackground!=null?.66f:.31f);panelImage.raycastTarget=false;
             if(count==0){
                 Text("Arte ausente",panel,skinTab==0?"NO SE ENCONTRO SKINS.PNG":"IMPORTA EL ARTE LOCAL V6.5",new Vector2(.5f,.5f),new Vector2(970,90),Vector2.zero,28,Color.white);
             }else{
