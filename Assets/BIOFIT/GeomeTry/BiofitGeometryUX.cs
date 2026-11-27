@@ -1634,7 +1634,7 @@ namespace Biofit.GeomeTryOriginal
             bool active=m!=null&&m.GameCaptureActive,saving=m!=null&&m.CaptureSaving,exporting=m!=null&&m.ExportBusy;
             bool closed=m!=null&&!string.IsNullOrEmpty(m.SavedCapturePath);
             string export=m==null?"Sin receptor":m.ExportStatus;
-            bool error=export.StartsWith("ERROR",StringComparison.OrdinalIgnoreCase)||(m!=null&&m.CaptureFileStatus.StartsWith("ERROR",StringComparison.OrdinalIgnoreCase));
+            bool error=export.StartsWith("ERROR",StringComparison.OrdinalIgnoreCase)||export.StartsWith("CANCEL",StringComparison.OrdinalIgnoreCase)||(m!=null&&m.CaptureFileStatus.StartsWith("ERROR",StringComparison.OrdinalIgnoreCase));
             bool done=!exporting&&!saving&&!active&&(export.StartsWith("EXPORTADO Y VERIFICADO",StringComparison.Ordinal)||export.StartsWith("EDITOR:",StringComparison.Ordinal));
             captureLabel.text=active?"GRABANDO SESIÓN":saving?"FINALIZANDO":exporting?"EXPORTANDO":error?"REVISAR ARCHIVOS":done?"EXPORTACIÓN COMPLETADA":closed?"REGISTRO GUARDADO":"REGISTRO INACTIVO";
             captureLabel.color=active?new Color32(255,117,117,255):error?new Color32(255,190,100,255):done?Lime:SettingsCyan;
@@ -1653,7 +1653,7 @@ namespace Biofit.GeomeTryOriginal
             settingsSyncButton.interactable=active;
             settingsSafButton.interactable=settingsReexportButton.interactable=m!=null&&m.CanExportCapture;
             settingsCooldownText.text=m==null?"COOLDOWN":"COOLDOWN: "+m.PairCooldownMilliseconds+" ms";
-            settingsSystem.text=m==null?"0/2 TRACKERS · RECEPTOR NO DISPONIBLE":m.ConnectedTrackerCount+"/2 TRACKERS · RELOJES "+(m.ClockAlignmentReady?"SINCRONIZADOS":"PENDIENTES")+" · "+(m.BmdControlBlocked?"CONTROL BLE BLOQUEADO":m.BothTrackersConnected?"CONTROL BLE HABILITADO":"ESPERANDO TRACKERS");
+            settingsSystem.text=m==null?"0/2 TRACKERS · RECEPTOR NO DISPONIBLE":m.ConnectedTrackerCount+"/2 TRACKERS · RELOJES "+(m.ClockAlignmentReady?"SINCRONIZADOS":"PENDIENTES")+" · "+(m.BmdControlBlocked?"CONTROL BLE BLOQUEADO":m.BothTrackersConnected?(m.ClockAlignmentReady?"CONTROL BLE HABILITADO":"ESPERANDO SINCRONIZACIÓN"):"ESPERANDO TRACKERS");
         }
 
         private void BuildOtherScene(string scene)

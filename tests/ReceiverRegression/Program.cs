@@ -205,8 +205,15 @@ class Program {
     var combined=new BiofitBLEMonitor();
     Check(!combined.FinishAndExportCapture(),"combined rejects idle");
     Check(combined.StartGameCapture(),"combined starts");
+    float startTime=UnityEngine.Time.realtimeSinceStartup;
+    UnityEngine.Time.realtimeSinceStartup=startTime+42;
+    combined.MarkVideoSync();
+    Check(combined.CaptureElapsedSeconds==42&&combined.CaptureSyncCount==1,"live timer and sync count");
     Check(combined.FinishAndExportCapture(),"combined stops");
     Check(!combined.FinishAndExportCapture(),"combined rejects duplicate");
+    UnityEngine.Time.realtimeSinceStartup=startTime+60;
+    Check(combined.CaptureElapsedSeconds==42,"closed timer freezes");
+    UnityEngine.Time.realtimeSinceStartup=startTime;
     combined.FinishAndExportCompletion.GetAwaiter().GetResult();
     Check(!combined.ExportBusy&&combined.ExportStatus.StartsWith("EDITOR:")&&BiofitCaptureArchive.VerifyFileStreaming(combined.SavedCapturePath),"combined exports current verified CSV");
     string old=combined.SavedCapturePath;

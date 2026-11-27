@@ -88,7 +88,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     public Task RawOperation { get; private set; } = Task.CompletedTask;
     public bool CaptureSaving => !CaptureCompletion.IsCompleted;
     private float captureStartedAt,captureStoppedAt;
-    public int CaptureElapsedSeconds => Mathf.Max(0,Mathf.FloorToInt((gameCaptureActive?Time.realtimeSinceStartup:captureStoppedAt)-captureStartedAt));
+    public int CaptureElapsedSeconds => Math.Max(0,(int)Math.Floor((gameCaptureActive?Time.realtimeSinceStartup:captureStoppedAt)-captureStartedAt));
     public int CaptureSyncCount => syncNumber;
     public bool LeftTrackerConnected => left.connection==ConnectedLabel;
     public bool RightTrackerConnected => right.connection==ConnectedLabel;
