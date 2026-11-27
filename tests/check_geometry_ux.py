@@ -315,7 +315,7 @@ delta = {"schema": 1, "slot": 1, "editorRevision": 1, "endGD": 300,
 for branch in ("main", "niveles-mejorados", "v6.5-desarrollo"):
     with tempfile.TemporaryDirectory() as temp:
         tmp = Path(temp)
-        remote = tmp / "lucianorodriguezurquiza/biofit-game-unity"
+        remote = tmp / "lucianorodriguezurquiza/biofit-dash"
         remote.parent.mkdir()
         run("git", "init", "--bare", "--initial-branch=main", str(remote))
         repo = tmp / "project"

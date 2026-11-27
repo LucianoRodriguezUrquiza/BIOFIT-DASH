@@ -115,7 +115,7 @@ try {
             throw "Skins.png quedo instalado y preparado localmente, pero fallo git push. Revisar GitHub y credenciales."
         }
         Write-Host "PUBLICADO en GitHub (rama experimental): $relative" -ForegroundColor Green
-        Write-Host "https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/blob/$expectedBranch/$relative"
+        Write-Host "https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH/blob/$expectedBranch/$relative"
     }
 
 }

@@ -1,3 +1,9 @@
+# Estado vigente — BIOFIT DASH V6.6
+
+Repositorio oficial https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH. Usuario confirma sincronización local en feat/bmd-v231 a 42c755b y solicita consolidar en main. Leer [CONSOLIDACION_V66.md](CONSOLIDACION_V66.md) antes de continuar. Mantener proyecto local único, archivos excluidos y dos deltas locales sin seguimiento. No alterar firmware ni niveles. Runner tendrá repositorio independiente.
+
+---
+
 # Estado vigente — 27/11/2026
 
 Aceptación de trabajo en Unity y CI 5/5: [ACEPTACION_BMD231_UX.md](ACEPTACION_BMD231_UX.md). La rama activa es feat/bmd-v231; main y firmware intactos. Se conservan deltas de niveles, arte local y detector. La APK final y ensayos de hardware no se certifican mediante esta aceptación. No reinstalar ni consolidar sin autorización.

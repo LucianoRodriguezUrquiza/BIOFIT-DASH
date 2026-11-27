@@ -4,6 +4,8 @@ from unittest.mock import patch
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("level_delta",ROOT/"tools/level_editor/level_delta.py")
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+assert m.REPO == "lucianorodriguezurquiza/biofit-dash"
+assert "main" in m.PUBLISH_BRANCHES
 assert "feat/bmd-v231" in m.PUBLISH_BRANCHES
 assert "feat/unapproved" not in m.PUBLISH_BRANCHES
 with tempfile.TemporaryDirectory() as tmp:
@@ -16,10 +18,11 @@ with tempfile.TemporaryDirectory() as tmp:
     delta.write_text(json.dumps(dict(schema=1,slot=3,editorRevision=1,baseSha256=m.sha(base),targetSha256=m.sha(base),endGD=100,removed=[],added=[],edits=[],order=[1]),separators=(",",":")),encoding="utf-8")
     calls=[]
     branch="feat/bmd-v231"
+    origin="https://github.com/"+m.REPO+".git"
     def git(r,*args):
         calls.append(args)
         if args[0]=="branch":return branch
-        if args[0]=="remote":return "https://github.com/"+m.REPO+".git"
+        if args[0]=="remote":return origin
         if args[0]=="ls-remote":return "abc refs/heads/"+branch
         if args[0]=="rev-parse":return "abc"
         return ""
@@ -30,7 +33,14 @@ with tempfile.TemporaryDirectory() as tmp:
         except ValueError as e:assert "rama BIOFIT autorizada" in str(e)
         else:raise AssertionError("unauthorized branch allowed")
         assert not any(a[0] in ("add","commit","push") for a in calls)
-        calls.clear();branch="feat/bmd-v231";m.main()
+        calls.clear();branch="feat/bmd-v231"
+        for origin in ("https://github.com/lucianorodriguezurquiza/biofit-game-unity.git", "https://github.com/lucianorodriguezurquiza/biofit-runner.git"):
+            try:m.main()
+            except ValueError as e:assert "Origin no autorizado" in str(e)
+            else:raise AssertionError("wrong repository allowed")
+            assert not any(a[0] in ("add","commit","push") for a in calls)
+            calls.clear()
+        origin="https://github.com/"+m.REPO+".git";m.main()
         assert ("push","origin","HEAD:refs/heads/feat/bmd-v231") in calls
         assert ("add","--","tools/level_editor/changes/"+delta.name,"tools/level_editor/changes/INDEX.md") in calls
         assert active.read_text(encoding="utf-8")==base

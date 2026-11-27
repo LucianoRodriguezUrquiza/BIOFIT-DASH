@@ -1,3 +1,9 @@
+# Estado vigente — V6.6
+
+Consultar [CONSOLIDACION_V66.md](CONSOLIDACION_V66.md) y [CONTEXTO_VIVO.md](CONTEXTO_VIVO.md). Repositorio oficial https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH; proyecto local único sin reinstalación. Las secciones siguientes son historial.
+
+---
+
 # BIOFIT DASH — V6.5 + BMD experimental
 
 Rama feat/bmd-v230. Se añade BMD V1 con configuración FW230, diagnóstico sombra y exportación de trace; [procedimiento, alcance y límites](BMD_V1.md). Main V6.5 intacta. Pruebas host y APK/ensayo físico pendientes al publicar.

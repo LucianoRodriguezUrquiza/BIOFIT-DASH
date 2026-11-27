@@ -3,7 +3,7 @@
 import argparse, hashlib, json, os, re, subprocess, sys, tempfile
 from pathlib import Path
 PUBLISH_BRANCHES={'main','niveles-mejorados','v6.5-desarrollo','feat/bmd-v231'}
-REPO='lucianorodriguezurquiza/biofit-game-unity'
+REPO='lucianorodriguezurquiza/biofit-dash'
 DEC=json.JSONDecoder()
 FIELDS=set('index id layer order kind xGD yGD rotationGD widthGD heightGD flipX flipY frames r g b duration portalMinGD portalMaxGD collisionMode deathMask editorScaleX editorScaleY'.split())
 def require(ok,msg):

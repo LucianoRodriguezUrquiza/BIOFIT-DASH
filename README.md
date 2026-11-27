@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.6 (cierre de trabajo Unity)
+
+Repositorio oficial: [BIOFIT-DASH](https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH). Versión aprobada por el usuario; consolidación solicitada en main. [Registro V6.6](docs/CONSOLIDACION_V66.md). El cierre conserva los recursos locales, los deltas y la infraestructura BMD V1.1/GFA; la APK definitiva y la validación física siguen pendientes. La rama de trabajo histórica feat/bmd-v231 se conserva. Las secciones siguientes son historial, no instrucciones vigentes. No clonar ni reinstalar el proyecto existente.
+
+---
+
 # BIOFIT DASH — V6.5 + BMD V1.1 / GFA y UX arcade (aceptación Unity)
 
 **27/11/2026:** versión de trabajo aprobada por el usuario en Unity, código `edc873860dfa88e38213aee27e8c95f57976938c`, CI 5/5. Rama activa `feat/bmd-v231`; `main` permanece en V6.5 anterior. [Registro de aceptación y organización de ramas](docs/ACEPTACION_BMD231_UX.md). La APK aprobada previamente corresponde a una revisión anterior; recompilación y validación Android de los menús actuales pendientes. Las secciones siguientes son historial. No fusionar ni eliminar ramas sin autorización expresa.
@@ -12,7 +18,7 @@ Rama feat/bmd-v230. Se añade BMD V1 con configuración FW230, diagnóstico somb
 
 # BIOFIT DASH — V6.5 aprobada como versión estable de trabajo
 
-26/11/2026: el usuario informa que compiló y probó satisfactoriamente su última APK, y autoriza cerrar esta versión tras corregir CI. La captura de PowerShell acredita HEAD local y remoto `ffa907d6baa7974b8152b9622026679f2981a52a` en `v6.5-desarrollo`, diff versionado vacío y coincidencia de los cinco SHA-256 de Active.json con deltas/manifiestos remotos. No acredita compilación independiente ni todos los casos BLE. CI 5/5 verificado en `aad9ca3edcbb7106a662870ca78c932605bbe30e` ([ejecución 45906168297](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45906168297)). Consolidación autorizada por fast-forward de `main` a este cierre documental, descendiente directo del código verificado; confirmar HEAD remoto. La rama v6.5-desarrollo se conserva. La corrección no cambió código de juego ni mapas. Leer [CONSOLIDACION_V65.md](docs/CONSOLIDACION_V65.md), [guía V6.5](docs/LEVEL_EDITOR_V65.md) y [validación](tools/level_editor/VALIDACION_V65.json). Las secciones siguientes son históricas; conservar ICC/DIPL/RFD/BRO/FLM/RCA. No reinstalar, no subir recursos locales no versionados ni modificar firmware, físicas o mapas. Pendiente: diagnosticar degradación de saltos consecutivos, sin atribuir todavía causa ni modificar detector.
+26/11/2026: el usuario informa que compiló y probó satisfactoriamente su última APK, y autoriza cerrar esta versión tras corregir CI. La captura de PowerShell acredita HEAD local y remoto `ffa907d6baa7974b8152b9622026679f2981a52a` en `v6.5-desarrollo`, diff versionado vacío y coincidencia de los cinco SHA-256 de Active.json con deltas/manifiestos remotos. No acredita compilación independiente ni todos los casos BLE. CI 5/5 verificado en `aad9ca3edcbb7106a662870ca78c932605bbe30e` ([ejecución 45906168297](https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH/actions/runs/45906168297)). Consolidación autorizada por fast-forward de `main` a este cierre documental, descendiente directo del código verificado; confirmar HEAD remoto. La rama v6.5-desarrollo se conserva. La corrección no cambió código de juego ni mapas. Leer [CONSOLIDACION_V65.md](docs/CONSOLIDACION_V65.md), [guía V6.5](docs/LEVEL_EDITOR_V65.md) y [validación](tools/level_editor/VALIDACION_V65.json). Las secciones siguientes son históricas; conservar ICC/DIPL/RFD/BRO/FLM/RCA. No reinstalar, no subir recursos locales no versionados ni modificar firmware, físicas o mapas. Pendiente: diagnosticar degradación de saltos consecutivos, sin atribuir todavía causa ni modificar detector.
 
 ---
 
@@ -73,7 +79,7 @@ Con Unity cerrado y desde PowerShell, en una carpeta nueva:
 
 ```powershell
 cd "C:\Users\Capo\Documents"
-git clone --recurse-submodules https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY.git BIOFIT-DASH-PRINCIPAL
+git clone --recurse-submodules https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH.git BIOFIT-DASH-PRINCIPAL
 cd ".\BIOFIT-DASH-PRINCIPAL"
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\prepare_geometry_original.ps1"
 ```
