@@ -79,16 +79,30 @@ assert 'bg.texture=vehicleBackground!=null?vehicleBackground:SkinBackground();' 
 assert 'bg.raycastTarget=false;' in ui
 assert 'vehicleBackground!=null?.66f:.31f' in ui
 selector=ui[ui.index("private void BuildSkinSelection()"):ui.index("private void BuildSettings()")]
+for excluded in ("Lock", "Shop", "Monedas", "Diamond", "Unlock", "PlayerName", "ArcadeCorners(", 'SkinDisc("Pagina"', 'Hotspot("Pagina '):
+    assert excluded not in selector
+for plate in ("Fondo titulo personaje","Fondo vista previa","Fondo skin actual","Fondo categoria ","Fondo individual skin","Fondo numero pagina"):
+    assert 'SkinPlate("'+plate+'"' in selector
+plate=ui[ui.index("private RectTransform SkinPlate("):ui.index("private void SkinArrow(")]
+assert "new Color32(42,45,50,250)" in plate and "surface.raycastTarget=false" in plate
+arrow=ui[ui.index("private void SkinArrow("):ui.index("private void BuildSkinSelection()")]
+assert "backIcon" not in arrow and "ImageButton(" not in arrow
+assert 'Chevron pagina' in arrow and 'btn.interactable=available;' in arrow
+assert "line.raycastTarget=false" in arrow
+assert 'BuildScreen(Custom)' in arrow
 for excluded in ("Lock", "Shop", "Monedas", "Diamond", "Unlock", "PlayerName"):
     assert excluded not in selector
 for count in (0,1,30,31,69,70,119):
     pages=max(1,(count+29)//30)
     assert [page*30+j for page in range(pages) for j in range(30) if page*30+j<count]==list(range(count))
-# Canonical geometry: grid, tabs, preview and dots do not overlap.
-assert .295*900+150 < .48*900-13
-assert .549*900+47.5 < .615*900
-assert .745*900-71 > .641*900+13.5
-assert .295*900-150 > .083*900+26.5
+# Canonical geometry: new contrast plates and navigation do not overlap.
+assert .295*900+150 < .535*900-64
+assert .535*900+64 < .615*900
+assert .89*900-40 > .745*900+82
+assert .745*900-82 > .641*900+17
+assert .641*900-17 > .615*900
+assert .295*900-150 > .072*900+21
+assert 98<1100/10 and 94<300/3
 assert .125*1600+38 < .5*1600-550
 assert .875*1600-38 > .5*1600+550
 assert "GridLayoutGroup layout" not in ui

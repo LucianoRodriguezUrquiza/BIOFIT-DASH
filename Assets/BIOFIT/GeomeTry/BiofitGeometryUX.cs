@@ -1128,19 +1128,33 @@ namespace Biofit.GeomeTryOriginal
             var image=Rect("Marco seleccion",parent,anchor,size,offset).gameObject.AddComponent<Image>();
             image.color=Color.white;image.raycastTarget=false;
         }
+        // Independent, opaque contrast plates; never intercept pointer input.
+        private RectTransform SkinPlate(string name,Transform parent,Vector2 anchor,Vector2 size)
+        {
+            var plate=Rect(name,parent,anchor,size,Vector2.zero);
+            var surface=plate.gameObject.AddComponent<Image>();
+            surface.color=new Color32(42,45,50,250);surface.raycastTarget=false;
+            return plate;
+        }
         private void SkinArrow(string name,int direction,int pages)
         {
             int target=skinPages[skinTab]+direction;
             bool available=target>=0&&target<pages;
-            // Existing back artwork points left; mirror only the image for Next.
-            var btn=ImageButton(name,canvasRoot,backIcon,direction<0?"<":">",
-                new Vector2(direction<0?.125f:.875f,.305f),new Vector2(76,76),Vector2.zero,
-                ()=>{skinPages[skinTab]=Mathf.Clamp(target,0,pages-1);BuildScreen(Custom);});
+            var btn=Hotspot(name,canvasRoot,new Vector2(direction<0?.125f:.875f,.305f),
+                new Vector2(76,76),()=>{skinPages[skinTab]=Mathf.Clamp(target,0,pages-1);BuildScreen(Custom);});
             btn.interactable=available;
-            var raw=btn.GetComponentInChildren<RawImage>();
-            if(raw!=null){
-                if(direction>0)raw.uvRect=new Rect(1,0,-1,1);
-                raw.color=available?Color.white:new Color(1,1,1,.25f);
+            // Rectangular charcoal button with a drawn chevron, distinct
+            // from the original circular green return arrow.
+            var edge=btn.targetGraphic as Image;
+            edge.color=available?new Color32(43,213,232,255):new Color32(87,94,101,255);
+            var face=Fill("Fondo flecha pagina",btn.transform,new Color32(42,45,50,255));
+            face.offsetMin=new Vector2(3,3);face.offsetMax=new Vector2(-3,-3);
+            for(int sign=-1;sign<=1;sign+=2){
+                var line=Rect("Chevron pagina",face,new Vector2(.5f,.5f),
+                    new Vector2(34,8),new Vector2(0,sign*11)).gameObject.AddComponent<Image>();
+                line.rectTransform.localEulerAngles=new Vector3(0,0,-direction*sign*45f);
+                line.color=available?new Color32(228,247,250,255):new Color32(105,110,116,255);
+                line.raycastTarget=false;
             }
         }
 
@@ -1159,20 +1173,23 @@ namespace Biofit.GeomeTryOriginal
                 bg.uvRect=new Rect((1f-w)*.5f,(1f-h)*.5f,w,h);
                 bg.color=new Color(.82f,.82f,.82f,1f);
             }
-            ArcadeCorners(canvasRoot);
-            Text("Titulo personajes",canvasRoot,"PERSONAJE",new Vector2(.5f,.89f),new Vector2(820,80),Vector2.zero,65,Color.white);
+            var heading=SkinPlate("Fondo titulo personaje",canvasRoot,new Vector2(.5f,.89f),new Vector2(570,80));
+            Text("Titulo personajes",heading,"PERSONAJE",new Vector2(.5f,.5f),new Vector2(550,74),Vector2.zero,65,Color.white);
             string[] labels={"CUBO","BALL","SPIDER"};
             int count=SkinCount(skinTab),selected=SkinSelected(skinTab);
             int pages=Mathf.Max(1,Mathf.CeilToInt(count/(float)SkinsPerPage));
             int page=skinPages[skinTab]=Mathf.Clamp(skinPages[skinTab],0,pages-1);
-            if(count>0)SkinArt("Vista previa personaje",canvasRoot,skinTab,selected,new Vector2(.5f,.745f),new Vector2(142,142));
-            Text("Skin actual",canvasRoot,count>0?labels[skinTab]+" "+(selected+1)+" / "+count:labels[skinTab],
-                new Vector2(.5f,.641f),new Vector2(600,27),Vector2.zero,21,Color.white);
+            var preview=SkinPlate("Fondo vista previa",canvasRoot,new Vector2(.5f,.745f),new Vector2(172,164));
+            if(count>0)SkinArt("Vista previa personaje",preview,skinTab,selected,new Vector2(.5f,.5f),new Vector2(142,142));
+            var current=SkinPlate("Fondo skin actual",canvasRoot,new Vector2(.5f,.641f),new Vector2(310,34));
+            Text("Skin actual",current,count>0?labels[skinTab]+" "+(selected+1)+" / "+count:labels[skinTab],
+                new Vector2(.5f,.5f),new Vector2(300,30),Vector2.zero,23,Color.white);
             var separator=Rect("Separador categorias",canvasRoot,new Vector2(.5f,.615f),new Vector2(1100,3),Vector2.zero).gameObject.AddComponent<Image>();
             separator.color=new Color(1,1,1,.55f);separator.raycastTarget=false;
             for(int tab=0;tab<3;tab++){
                 int choice=tab;
                 Vector2 pos=new Vector2(.5f+(tab-1)*.125f,.549f);
+                SkinPlate("Fondo categoria "+labels[tab],canvasRoot,new Vector2(pos.x,.535f),new Vector2(160,128));
                 var button=Hotspot("Categoria "+labels[tab],canvasRoot,pos,new Vector2(95,95),()=>{
                     skinTab=choice;
                     // When changing category, return to the selected skin's page.
@@ -1197,18 +1214,14 @@ namespace Biofit.GeomeTryOriginal
                             if(skinTab==0)SetSkin(index);else BiofitV65Skins.Select(SkinMode(skinTab),index);
                             BuildScreen(Custom);
                         });
+                    SkinPlate("Fondo individual skin",tile.transform,new Vector2(.5f,.5f),new Vector2(98,94));
                     SkinArt("Skin",tile.transform,skinTab,index,new Vector2(.5f,.5f),new Vector2(84,80));
                     if(index==selected)SkinFrame(tile.transform);
                 }
             }
             SkinArrow("Pagina anterior",-1,pages);SkinArrow("Pagina siguiente",1,pages);
-            for(int i=0;i<pages;i++){
-                int target=i;
-                var dot=Hotspot("Pagina "+(i+1),canvasRoot,new Vector2(.5f+(i-(pages-1)*.5f)*.041f,.083f),
-                    new Vector2(53,53),()=>{skinPages[skinTab]=target;BuildScreen(Custom);});
-                SkinDisc("Pagina",dot.transform,new Vector2(44,44),i==page?new Color32(25,221,229,255):new Color32(151,151,151,255));
-            }
-            Text("Pagina actual",canvasRoot,(page+1)+" / "+pages,new Vector2(.5f,.035f),new Vector2(300,25),Vector2.zero,17,Color.white);
+            var pageLabel=SkinPlate("Fondo numero pagina",canvasRoot,new Vector2(.5f,.072f),new Vector2(240,42));
+            Text("Pagina actual",pageLabel,(page+1)+" / "+pages,new Vector2(.5f,.5f),new Vector2(230,36),Vector2.zero,25,Color.white);
         }
 
         private void BuildSettings()
