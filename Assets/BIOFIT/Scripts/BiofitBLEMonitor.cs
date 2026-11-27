@@ -9,7 +9,7 @@ using UnityEngine;
 /// No modifica el firmware ni la calibracion de las Waveshare.
 /// El evento UP_IMPULSE es un candidato; no equivale a un salto confirmado.
 /// </summary>
-public sealed class BiofitBLEMonitor : MonoBehaviour
+public sealed partial class BiofitBLEMonitor : MonoBehaviour
 {
     private BiofitCooldownConfiguration cooldownConfiguration;
 
@@ -74,7 +74,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     public double LastCyclePairSeconds => liftPairs.LastPairSeconds;
     private int cyclePairsAtCaptureStart;
     public int CyclePairCount => liftPairs.Pairs-cyclePairsAtCaptureStart;
-    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();ControlEpoch++;}
+    private void InvalidateControl() {liftPairs.Clear();jumpDetector.ClearPending();bmdShadow.ClearPending();ControlEpoch++;}
 
     public bool LastPairedWasFastPhase { get; private set; }
     private int phaseFastPairsAtCaptureStart;
@@ -103,6 +103,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         rawActive ? "RAW: ON" : "RAW: OFF";
     public void ToggleRawCapture()
     {
+        if(BmdBusy){RawStatus="RAW: BMD ocupado";return;}
         if(CaptureSaving)
         {
             RawStatus="RAW: esperar FINALIZANDO; no cambiar durante el cierre";
@@ -212,11 +213,13 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     private void OnApplicationPause(bool paused)
     {
         if(!paused)return;
+        CancelBmd();
         if(gameCaptureActive) { eventCapture.MarkSync("APP_PAUSA_FIN",Time.realtimeSinceStartup); StopGameCapture(); }
         else RawOperation=SetRawCaptureAsync(false);
     }
     private void OnDestroy()
     {
+        CancelBmd();
         if(gameCaptureActive)StopGameCapture(); else RawOperation=SetRawCaptureAsync(false);
     }
 
@@ -501,7 +504,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
     /// <summary>Una sola sesion para reposo, marcha, carrera, elevacion y juego.</summary>
     public bool StartGameCapture()
     {
-        if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || !RawOperation.IsCompleted) return false;
+        if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || BmdBusy || !RawOperation.IsCompleted) return false;
         string name="BIOFIT_v0911_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
@@ -509,6 +512,8 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
         RawStatus="RAW OFF: sesion iniciada, pulsar RAW para activar";
         if (!eventCapture.BeginGame(Time.realtimeSinceStartup)) return false;
         gameCaptureActive = true;
+        bmdShadow.Begin(PairCooldownMilliseconds,jumpDetector.MaxPairGapWindowSeconds);
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,"BMD_CAPTURE profile="+BmdMask+" verified="+bmdVerified);
         gLeftOn = left.movOn; gRightOn = right.movOn;
         gLeftUp = left.upImpulses; gRightUp = right.upImpulses;
         gPairs = jumpDetector.BilateralCandidates;
@@ -889,6 +894,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             {
                 var raw=await service.GetCharacteristicAsync(RawUuid);
                 var config=await service.GetCharacteristicAsync(ConfigUuid);
+                if(id==1)leftBmd=new BiofitBmdLink(config);else rightBmd=new BiofitBmdLink(config);
                 var link=new BiofitRawLink(raw,config);
                 await link.SetAsync(false,null);
                 if(id==1)leftRaw=link;else rightRaw=link;
@@ -934,6 +940,7 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                 tracker.statusWindowStart = 0; tracker.lastStatusCallback = 0;
                 tracker.statusInWindow = 0; tracker.statusHz = 0;
                 inputEngine.ProcessEvent(packet.expectedId, 2, Time.realtimeSinceStartup);
+                BmdDisconnected(tracker);
                 timeAligner.Reset(packet.expectedId); InvalidateControl(); tracker.firmwareVersion=0;
                 continue;
             }
@@ -1129,13 +1136,16 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
             callbackSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture);
         dispatchStarted=MonotonicNow; currentCallbackSeconds=callbackSeconds;
         bool phaseEvidence = (b[3] & 0x10) != 0; // fw2.2.8 V2 EVENT flag bit4
-        bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 && !LiftCycleMode &&
+        bool bmdAllowed=BmdEventAllowed(callbackSeconds);
+        if(gameCaptureActive && fresh && eventType==3 && !LiftCycleMode && bmdAllowed && timeAligner.IsReady(callbackSeconds))
+            eventCapture.RecordDiagnostic(receivedSeconds,state.id,bmdShadow.Observe(state.id,pairSeconds,verticalG,PairCooldownMilliseconds,jumpDetector.MaxPairGapWindowSeconds)+" "+CurrentEventTrace);
+        bool paired = fresh && timeAligner.IsReady(callbackSeconds) && eventType == 3 && !LiftCycleMode && bmdAllowed &&
             jumpDetector.ProcessImpulse(state.id, pairSeconds, verticalG,
                 phaseEvidence, PhaseFastPairs);
         LastPairedWasFastPhase = paired && jumpDetector.LastPairUsedFastPhase;
         if (fresh && eventType == 3 && !LiftCycleMode)
             eventCapture.RecordDiagnostic(receivedSeconds, state.id,
-                "BILATERAL_DECISION=" + (timeAligner.IsReady(callbackSeconds) ?
+                "BILATERAL_DECISION=" + (!bmdAllowed ? "BMD_BLOCKED" : timeAligner.IsReady(callbackSeconds) ?
                     jumpDetector.LastDecision.ToString() : "ClockNotReady") + " " + CurrentEventTrace +
                 " pairClockS=" + pairSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) +
                 " cooldownRejected=" + jumpDetector.PairCooldownRejected +
@@ -1147,12 +1157,12 @@ public sealed class BiofitBLEMonitor : MonoBehaviour
                  jumpDetector.LastDecision == BiofitBilateralJumpDetector.Decision.PairCooldown ?
                     " gapMs=" + jumpDetector.LastPairGapMs.ToString("F3",System.Globalization.CultureInfo.InvariantCulture) +
                     " intervalS=" + jumpDetector.LastPairIntervalSeconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture) : ""));
-        if (fresh && eventType == 3)
+        if (fresh && eventType == 3 && bmdAllowed)
             AnkleUpCandidate?.Invoke(state.id, verticalG,
                 eventSeconds - (float)Math.Max(0d, callbackSeconds - pairSeconds));
 
         if(eventType==4) {
-            bool eligible=fresh && timeAligner.IsReady(callbackSeconds) && LiftCycleMode && CycleFirmwareReady && (b[3]&0x20)!=0;
+            bool eligible=fresh && bmdAllowed && timeAligner.IsReady(callbackSeconds) && LiftCycleMode && CycleFirmwareReady && (b[3]&0x20)!=0;
             paired=eligible && liftPairs.Observe(state.id,pairSeconds,verticalG);
             eventCapture.RecordDiagnostic(receivedSeconds,state.id,
                 "LIFT_PAIR="+(eligible?liftPairs.LastDecision.ToString():"IgnoredOrUnavailable")+" "+CurrentEventTrace+

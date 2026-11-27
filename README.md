@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.5 + BMD experimental
+
+Rama feat/bmd-v230. Se añade BMD V1 con configuración FW230, diagnóstico sombra y exportación de trace; [procedimiento, alcance y límites](docs/BMD_V1.md). Main V6.5 intacta. Pruebas host y APK/ensayo físico pendientes al publicar.
+
+---
+
 # BIOFIT DASH — V6.5 aprobada como versión estable de trabajo
 
 26/11/2026: el usuario informa que compiló y probó satisfactoriamente su última APK, y autoriza cerrar esta versión tras corregir CI. La captura de PowerShell acredita HEAD local y remoto `ffa907d6baa7974b8152b9622026679f2981a52a` en `v6.5-desarrollo`, diff versionado vacío y coincidencia de los cinco SHA-256 de Active.json con deltas/manifiestos remotos. No acredita compilación independiente ni todos los casos BLE. CI 5/5 verificado en `aad9ca3edcbb7106a662870ca78c932605bbe30e` ([ejecución 45906168297](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45906168297)). Consolidación autorizada por fast-forward de `main` a este cierre documental, descendiente directo del código verificado; confirmar HEAD remoto. La rama v6.5-desarrollo se conserva. La corrección no cambió código de juego ni mapas. Leer [CONSOLIDACION_V65.md](docs/CONSOLIDACION_V65.md), [guía V6.5](docs/LEVEL_EDITOR_V65.md) y [validación](tools/level_editor/VALIDACION_V65.json). Las secciones siguientes son históricas; conservar ICC/DIPL/RFD/BRO/FLM/RCA. No reinstalar, no subir recursos locales no versionados ni modificar firmware, físicas o mapas. Pendiente: diagnosticar degradación de saltos consecutivos, sin atribuir todavía causa ni modificar detector.

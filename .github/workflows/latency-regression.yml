@@ -29,6 +29,7 @@ jobs:
       - run: python3 tests/JumpControl/compare_cooldowns.py
       - run: dotnet run --project tests/PhaseAudit
       - run: dotnet run --project tests/RawRegression
+      - run: dotnet run --project tests/BmdRegression
       - run: dotnet run --project tests/ArchiveRecovery096
       - run: python3 tests/check_android_export.py
   geometry-csharp-syntax:

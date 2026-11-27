@@ -6,6 +6,8 @@ string[] sources = {
     "Assets/BIOFIT/Scripts/BiofitBilateralJumpDetector.cs",
     "Assets/BIOFIT/Scripts/BiofitCooldownConfiguration.cs",
     "Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs",
+    "Assets/BIOFIT/Scripts/BiofitBLEMonitor.Bmd.cs",
+    "Assets/BIOFIT/Scripts/BiofitBmdProtocol.cs",
     "Assets/BIOFIT/GeomeTry/BiofitSettingsButtonFeedback.cs",
     "Assets/BIOFIT/GeomeTry/BiofitUiArtwork.cs",
     "Assets/BIOFIT/GeomeTry/Editor/BiofitGeometryUxPreflight.cs",

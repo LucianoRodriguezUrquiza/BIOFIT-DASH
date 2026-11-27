@@ -59,6 +59,11 @@ namespace Biofit.GeomeTryOriginal
         private TMP_Text stereoCoinHudLabel;
         private readonly Button[] cooldownOptionButtons = new Button[6];
         private bool cooldownPage;
+        private bool bmdPage;
+        private int bmdSelected;
+        private TMP_Text bmdStatusLabel,bmdSelectedLabel;
+        private readonly Button[] bmdOptions=new Button[4];
+        private float bmdRefreshAt;
         // Discovery only: listen to legacy Unity input while the Joystick diagnostic
         // page is open. No gameplay binding is changed until Android HID codes are known.
         private bool joystickPage;
@@ -159,6 +164,7 @@ namespace Biofit.GeomeTryOriginal
         {
             if (scene.name != Settings)
             {
+                bmdPage = false;
                 cooldownPage = false;
                 joystickPage = false;
             }
@@ -206,6 +212,8 @@ namespace Biofit.GeomeTryOriginal
                 Time.unscaledTime >= commandFeedbackUntil)
                 commandFeedbackLabel.text = "";
 
+            if(currentScene==Settings && bmdPage && Time.unscaledTime>=bmdRefreshAt)
+            {bmdRefreshAt=Time.unscaledTime+.4f;RefreshBmd();}
             if (currentScene == Settings && joystickPage)
                 RefreshJoystickDiagnostics();
             if (currentScene == Settings && statusLabel != null &&
@@ -311,6 +319,8 @@ namespace Biofit.GeomeTryOriginal
         private void BuildScreen(string sceneName)
         {
             currentScene = sceneName;
+            bmdStatusLabel=null;bmdSelectedLabel=null;
+            for(int i=0;i<bmdOptions.Length;i++)bmdOptions[i]=null;
             statusLabel = null;
             commandFeedbackLabel = null;
             cooldownValueLabel = null;
@@ -395,7 +405,8 @@ namespace Biofit.GeomeTryOriginal
             else if (sceneName == Custom) BuildSkinSelection();
             else if (sceneName == Settings)
             {
-                if (joystickPage) BuildJoystickDiagnostics();
+                if (bmdPage) BuildBmd();
+                else if (joystickPage) BuildJoystickDiagnostics();
                 else if (cooldownPage) BuildCooldownSettings();
                 else BuildSettings();
             }
@@ -722,7 +733,12 @@ namespace Biofit.GeomeTryOriginal
             string target = scene == LevelScene ? Select : Menu;
             Action goBack = () =>
             {
-                if (scene == Settings && (cooldownPage || joystickPage))
+                if(scene==Settings && bmdPage)
+                {
+                    var m=GetMonitor();if(m!=null&&m.BmdBusy)return;
+                    bmdPage=false;BuildScreen(Settings);
+                }
+                else if (scene == Settings && (cooldownPage || joystickPage))
                 {
                     cooldownPage = false;
                     joystickPage = false;
@@ -1248,9 +1264,49 @@ namespace Biofit.GeomeTryOriginal
                     joystickPage = true;
                     BuildScreen(Settings);
                 }, Ice, 26);
+            Button("Abrir BMD",canvasRoot,"BMD",new Vector2(.91f,.793f),new Vector2(190f,66f),Vector2.zero,()=>{bmdPage=true;cooldownPage=false;joystickPage=false;var m=GetMonitor();bmdSelected=m==null||m.BmdMask<0?0:m.BmdMask;BuildScreen(Settings);},Ice,28);
             RefreshBleStatus();
         }
 
+        private void BuildBmd()
+        {
+            Fill("BMD fondo",canvasRoot,Blue);ArcadeCorners(canvasRoot);
+            Text("BMD titulo",canvasRoot,"BMD · BIOFIT MOTION DIAGNOSTICS",new Vector2(.5f,.90f),new Vector2(1200,65),Vector2.zero,36,Lime);
+            bmdStatusLabel=Text("BMD estado",canvasRoot,"",new Vector2(.5f,.748f),new Vector2(1380,176),Vector2.zero,22,Color.white);
+            string[] labels={"UMBRAL 0,12 g","REARME SUPERVISADO","GRAVEDAD ADAPTATIVA","AISLAR LIFT TX"};
+            for(int i=0;i<4;i++)
+            {
+                int bit=1<<i;
+                bmdOptions[i]=Button("BMD opcion "+bit,canvasRoot,labels[i],new Vector2(.25f+(i%2)*.5f,.57f-(i/2)*.10f),new Vector2(675,68),Vector2.zero,()=>{var m=GetMonitor();if(m!=null&&m.BmdBusy)return;bmdSelected^=bit;RefreshBmd();},Ice,24);
+            }
+            bmdSelectedLabel=Text("BMD seleccion",canvasRoot,"",new Vector2(.5f,.39f),new Vector2(1280,42),Vector2.zero,24,Lime);
+            string[] commands={"CONSULTAR","APLICAR AMBOS","RESTAURAR 0","INICIAR TRACE","CONGELAR TRACE","DESCARGAR TRACE","EXPORTAR TRACE","CANCELAR"};
+            for(int i=0;i<commands.Length;i++)
+            {
+                int action=i;
+                Button("BMD accion "+i,canvasRoot,commands[i],new Vector2(.14f+(i%4)*.24f,.282f-(i/4)*.103f),new Vector2(350,72),Vector2.zero,()=>BmdAction(action),i==7?Ice:Lime,22);
+            }
+            Text("BMD aviso",canvasRoot,"RAW OFF · CAMBIAR PERFIL EN REPOSO · FINALIZAR CSV ANTES DE DESCARGAR",new Vector2(.5f,.069f),new Vector2(1450,48),Vector2.zero,19,Ice);
+            RefreshBmd();
+        }
+        private void BmdAction(int action)
+        {
+            var m=GetMonitor();if(m==null)return;
+            switch(action){case 0:m.RequestBmd("query");break;case 1:m.RequestBmd("profile",bmdSelected);break;case 2:bmdSelected=0;m.RequestBmd("profile",0);break;case 3:m.RequestBmd("start");break;case 4:m.RequestBmd("freeze");break;case 5:m.RequestBmd("download");break;case 6:m.ExportBmdTrace();break;case 7:m.CancelBmd();break;}
+            RefreshBmd();
+        }
+        private void RefreshBmd()
+        {
+            var m=GetMonitor();
+            if(bmdStatusLabel!=null)bmdStatusLabel.text=m==null?"Receptor no disponible":m.BmdTrackerSummary+"\n"+m.BmdDetectorSummary+"\n"+m.BmdShadowSummary+"\n"+m.BmdStatus+"\n"+m.ExportStatus;
+            if(bmdSelectedLabel!=null)bmdSelectedLabel.text="SELECCIÓN: "+bmdSelected+" · "+(bmdSelected==0?"LEGACY":"EXPERIMENTAL")+" · APLICAR PARA CONFIRMAR";
+            for(int i=0;i<bmdOptions.Length;i++)if(bmdOptions[i]!=null)
+            {
+                Color color=(bmdSelected&(1<<i))!=0?Lime:Ice;
+                var image=bmdOptions[i].GetComponent<Image>();if(image!=null)image.color=color;
+                foreach(Image child in bmdOptions[i].GetComponentsInChildren<Image>())if(child.name.EndsWith("lime inset",StringComparison.Ordinal))child.color=color;
+            }
+        }
 
         // Experimental diagnostic page for Bluetooth HID mini remotes.
         // The mode may expose a keyboard, gamepad, mouse, or system volume keys.
