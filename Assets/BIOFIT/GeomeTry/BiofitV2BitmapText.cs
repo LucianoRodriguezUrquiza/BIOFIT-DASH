@@ -27,7 +27,13 @@ namespace Biofit.GeomeTryOriginal
         private Color lastColor;
         private TextAlignmentOptions lastAlign;
         private Vector2 lastRect;
-        private bool usable,lastEnabled,hidden;
+        private bool usable,lastEnabled,hidden,fitInk;
+        public static void ConstrainToRect(TMP_Text t)
+        {
+            if(t==null)return;
+            var bitmap=t.GetComponentInChildren<BiofitV2BitmapText>(true);
+            if(bitmap!=null){bitmap.fitInk=true;bitmap.SetVerticesDirty();}
+        }
         public override Texture mainTexture => face!=null?face.texture:Texture2D.whiteTexture;
         public static Texture2D Art(string key) => Resources.Load<Texture2D>("BiofitStereoV2/UI/"+key);
         private static Face Load(string key)
@@ -132,6 +138,34 @@ namespace Biofit.GeomeTryOriginal
                     }
                     x+=g.xadvance*scale;
                 }
+            }
+            if(fitInk)FitVisibleInk(vh,r);
+        }
+        // BMFont advances are not ink bounds: offsets and overhangs can extend
+        // beyond them. Fit actual quad vertices uniformly, retaining alignment.
+        private static void FitVisibleInk(VertexHelper vh,Rect r)
+        {
+            if(vh.currentVertCount==0)return;
+            UIVertex vertex=default;
+            Vector2 lo=new Vector2(float.PositiveInfinity,float.PositiveInfinity);
+            Vector2 hi=new Vector2(float.NegativeInfinity,float.NegativeInfinity);
+            for(int i=0;i<vh.currentVertCount;i++){
+                vh.PopulateUIVertex(ref vertex,i);
+                var point=new Vector2(vertex.position.x,vertex.position.y);
+                lo=Vector2.Min(lo,point);hi=Vector2.Max(hi,point);
+            }
+            // Leave a subpixel safety inset; the calling menu reserves padding.
+            float w=Mathf.Max(.01f,hi.x-lo.x),h=Mathf.Max(.01f,hi.y-lo.y);
+            float scale=Mathf.Min(1f,Mathf.Max(.01f,r.width-2f)/w,Mathf.Max(.01f,r.height-2f)/h);
+            Vector2 center=r.center;
+            Vector2 min=center+(lo-center)*scale,max=center+(hi-center)*scale;
+            float dx=Mathf.Clamp(0f,r.xMin+1f-min.x,r.xMax-1f-max.x);
+            float dy=Mathf.Clamp(0f,r.yMin+1f-min.y,r.yMax-1f-max.y);
+            for(int i=0;i<vh.currentVertCount;i++){
+                vh.PopulateUIVertex(ref vertex,i);
+                Vector3 v=vertex.position;
+                vertex.position=new Vector3(center.x+(v.x-center.x)*scale+dx,center.y+(v.y-center.y)*scale+dy,v.z);
+                vh.SetUIVertex(vertex,i);
             }
         }
     }

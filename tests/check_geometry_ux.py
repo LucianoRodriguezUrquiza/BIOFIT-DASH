@@ -77,14 +77,30 @@ assert 'SkinBackground()' in ui
 assert 'Resources.Load<Texture2D>("BiofitUi/VehicleMenu/vehicle_menu_bg")' in ui
 assert 'bg.texture=vehicleBackground!=null?vehicleBackground:SkinBackground();' in ui
 assert 'bg.raycastTarget=false;' in ui
-assert 'vehicleBackground!=null?.66f:.31f' in ui
+assert 'RoundedMenuPanel("Panel de skins"' in ui
 selector=ui[ui.index("private void BuildSkinSelection()"):ui.index("private void BuildSettings()")]
 for excluded in ("Lock", "Shop", "Monedas", "Diamond", "Unlock", "PlayerName", "ArcadeCorners(", 'SkinDisc("Pagina"', 'Hotspot("Pagina '):
     assert excluded not in selector
 for plate in ("Fondo titulo personaje","Fondo vista previa","Fondo skin actual","Fondo categoria ","Fondo individual skin","Fondo numero pagina"):
     assert 'SkinPlate("'+plate+'"' in selector
-plate=ui[ui.index("private RectTransform SkinPlate("):ui.index("private void SkinArrow(")]
-assert "new Color32(42,45,50,250)" in plate and "surface.raycastTarget=false" in plate
+plate=ui[ui.index("private Sprite RoundedMenuSprite("):ui.index("private void SkinArrow(")]
+for token in ("Image.Type.Sliced","SpriteMeshType.FullRect","roundedMenuSprites.TryGetValue","surface.raycastTarget=false","Centro opaco","Marco arcade","Brillo superior","Sombra inferior","t.enableAutoSizing=true","TextOverflowModes.Ellipsis","BiofitV2BitmapText.ConstrainToRect(t)"):
+    assert token in plate,token
+assert "size.x-16" in plate and "size.y-8" in plate
+assert "Destroy(sprite)" in ui and "Destroy(texture)" in ui
+font=(root/"Assets/BIOFIT/GeomeTry/BiofitV2BitmapText.cs").read_text()
+for token in ("if(fitInk)FitVisibleInk(vh,r)","vh.PopulateUIVertex","vh.SetUIVertex","r.width-2f","r.height-2f"):
+    assert token in font,token
+# Actual glyph bearings can extend beyond the advance. Exercise the same
+# uniform-fit and translation math on ordinary and extreme ink rectangles.
+for W,H in ((50,18),(280,26),(494,38),(1000,100)):
+    for lo,hi in (((-W/2-8,-H/2-3),(W/2+17,H/2+5)),((-5,-3),(12,8)),((-W,0),(3*W,4*H))):
+        scale=min(1,(W-2)/max(.01,hi[0]-lo[0]),(H-2)/max(.01,hi[1]-lo[1]))
+        for dim,extent in enumerate((W,H)):
+            low=lo[dim]*scale;high=hi[dim]*scale
+            delta=max(-extent/2+1-low,min(0,extent/2-1-high))
+            assert low+delta>=-extent/2+1-1e-6 and high+delta<=extent/2-1+1e-6
+assert 'RoundedMenuButtonFace(button,size,accent,true)' in ui
 arrow=ui[ui.index("private void SkinArrow("):ui.index("private void BuildSkinSelection()")]
 assert "backIcon" not in arrow and "ImageButton(" not in arrow
 assert 'Chevron pagina' in arrow and 'btn.interactable=available;' in arrow
@@ -97,10 +113,14 @@ for count in (0,1,30,31,69,70,119):
 assert .295*900+150 < .535*900-64
 assert .535*900+64 < .615*900
 assert .89*900-40 > .751*900+77
-assert .751*900-77 > .641*900+17
-assert .641*900-17 > .615*900
+assert .751*900-77 > .641*900+20
+assert .641*900-20 > .615*900
 assert .295*900-150 > .072*900+21
-assert 98<1100/10 and 94<300/3
+assert 94<1076/10 and 84<276/3
+assert 74<94-12 and 66<84-12
+assert 'new Vector2(140,28)' in selector and 'new Vector2(160,128)' in selector
+assert 'new Vector2(128,128)' in selector
+assert 'MenuText("Titulo personajes"' in selector
 assert .125*1600+38 < .5*1600-550
 assert .875*1600-38 > .5*1600+550
 assert "GridLayoutGroup layout" not in ui
@@ -149,6 +169,10 @@ assert .5*1600+268 < .82*1600-220
 assert .54*900+287 < .91*900-41
 assert .54*900-287 > .124*900+59
 assert all(574*.135>68 for _ in range(5))
+assert 'MenuText("Titulo de ajustes"' in settings_ui
+assert 'size-new Vector2(26,24)' in ui
+assert 508-26-16>0 and 70-24-8>0
+assert 400-26-16>0 and 68-24-8>0
 for token in ("StartGameCapture()", "FinishAndExportCapture()", "ToggleRawCapture()", "MarkVideoSync()", "RequestExport(saf)", "m.CaptureElapsedSeconds", "m.LeftTrackerConnected", "m.RightTrackerConnected", "m.CaptureSyncCount"):
     assert token in ui,token
 monitor=(root/"Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs").read_text()

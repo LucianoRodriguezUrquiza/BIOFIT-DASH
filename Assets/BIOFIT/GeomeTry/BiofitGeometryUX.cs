@@ -79,6 +79,9 @@ namespace Biofit.GeomeTryOriginal
         private float commandFeedbackUntil;
         private const int SkinColumns=10, SkinRows=3, SkinsPerPage=SkinColumns*SkinRows;
         private Texture2D skinGradient;
+        // Shared runtime artwork; generated once per corner radius, not per skin.
+        private readonly Dictionary<int,Sprite> roundedMenuSprites=new Dictionary<int,Sprite>();
+        private readonly List<Texture2D> roundedMenuTextures=new List<Texture2D>();
         private readonly int[] skinPages=new int[3];
         private TMP_FontAsset fallbackFont;
         private Texture2D atlas;
@@ -161,6 +164,9 @@ namespace Biofit.GeomeTryOriginal
             if (dotSprite != null) Destroy(dotSprite);
             if (dotTexture != null) Destroy(dotTexture);
             if (skinGradient != null) Destroy(skinGradient);
+            foreach(var sprite in roundedMenuSprites.Values)if(sprite!=null)Destroy(sprite);
+            foreach(var texture in roundedMenuTextures)if(texture!=null)Destroy(texture);
+            roundedMenuSprites.Clear();roundedMenuTextures.Clear();
             if (instance == this) instance = null;
         }
 
@@ -1119,8 +1125,8 @@ namespace Biofit.GeomeTryOriginal
             // Eight white corner strokes, not a lock or a disabled state.
             for(int x=0;x<2;x++)for(int y=0;y<2;y++){
                 Vector2 at=new Vector2(x,y);
-                AddSkinStroke(parent,at,new Vector2(25,4),new Vector2(x==0?14:-14,y==0?3:-3));
-                AddSkinStroke(parent,at,new Vector2(4,25),new Vector2(x==0?3:-3,y==0?14:-14));
+                AddSkinStroke(parent,at,new Vector2(18,3),new Vector2(x==0?15:-15,y==0?6:-6));
+                AddSkinStroke(parent,at,new Vector2(3,18),new Vector2(x==0?6:-6,y==0?15:-15));
             }
         }
         private void AddSkinStroke(Transform parent,Vector2 anchor,Vector2 size,Vector2 offset)
@@ -1128,32 +1134,104 @@ namespace Biofit.GeomeTryOriginal
             var image=Rect("Marco seleccion",parent,anchor,size,offset).gameObject.AddComponent<Image>();
             image.color=Color.white;image.raycastTarget=false;
         }
-        // Independent, opaque contrast plates; never intercept pointer input.
-        private RectTransform SkinPlate(string name,Transform parent,Vector2 anchor,Vector2 size)
+        // One rounded, 9-sliced visual language for Settings and Customisation.
+        // Radius is expressed in canonical UI units; corners do not stretch.
+        private Sprite RoundedMenuSprite(int radius)
+        {
+            radius=Mathf.Max(2,radius);
+            if(roundedMenuSprites.TryGetValue(radius,out var sprite))return sprite;
+            int border=radius+2,side=2*border+4;
+            var tex=new Texture2D(side,side,TextureFormat.RGBA32,false);
+            tex.name="BIOFIT rounded "+radius;tex.wrapMode=TextureWrapMode.Clamp;tex.filterMode=FilterMode.Bilinear;
+            var pixels=new Color32[side*side];
+            float half=side*.5f-1f;
+            for(int y=0;y<side;y++)for(int x=0;x<side;x++){
+                float qx=Mathf.Abs(x+.5f-side*.5f)-(half-radius);
+                float qy=Mathf.Abs(y+.5f-side*.5f)-(half-radius);
+                float ox=Mathf.Max(qx,0),oy=Mathf.Max(qy,0);
+                float distance=Mathf.Sqrt(ox*ox+oy*oy)+Mathf.Min(Mathf.Max(qx,qy),0)-radius;
+                pixels[y*side+x]=new Color32(255,255,255,(byte)Mathf.RoundToInt(Mathf.Clamp01(.5f-distance)*255));
+            }
+            tex.SetPixels32(pixels);tex.Apply(false,true);
+            sprite=Sprite.Create(tex,new Rect(0,0,side,side),new Vector2(.5f,.5f),100f,0,SpriteMeshType.FullRect,
+                new Vector4(border,border,border,border));
+            roundedMenuTextures.Add(tex);roundedMenuSprites.Add(radius,sprite);return sprite;
+        }
+        private void RoundedMenuSurface(Image surface,int radius,Color color,bool hit=false)
+        {
+            surface.sprite=RoundedMenuSprite(radius);surface.type=Image.Type.Sliced;
+            surface.color=color;surface.raycastTarget=hit;
+        }
+        private Image RoundedMenuLayer(string name,Transform parent,Vector2 size,Vector2 offset,int radius,Color color)
+        {
+            var image=Rect(name,parent,new Vector2(.5f,.5f),size,offset).gameObject.AddComponent<Image>();
+            RoundedMenuSurface(image,radius,color);return image;
+        }
+        private RectTransform RoundedMenuPanel(string name,Transform parent,Vector2 anchor,Vector2 size,bool major)
         {
             var plate=Rect(name,parent,anchor,size,Vector2.zero);
+            int radius=Mathf.Clamp(Mathf.RoundToInt(Mathf.Min(size.x,size.y)*.18f),6,major?24:18);
+            int rim=major?5:3,inner=major?10:6;
             var surface=plate.gameObject.AddComponent<Image>();
-            surface.color=new Color32(42,45,50,250);surface.raycastTarget=false;
+            RoundedMenuSurface(surface,radius,new Color32(7,12,23,255));
+            surface.raycastTarget=false;
+            if(major){
+                var shadow=plate.gameObject.AddComponent<Shadow>();
+                shadow.effectColor=new Color(0,0,0,.65f);shadow.effectDistance=new Vector2(4,-5);
+            }
+            RoundedMenuLayer("Bisel azul "+name,plate,size-new Vector2(rim*2,rim*2),Vector2.zero,
+                radius-rim,major?new Color32(79,177,207,255):new Color32(69,98,126,255));
+            RoundedMenuLayer("Centro opaco "+name,plate,size-new Vector2(inner*2,inner*2),Vector2.zero,
+                radius-inner,major?new Color32(22,37,58,255):new Color32(34,45,61,255));
             return plate;
         }
+        private RectTransform SkinPlate(string name,Transform parent,Vector2 anchor,Vector2 size)
+        {
+            return RoundedMenuPanel(name,parent,anchor,size,false);
+        }
+        // Preserve original bitmap font (Text attaches it) with internal
+        // padding and exact ink bounds; TMP fallback also fits its own rect.
+        private TMP_Text MenuText(string name,Transform parent,string label,Vector2 anchor,Vector2 size,Vector2 offset,int fontSize,Color color)
+        {
+            Vector2 inner=new Vector2(Mathf.Max(1,size.x-16),Mathf.Max(1,size.y-8));
+            var t=Text(name,parent,label,anchor,inner,offset,fontSize,color);
+            t.enableAutoSizing=true;t.fontSizeMin=Mathf.Min(10,fontSize);t.fontSizeMax=fontSize;
+            t.overflowMode=TextOverflowModes.Ellipsis;
+            BiofitV2BitmapText.ConstrainToRect(t);
+            return t;
+        }
+        private Image RoundedMenuButtonFace(Button button,Vector2 size,Color accent,bool enabled)
+        {
+            var outer=(Image)button.targetGraphic;
+            RoundedMenuSurface(outer,18,new Color32(8,13,22,255),true);
+            Color edge=enabled?accent:new Color32(99,111,127,255);
+            RoundedMenuLayer("Marco arcade",button.transform,size-new Vector2(6,6),Vector2.zero,15,edge);
+            RoundedMenuLayer("Borde interior",button.transform,size-new Vector2(12,12),Vector2.zero,12,new Color32(12,23,35,255));
+            var face=RoundedMenuLayer("Superficie arcade",button.transform,size-new Vector2(18,18),Vector2.zero,9,edge);
+            RoundedMenuLayer("Brillo superior",face.transform,new Vector2(size.x-30,Mathf.Max(6,(size.y-18)*.26f)),
+                new Vector2(0,(size.y-18)*.24f),6,new Color(1,1,1,.20f));
+            RoundedMenuLayer("Sombra inferior",face.transform,new Vector2(size.x-30,6),
+                new Vector2(0,-(size.y-18)*.32f),3,new Color(0,0,0,.22f));
+            button.targetGraphic=face;button.transition=Selectable.Transition.ColorTint;
+            var colors=button.colors;colors.normalColor=Color.white;colors.highlightedColor=Color.white;
+            colors.pressedColor=new Color(.83f,.83f,.83f,1f);colors.disabledColor=new Color(.62f,.62f,.62f,1f);button.colors=colors;
+            return face;
+        }
+        
         private void SkinArrow(string name,int direction,int pages)
         {
             int target=skinPages[skinTab]+direction;
             bool available=target>=0&&target<pages;
             var btn=Hotspot(name,canvasRoot,new Vector2(direction<0?.125f:.875f,.305f),
                 new Vector2(76,76),()=>{skinPages[skinTab]=Mathf.Clamp(target,0,pages-1);BuildScreen(Custom);});
+            // Rounded arcade page arrow, distinct from the circular back arrow.
+            var face=RoundedMenuButtonFace(btn,new Vector2(76,76),SettingsCyan,available).rectTransform;
             btn.interactable=available;
-            // Rectangular charcoal button with a drawn chevron, distinct
-            // from the original circular green return arrow.
-            var edge=btn.targetGraphic as Image;
-            edge.color=available?new Color32(43,213,232,255):new Color32(87,94,101,255);
-            var face=Fill("Fondo flecha pagina",btn.transform,new Color32(42,45,50,255));
-            face.offsetMin=new Vector2(3,3);face.offsetMax=new Vector2(-3,-3);
             for(int sign=-1;sign<=1;sign+=2){
                 var line=Rect("Chevron pagina",face,new Vector2(.5f,.5f),
                     new Vector2(34,8),new Vector2(0,sign*11)).gameObject.AddComponent<Image>();
                 line.rectTransform.localEulerAngles=new Vector3(0,0,-direction*sign*45f);
-                line.color=available?new Color32(228,247,250,255):new Color32(105,110,116,255);
+                line.color=available?new Color32(12,28,43,255):new Color32(208,214,221,255);
                 line.raycastTarget=false;
             }
         }
@@ -1174,74 +1252,67 @@ namespace Biofit.GeomeTryOriginal
                 bg.color=new Color(.82f,.82f,.82f,1f);
             }
             var heading=SkinPlate("Fondo titulo personaje",canvasRoot,new Vector2(.5f,.89f),new Vector2(570,80));
-            Text("Titulo personajes",heading,"PERSONAJE",new Vector2(.5f,.5f),new Vector2(550,74),Vector2.zero,65,Color.white);
+            MenuText("Titulo personajes",heading,"PERSONAJE",new Vector2(.5f,.5f),new Vector2(550,74),Vector2.zero,65,Color.white);
             string[] labels={"CUBO","BALL","SPIDER"};
             int count=SkinCount(skinTab),selected=SkinSelected(skinTab);
             int pages=Mathf.Max(1,Mathf.CeilToInt(count/(float)SkinsPerPage));
             int page=skinPages[skinTab]=Mathf.Clamp(skinPages[skinTab],0,pages-1);
             var preview=SkinPlate("Fondo vista previa",canvasRoot,new Vector2(.5f,.751f),new Vector2(172,154));
-            if(count>0)SkinArt("Vista previa personaje",preview,skinTab,selected,new Vector2(.5f,.5f),new Vector2(142,142));
-            var current=SkinPlate("Fondo skin actual",canvasRoot,new Vector2(.5f,.641f),new Vector2(310,34));
-            Text("Skin actual",current,count>0?labels[skinTab]+" "+(selected+1)+" / "+count:labels[skinTab],
-                new Vector2(.5f,.5f),new Vector2(300,30),Vector2.zero,23,Color.white);
+            if(count>0)SkinArt("Vista previa personaje",preview,skinTab,selected,new Vector2(.5f,.5f),new Vector2(128,128));
+            var current=SkinPlate("Fondo skin actual",canvasRoot,new Vector2(.5f,.641f),new Vector2(310,40));
+            MenuText("Skin actual",current,count>0?labels[skinTab]+" "+(selected+1)+" / "+count:labels[skinTab],
+                new Vector2(.5f,.5f),new Vector2(286,34),Vector2.zero,23,Color.white);
             var separator=Rect("Separador categorias",canvasRoot,new Vector2(.5f,.615f),new Vector2(1100,3),Vector2.zero).gameObject.AddComponent<Image>();
             separator.color=new Color(1,1,1,.55f);separator.raycastTarget=false;
             for(int tab=0;tab<3;tab++){
                 int choice=tab;
                 Vector2 pos=new Vector2(.5f+(tab-1)*.125f,.549f);
-                SkinPlate("Fondo categoria "+labels[tab],canvasRoot,new Vector2(pos.x,.535f),new Vector2(160,128));
-                var button=Hotspot("Categoria "+labels[tab],canvasRoot,pos,new Vector2(95,95),()=>{
+                var category=SkinPlate("Fondo categoria "+labels[tab],canvasRoot,new Vector2(pos.x,.535f),new Vector2(160,128));
+                var button=Hotspot("Categoria "+labels[tab],category,new Vector2(.5f,.5f),new Vector2(160,128),()=>{
                     skinTab=choice;
                     // When changing category, return to the selected skin's page.
                     skinPages[choice]=SkinSelected(choice)/SkinsPerPage;
                     BuildScreen(Custom);
                 });
-                SkinDisc("Categoria",button.transform,new Vector2(86,86),skinTab==tab?new Color32(25,221,229,255):new Color32(171,171,171,255));
-                SkinCategoryIcon(button.transform,tab);
-                Text("Nombre categoria",canvasRoot,labels[tab],new Vector2(pos.x,.48f),new Vector2(175,26),Vector2.zero,21,Color.white);
+                var iconRoot=Rect("Categoria icono",button.transform,new Vector2(.5f,.635f),new Vector2(82,82),Vector2.zero);
+                SkinDisc("Categoria",iconRoot,new Vector2(78,78),skinTab==tab?new Color32(25,221,229,255):new Color32(171,171,171,255));
+                SkinCategoryIcon(iconRoot,tab);
+                MenuText("Nombre categoria",button.transform,labels[tab],new Vector2(.5f,.15f),new Vector2(140,28),Vector2.zero,21,Color.white);
             }
-            var panel=Rect("Panel de skins",canvasRoot,new Vector2(.5f,.295f),new Vector2(1100,300),Vector2.zero);
-            var panelImage=panel.gameObject.AddComponent<Image>();panelImage.color=new Color(0,0,0,vehicleBackground!=null?.66f:.31f);panelImage.raycastTarget=false;
+            var panel=RoundedMenuPanel("Panel de skins",canvasRoot,new Vector2(.5f,.295f),new Vector2(1100,300),true);
+            var grid=Rect("Interior grilla skins",panel,new Vector2(.5f,.5f),new Vector2(1076,276),Vector2.zero);
             if(count==0){
-                Text("Arte ausente",panel,skinTab==0?"NO SE ENCONTRO SKINS.PNG":"IMPORTA EL ARTE LOCAL V6.5",new Vector2(.5f,.5f),new Vector2(970,90),Vector2.zero,28,Color.white);
+                MenuText("Arte ausente",panel,skinTab==0?"NO SE ENCONTRO SKINS.PNG":"IMPORTA EL ARTE LOCAL V6.5",new Vector2(.5f,.5f),new Vector2(970,90),Vector2.zero,28,Color.white);
             }else{
                 for(int j=0;j<SkinsPerPage;j++){
                     int index=page*SkinsPerPage+j;if(index>=count)break;
                     int col=j%SkinColumns,row=j/SkinColumns;
-                    var tile=Hotspot("Elegir skin "+(index+1),panel,
+                    var tile=Hotspot("Elegir skin "+(index+1),grid,
                         new Vector2((col+.5f)/SkinColumns,1f-(row+.5f)/SkinRows),
-                        new Vector2(98,94),()=>{
+                        new Vector2(94,84),()=>{
                             if(skinTab==0)SetSkin(index);else BiofitV65Skins.Select(SkinMode(skinTab),index);
                             BuildScreen(Custom);
                         });
-                    SkinPlate("Fondo individual skin",tile.transform,new Vector2(.5f,.5f),new Vector2(98,94));
-                    SkinArt("Skin",tile.transform,skinTab,index,new Vector2(.5f,.5f),new Vector2(84,80));
+                    SkinPlate("Fondo individual skin",tile.transform,new Vector2(.5f,.5f),new Vector2(94,84));
+                    SkinArt("Skin",tile.transform,skinTab,index,new Vector2(.5f,.5f),new Vector2(74,66));
                     if(index==selected)SkinFrame(tile.transform);
                 }
             }
             SkinArrow("Pagina anterior",-1,pages);SkinArrow("Pagina siguiente",1,pages);
             var pageLabel=SkinPlate("Fondo numero pagina",canvasRoot,new Vector2(.5f,.072f),new Vector2(240,42));
-            Text("Pagina actual",pageLabel,(page+1)+" / "+pages,new Vector2(.5f,.5f),new Vector2(230,36),Vector2.zero,25,Color.white);
+            MenuText("Pagina actual",pageLabel,(page+1)+" / "+pages,new Vector2(.5f,.5f),new Vector2(230,36),Vector2.zero,25,Color.white);
         }
 
         private static readonly Color SettingsCyan=new Color32(95,222,235,255);
-        private static readonly Color SettingsGray=new Color32(37,43,51,249);
         private RectTransform SettingsPanel(string name,Transform parent,Vector2 pos,Vector2 size)
         {
-            var panel=SkinPlate(name,parent,pos,size);
-            panel.GetComponent<Image>().color=new Color32(29,35,43,247);
-            return panel;
+            return RoundedMenuPanel(name,parent,pos,size,true);
         }
         private Button SettingsButton(string name,Transform parent,string label,Vector2 pos,Vector2 size,Action action,Color accent,out TMP_Text caption,int font=25)
         {
             var button=Hotspot(name,parent,pos,size,action);
-            var rim=(Image)button.targetGraphic;rim.color=accent;
-            button.transition=Selectable.Transition.ColorTint;
-            var colors=button.colors;colors.normalColor=Color.white;colors.highlightedColor=Color.white;
-            colors.pressedColor=new Color(.8f,.8f,.8f,1f);colors.disabledColor=new Color(.40f,.40f,.40f,1f);button.colors=colors;
-            var face=Fill(name+" fondo",button.transform,SettingsGray);
-            face.offsetMin=new Vector2(3,3);face.offsetMax=new Vector2(-3,-3);
-            caption=Text(name+" texto",face,label,new Vector2(.5f,.5f),size-new Vector2(14,10),Vector2.zero,font,Color.white);
+            var face=RoundedMenuButtonFace(button,size,accent,true);
+            caption=MenuText(name+" texto",face.transform,label,new Vector2(.5f,.5f),size-new Vector2(26,24),Vector2.zero,font,new Color32(9,24,39,255));
             return button;
         }
         private Button SettingsButton(string name,Transform parent,string label,Vector2 pos,Vector2 size,Action action,Color accent,int font=25)
@@ -1261,31 +1332,31 @@ namespace Biofit.GeomeTryOriginal
                 bg.uvRect=new Rect((1f-w)*.5f,(1f-h)*.5f,w,h);
             }
             var heading=SettingsPanel("Titulo ajustes",canvasRoot,new Vector2(.5f,.91f),new Vector2(620,82));
-            Text("Titulo de ajustes",heading,"CONFIGURACIÓN",new Vector2(.5f,.5f),new Vector2(600,72),Vector2.zero,48,Color.white);
+            MenuText("Titulo de ajustes",heading,"CONFIGURACIÓN",new Vector2(.5f,.5f),new Vector2(600,72),Vector2.zero,48,Color.white);
             SettingsButton("Abrir BMD",canvasRoot,"BMD",new Vector2(.90f,.91f),new Vector2(150,70),()=>{bmdPage=true;cooldownPage=false;joystickPage=false;var m=GetMonitor();bmdSelected=m==null||m.BmdMask<0?0:m.BmdMask;BuildScreen(Settings);},SettingsCyan,28);
 
             var trackers=SettingsPanel("Conexion BLE",canvasRoot,new Vector2(.18f,.54f),new Vector2(440,574));
-            Text("Seccion trackers",trackers,"CONEXIÓN WAVESHARE",new Vector2(.5f,.93f),new Vector2(424,48),Vector2.zero,28,SettingsCyan);
+            MenuText("Seccion trackers",trackers,"CONEXIÓN WAVESHARE",new Vector2(.5f,.93f),new Vector2(424,48),Vector2.zero,28,SettingsCyan);
             var leftCard=SkinPlate("Tracker izquierdo placa",trackers,new Vector2(.5f,.745f),new Vector2(402,142));
             var rightCard=SkinPlate("Tracker derecho placa",trackers,new Vector2(.5f,.48f),new Vector2(402,142));
-            Text("Tracker izquierdo titulo",leftCard,"TRACKER IZQUIERDO",new Vector2(.5f,.77f),new Vector2(390,37),Vector2.zero,26,Color.white);
-            Text("Tracker derecho titulo",rightCard,"TRACKER DERECHO",new Vector2(.5f,.77f),new Vector2(390,37),Vector2.zero,26,Color.white);
-            trackerLeftLabel=Text("Tracker izquierdo estado",leftCard,"",new Vector2(.5f,.36f),new Vector2(390,76),Vector2.zero,26,Color.white);
-            trackerRightLabel=Text("Tracker derecho estado",rightCard,"",new Vector2(.5f,.36f),new Vector2(390,76),Vector2.zero,26,Color.white);
-            connectionLabel=Text("Estado trackers",trackers,"",new Vector2(.5f,.257f),new Vector2(406,84),Vector2.zero,22,Color.white);
+            MenuText("Tracker izquierdo titulo",leftCard,"TRACKER IZQUIERDO",new Vector2(.5f,.77f),new Vector2(390,37),Vector2.zero,26,Color.white);
+            MenuText("Tracker derecho titulo",rightCard,"TRACKER DERECHO",new Vector2(.5f,.77f),new Vector2(390,37),Vector2.zero,26,Color.white);
+            trackerLeftLabel=MenuText("Tracker izquierdo estado",leftCard,"",new Vector2(.5f,.36f),new Vector2(390,76),Vector2.zero,26,Color.white);
+            trackerRightLabel=MenuText("Tracker derecho estado",rightCard,"",new Vector2(.5f,.36f),new Vector2(390,76),Vector2.zero,26,Color.white);
+            connectionLabel=MenuText("Estado trackers",trackers,"",new Vector2(.5f,.257f),new Vector2(406,84),Vector2.zero,22,Color.white);
             connectTrackersButton=SettingsButton("Buscar y conectar trackers",trackers,"BUSCAR Y CONECTAR",new Vector2(.5f,.095f),new Vector2(400,74),()=>{GetMonitor()?.RequestTrackerConnection();RefreshBleStatus();},Lime,26);
 
             var captures=SettingsPanel("Captura y archivos",canvasRoot,new Vector2(.5f,.54f),new Vector2(536,574));
-            Text("Seccion captura",captures,"REGISTRO Y EXPORTACIÓN",new Vector2(.5f,.93f),new Vector2(520,48),Vector2.zero,30,SettingsCyan);
-            captureLabel=Text("Estado capturas",captures,"",new Vector2(.5f,.818f),new Vector2(512,50),Vector2.zero,29,Color.white);
+            MenuText("Seccion captura",captures,"REGISTRO Y EXPORTACIÓN",new Vector2(.5f,.93f),new Vector2(520,48),Vector2.zero,30,SettingsCyan);
+            captureLabel=MenuText("Estado capturas",captures,"",new Vector2(.5f,.818f),new Vector2(512,50),Vector2.zero,29,Color.white);
             var timerPlate=SkinPlate("Fondo cronometro",captures,new Vector2(.5f,.685f),new Vector2(300,100));
-            settingsTimer=Text("Cronometro captura",timerPlate,"00:00",new Vector2(.5f,.5f),new Vector2(290,92),Vector2.zero,68,Color.white);
-            settingsDetails=Text("Detalle registro",captures,"",new Vector2(.5f,.463f),new Vector2(510,142),Vector2.zero,23,Color.white);
-            statusLabel=Text("Aviso captura",captures,"",new Vector2(.5f,.238f),new Vector2(510,103),Vector2.zero,20,Color.white);
+            settingsTimer=MenuText("Cronometro captura",timerPlate,"00:00",new Vector2(.5f,.5f),new Vector2(290,92),Vector2.zero,68,Color.white);
+            settingsDetails=MenuText("Detalle registro",captures,"",new Vector2(.5f,.463f),new Vector2(510,142),Vector2.zero,23,Color.white);
+            statusLabel=MenuText("Aviso captura",captures,"",new Vector2(.5f,.238f),new Vector2(510,103),Vector2.zero,20,Color.white);
             settingsMainButton=SettingsButton("Registro accion principal",captures,"INICIAR REGISTRO",new Vector2(.5f,.078f),new Vector2(508,70),CapturePrimaryAction,Lime,out settingsMainText,26);
 
             var tools=SettingsPanel("Herramientas configuracion",canvasRoot,new Vector2(.82f,.54f),new Vector2(440,574));
-            Text("Titulo herramientas",tools,"HERRAMIENTAS",new Vector2(.5f,.93f),new Vector2(420,48),Vector2.zero,29,SettingsCyan);
+            MenuText("Titulo herramientas",tools,"HERRAMIENTAS",new Vector2(.5f,.93f),new Vector2(420,48),Vector2.zero,29,SettingsCyan);
             settingsRawButton=SettingsButton("RAW",tools,"RAW: OFF",new Vector2(.5f,.795f),new Vector2(400,68),ToggleRawCapture,SettingsCyan,out settingsRawText);
             settingsSyncButton=SettingsButton("SYNC",tools,"MARCAR SYNC",new Vector2(.5f,.66f),new Vector2(400,68),MarkSync,SettingsCyan);
             SettingsButton("Abrir cooldown",tools,"COOLDOWN",new Vector2(.5f,.525f),new Vector2(400,68),()=>{joystickPage=false;cooldownPage=true;BuildScreen(Settings);},SettingsCyan,out settingsCooldownText);
@@ -1293,8 +1364,8 @@ namespace Biofit.GeomeTryOriginal
             settingsSafButton=SettingsButton("Export SAF",tools,"GUARDAR ARCHIVOS (SAF)",new Vector2(.5f,.255f),new Vector2(400,68),()=>ExportCapture(true),SettingsCyan,23);
             settingsReexportButton=SettingsButton("Downloads",tools,"REEXPORTAR CSV",new Vector2(.5f,.12f),new Vector2(400,68),()=>ExportCapture(false),SettingsCyan,23);
             var footer=SettingsPanel("Estado general configuracion",canvasRoot,new Vector2(.5f,.124f),new Vector2(1464,118));
-            settingsSystem=Text("Estado sistema",footer,"",new Vector2(.5f,.68f),new Vector2(1430,48),Vector2.zero,25,Color.white);
-            commandFeedbackLabel=Text("Confirmacion boton",footer,"",new Vector2(.5f,.27f),new Vector2(1430,38),Vector2.zero,23,SettingsCyan);
+            settingsSystem=MenuText("Estado sistema",footer,"",new Vector2(.5f,.68f),new Vector2(1430,48),Vector2.zero,25,Color.white);
+            commandFeedbackLabel=MenuText("Confirmacion boton",footer,"",new Vector2(.5f,.27f),new Vector2(1430,38),Vector2.zero,23,SettingsCyan);
             RefreshBleStatus();
         }
 
