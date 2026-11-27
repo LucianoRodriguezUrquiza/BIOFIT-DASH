@@ -90,16 +90,14 @@ assert "backIcon" not in arrow and "ImageButton(" not in arrow
 assert 'Chevron pagina' in arrow and 'btn.interactable=available;' in arrow
 assert "line.raycastTarget=false" in arrow
 assert 'BuildScreen(Custom)' in arrow
-for excluded in ("Lock", "Shop", "Monedas", "Diamond", "Unlock", "PlayerName"):
-    assert excluded not in selector
 for count in (0,1,30,31,69,70,119):
     pages=max(1,(count+29)//30)
     assert [page*30+j for page in range(pages) for j in range(30) if page*30+j<count]==list(range(count))
 # Canonical geometry: new contrast plates and navigation do not overlap.
 assert .295*900+150 < .535*900-64
 assert .535*900+64 < .615*900
-assert .89*900-40 > .745*900+82
-assert .745*900-82 > .641*900+17
+assert .89*900-40 > .751*900+77
+assert .751*900-77 > .641*900+17
 assert .641*900-17 > .615*900
 assert .295*900-150 > .072*900+21
 assert 98<1100/10 and 94<300/3

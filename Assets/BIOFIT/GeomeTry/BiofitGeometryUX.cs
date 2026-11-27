@@ -1179,7 +1179,7 @@ namespace Biofit.GeomeTryOriginal
             int count=SkinCount(skinTab),selected=SkinSelected(skinTab);
             int pages=Mathf.Max(1,Mathf.CeilToInt(count/(float)SkinsPerPage));
             int page=skinPages[skinTab]=Mathf.Clamp(skinPages[skinTab],0,pages-1);
-            var preview=SkinPlate("Fondo vista previa",canvasRoot,new Vector2(.5f,.745f),new Vector2(172,164));
+            var preview=SkinPlate("Fondo vista previa",canvasRoot,new Vector2(.5f,.751f),new Vector2(172,154));
             if(count>0)SkinArt("Vista previa personaje",preview,skinTab,selected,new Vector2(.5f,.5f),new Vector2(142,142));
             var current=SkinPlate("Fondo skin actual",canvasRoot,new Vector2(.5f,.641f),new Vector2(310,34));
             Text("Skin actual",current,count>0?labels[skinTab]+" "+(selected+1)+" / "+count:labels[skinTab],
