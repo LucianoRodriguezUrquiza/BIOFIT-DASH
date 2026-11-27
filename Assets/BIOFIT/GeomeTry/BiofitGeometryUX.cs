@@ -49,9 +49,9 @@ namespace Biofit.GeomeTryOriginal
         private int lastScreenHeight = -1;
         private BiofitUiArtwork artwork;
         private TMP_Text connectionLabel;
-        private TMP_Text eventLabel;
+        private TMP_Text trackerLeftLabel,trackerRightLabel,settingsTimer,settingsDetails,settingsSystem,settingsMainText,settingsRawText,settingsCooldownText;
+        private Button settingsMainButton,settingsRawButton,settingsSyncButton,settingsReexportButton,settingsSafButton;
         private TMP_Text captureLabel;
-        private TMP_Text performanceLabel;
         private TMP_Text statusLabel;
         private TMP_Text commandFeedbackLabel;
         private TMP_Text cooldownValueLabel;
@@ -346,9 +346,9 @@ namespace Biofit.GeomeTryOriginal
                 cooldownOptionButtons[i] = null;
             commandFeedbackUntil = 0f;
             connectionLabel = null;
-            eventLabel = null;
+            trackerLeftLabel=trackerRightLabel=settingsTimer=settingsDetails=settingsSystem=settingsMainText=settingsRawText=settingsCooldownText=null;
+            settingsMainButton=settingsRawButton=settingsSyncButton=settingsReexportButton=settingsSafButton=null;
             captureLabel = null;
-            performanceLabel = null;
             connectTrackersButton = null;
             selectorContentRoot = null;
             selectorFocusCard = null;
@@ -1224,110 +1224,77 @@ namespace Biofit.GeomeTryOriginal
             Text("Pagina actual",pageLabel,(page+1)+" / "+pages,new Vector2(.5f,.5f),new Vector2(230,36),Vector2.zero,25,Color.white);
         }
 
+        private static readonly Color SettingsCyan=new Color32(95,222,235,255);
+        private static readonly Color SettingsGray=new Color32(37,43,51,249);
+        private RectTransform SettingsPanel(string name,Transform parent,Vector2 pos,Vector2 size)
+        {
+            var panel=SkinPlate(name,parent,pos,size);
+            panel.GetComponent<Image>().color=new Color32(29,35,43,247);
+            return panel;
+        }
+        private Button SettingsButton(string name,Transform parent,string label,Vector2 pos,Vector2 size,Action action,Color accent,out TMP_Text caption,int font=25)
+        {
+            var button=Hotspot(name,parent,pos,size,action);
+            var rim=(Image)button.targetGraphic;rim.color=accent;
+            button.transition=Selectable.Transition.ColorTint;
+            var colors=button.colors;colors.normalColor=Color.white;colors.highlightedColor=Color.white;
+            colors.pressedColor=new Color(.8f,.8f,.8f,1f);colors.disabledColor=new Color(.40f,.40f,.40f,1f);button.colors=colors;
+            var face=Fill(name+" fondo",button.transform,SettingsGray);
+            face.offsetMin=new Vector2(3,3);face.offsetMax=new Vector2(-3,-3);
+            caption=Text(name+" texto",face,label,new Vector2(.5f,.5f),size-new Vector2(14,10),Vector2.zero,font,Color.white);
+            return button;
+        }
+        private Button SettingsButton(string name,Transform parent,string label,Vector2 pos,Vector2 size,Action action,Color accent,int font=25)
+        {
+            return SettingsButton(name,parent,label,pos,size,action,accent,out _,font);
+        }
         private void BuildSettings()
         {
-            Fill("BIOFIT configuracion fondo", canvasRoot, Blue);
-            ArcadeCorners(canvasRoot);
-            ArcadeLogo(canvasRoot);
+            Fill("BIOFIT configuracion fondo",canvasRoot,new Color32(7,23,38,255));
+            var texture=Resources.Load<Texture2D>("BiofitUi/SettingsMenu/settings_menu_bg");
+            if(texture!=null)
+            {
+                var bg=Rect("Fondo laboratorio configuracion",canvasRoot,new Vector2(.5f,.5f),new Vector2(1600,900),Vector2.zero).gameObject.AddComponent<RawImage>();
+                bg.texture=texture;bg.raycastTarget=false;
+                float aspect=texture.width/(float)texture.height,target=1600f/900f;
+                float w=Mathf.Min(1f,target/aspect),h=Mathf.Min(1f,aspect/target);
+                bg.uvRect=new Rect((1f-w)*.5f,(1f-h)*.5f,w,h);
+            }
+            var heading=SettingsPanel("Titulo ajustes",canvasRoot,new Vector2(.5f,.91f),new Vector2(620,82));
+            Text("Titulo de ajustes",heading,"CONFIGURACIÓN",new Vector2(.5f,.5f),new Vector2(600,72),Vector2.zero,48,Color.white);
+            SettingsButton("Abrir BMD",canvasRoot,"BMD",new Vector2(.90f,.91f),new Vector2(150,70),()=>{bmdPage=true;cooldownPage=false;joystickPage=false;var m=GetMonitor();bmdSelected=m==null||m.BmdMask<0?0:m.BmdMask;BuildScreen(Settings);},SettingsCyan,28);
 
-            RectTransform heading = ArcadePanel("Titulo ajustes",
-                canvasRoot, new Vector2(.5f, .793f),
-                new Vector2(1080f, 66f), Vector2.zero);
-            Text("Titulo de ajustes", heading, "CONFIGURACIÓN  ·  BILATERAL LEGACY",
-                new Vector2(.5f, .5f), new Vector2(1030f, 55f),
-                Vector2.zero, 33, Color.white);
+            var trackers=SettingsPanel("Conexion BLE",canvasRoot,new Vector2(.18f,.54f),new Vector2(440,574));
+            Text("Seccion trackers",trackers,"CONEXIÓN WAVESHARE",new Vector2(.5f,.93f),new Vector2(424,48),Vector2.zero,28,SettingsCyan);
+            var leftCard=SkinPlate("Tracker izquierdo placa",trackers,new Vector2(.5f,.745f),new Vector2(402,142));
+            var rightCard=SkinPlate("Tracker derecho placa",trackers,new Vector2(.5f,.48f),new Vector2(402,142));
+            Text("Tracker izquierdo titulo",leftCard,"TRACKER IZQUIERDO",new Vector2(.5f,.77f),new Vector2(390,37),Vector2.zero,26,Color.white);
+            Text("Tracker derecho titulo",rightCard,"TRACKER DERECHO",new Vector2(.5f,.77f),new Vector2(390,37),Vector2.zero,26,Color.white);
+            trackerLeftLabel=Text("Tracker izquierdo estado",leftCard,"",new Vector2(.5f,.36f),new Vector2(390,76),Vector2.zero,26,Color.white);
+            trackerRightLabel=Text("Tracker derecho estado",rightCard,"",new Vector2(.5f,.36f),new Vector2(390,76),Vector2.zero,26,Color.white);
+            connectionLabel=Text("Estado trackers",trackers,"",new Vector2(.5f,.257f),new Vector2(406,84),Vector2.zero,22,Color.white);
+            connectTrackersButton=SettingsButton("Buscar y conectar trackers",trackers,"BUSCAR Y CONECTAR",new Vector2(.5f,.095f),new Vector2(400,74),()=>{GetMonitor()?.RequestTrackerConnection();RefreshBleStatus();},Lime,26);
 
-            // Four independent, non-overlapping regions, rather than a
-            // seven-line dense status dump over one tiny panel.
-            RectTransform trackers = ArcadePanel("Conexion BLE",
-                canvasRoot, new Vector2(.310f, .614f),
-                new Vector2(596f, 164f), Vector2.zero);
-            Text("Seccion trackers", trackers, "CONEXIÓN WAVESHARE",
-                new Vector2(.5f, .85f), new Vector2(528f, 32f),
-                Vector2.zero, 26, Lime);
-            connectionLabel = Text("Estado trackers", trackers, "",
-                new Vector2(.5f, .53f), new Vector2(536f, 65f),
-                Vector2.zero, 19, Color.white);
-            connectTrackersButton=Button("Buscar y conectar trackers",trackers,"BUSCAR Y CONECTAR",
-                new Vector2(.5f,.15f),new Vector2(460f,40f),Vector2.zero,()=>{
-                    var monitor=GetMonitor();
-                    if(monitor!=null)monitor.RequestTrackerConnection();
-                    RefreshBleStatus();
-                },Lime,20);
+            var captures=SettingsPanel("Captura y archivos",canvasRoot,new Vector2(.5f,.54f),new Vector2(536,574));
+            Text("Seccion captura",captures,"REGISTRO Y EXPORTACIÓN",new Vector2(.5f,.93f),new Vector2(520,48),Vector2.zero,30,SettingsCyan);
+            captureLabel=Text("Estado capturas",captures,"",new Vector2(.5f,.818f),new Vector2(512,50),Vector2.zero,29,Color.white);
+            var timerPlate=SkinPlate("Fondo cronometro",captures,new Vector2(.5f,.685f),new Vector2(300,100));
+            settingsTimer=Text("Cronometro captura",timerPlate,"00:00",new Vector2(.5f,.5f),new Vector2(290,92),Vector2.zero,68,Color.white);
+            settingsDetails=Text("Detalle registro",captures,"",new Vector2(.5f,.463f),new Vector2(510,142),Vector2.zero,23,Color.white);
+            statusLabel=Text("Aviso captura",captures,"",new Vector2(.5f,.238f),new Vector2(510,103),Vector2.zero,20,Color.white);
+            settingsMainButton=SettingsButton("Registro accion principal",captures,"INICIAR REGISTRO",new Vector2(.5f,.078f),new Vector2(508,70),CapturePrimaryAction,Lime,out settingsMainText,26);
 
-            RectTransform movements = ArcadePanel("Eventos BLE",
-                canvasRoot, new Vector2(.690f, .614f),
-                new Vector2(596f, 164f), Vector2.zero);
-            Text("Seccion movimientos", movements, "DETECCIÓN DE MOVIMIENTOS",
-                new Vector2(.5f, .80f), new Vector2(528f, 44f),
-                Vector2.zero, 26, Lime);
-            eventLabel = Text("Pares y saltos", movements, "",
-                new Vector2(.5f, .38f), new Vector2(526f, 100f),
-                Vector2.zero, 26, Color.white);
-
-            RectTransform captures = ArcadePanel("Captura y archivos",
-                canvasRoot, new Vector2(.310f, .411f),
-                new Vector2(596f, 139f), Vector2.zero);
-            Text("Seccion captura", captures, "REGISTRO Y EXPORTACIÓN",
-                new Vector2(.5f, .83f), new Vector2(530f, 39f),
-                Vector2.zero, 27, Lime);
-            captureLabel = Text("Estado capturas", captures, "",
-                new Vector2(.5f, .54f), new Vector2(530f, 44f),
-                Vector2.zero, 22, Color.white);
-            statusLabel = Text("Aviso captura", captures, "",
-                new Vector2(.5f, .22f), new Vector2(530f, 48f),
-                Vector2.zero, 18, Ice);
-
-            // Space between the heading and status cards: brief acknowledgement,
-            // distinct from CaptureBanner which reports actual file/BLE state.
-            commandFeedbackLabel = Text("Confirmacion boton", canvasRoot, "",
-                new Vector2(.5f, .731f), new Vector2(1140f, 32f),
-                Vector2.zero, 20, Ice);
-
-            RectTransform performance = ArcadePanel("FPS medicion",
-                canvasRoot, new Vector2(.690f, .411f),
-                new Vector2(596f, 139f), Vector2.zero);
-            Text("Seccion rendimiento", performance, "RENDIMIENTO",
-                new Vector2(.5f, .83f), new Vector2(530f, 39f),
-                Vector2.zero, 27, Lime);
-            performanceLabel = Text("FPS y entorno", performance, "",
-                new Vector2(.5f, .42f), new Vector2(538f, 86f),
-                Vector2.zero, 21, Color.white);
-
-            Button("Start capture", canvasRoot, "INICIAR REGISTRO",
-                new Vector2(.310f, .269f), new Vector2(430f, 66f),
-                Vector2.zero, StartCapture, Lime, 27);
-            Button("Stop capture", canvasRoot, "FINALIZAR",
-                new Vector2(.690f, .269f), new Vector2(430f, 66f),
-                Vector2.zero, StopCapture, Lime, 27);
-            Button("RAW", canvasRoot, "RAW",
-                new Vector2(.205f, .167f), new Vector2(305f, 64f),
-                Vector2.zero, ToggleRawCapture, Lime, 28);
-            Button("SYNC", canvasRoot, "MARCAR SYNC",
-                new Vector2(.500f, .167f), new Vector2(305f, 64f),
-                Vector2.zero, MarkSync, Lime, 27);
-            Button("Downloads", canvasRoot, "DESCARGAS",
-                new Vector2(.795f, .167f), new Vector2(305f, 64f),
-                Vector2.zero, () => ExportCapture(false), Lime, 27);
-            Button("Export SAF", canvasRoot, "GUARDAR ARCHIVOS (SAF)",
-                new Vector2(.500f, .078f), new Vector2(620f, 62f),
-                Vector2.zero, () => ExportCapture(true), Lime, 27);
-            // Dedicated subpage; do not crowd the existing capture controls.
-            Button("Abrir cooldown", canvasRoot, "COOLDOWN",
-                new Vector2(.180f, .078f), new Vector2(320f, 62f),
-                Vector2.zero, () => {
-                    joystickPage = false;
-                    cooldownPage = true;
-                    BuildScreen(Settings);
-                }, Ice, 26);
-            Button("Abrir joystick", canvasRoot, "JOYSTICK",
-                new Vector2(.820f, .078f), new Vector2(320f, 62f),
-                Vector2.zero, () => {
-                    cooldownPage = false;
-                    joystickPage = true;
-                    BuildScreen(Settings);
-                }, Ice, 26);
-            Button("Abrir BMD",canvasRoot,"BMD",new Vector2(.91f,.793f),new Vector2(190f,66f),Vector2.zero,()=>{bmdPage=true;cooldownPage=false;joystickPage=false;var m=GetMonitor();bmdSelected=m==null||m.BmdMask<0?0:m.BmdMask;BuildScreen(Settings);},Ice,28);
+            var tools=SettingsPanel("Herramientas configuracion",canvasRoot,new Vector2(.82f,.54f),new Vector2(440,574));
+            Text("Titulo herramientas",tools,"HERRAMIENTAS",new Vector2(.5f,.93f),new Vector2(420,48),Vector2.zero,29,SettingsCyan);
+            settingsRawButton=SettingsButton("RAW",tools,"RAW: OFF",new Vector2(.5f,.795f),new Vector2(400,68),ToggleRawCapture,SettingsCyan,out settingsRawText);
+            settingsSyncButton=SettingsButton("SYNC",tools,"MARCAR SYNC",new Vector2(.5f,.66f),new Vector2(400,68),MarkSync,SettingsCyan);
+            SettingsButton("Abrir cooldown",tools,"COOLDOWN",new Vector2(.5f,.525f),new Vector2(400,68),()=>{joystickPage=false;cooldownPage=true;BuildScreen(Settings);},SettingsCyan,out settingsCooldownText);
+            SettingsButton("Abrir joystick",tools,"JOYSTICK",new Vector2(.5f,.39f),new Vector2(400,68),()=>{cooldownPage=false;joystickPage=true;BuildScreen(Settings);},SettingsCyan);
+            settingsSafButton=SettingsButton("Export SAF",tools,"GUARDAR ARCHIVOS (SAF)",new Vector2(.5f,.255f),new Vector2(400,68),()=>ExportCapture(true),SettingsCyan,23);
+            settingsReexportButton=SettingsButton("Downloads",tools,"REEXPORTAR CSV",new Vector2(.5f,.12f),new Vector2(400,68),()=>ExportCapture(false),SettingsCyan,23);
+            var footer=SettingsPanel("Estado general configuracion",canvasRoot,new Vector2(.5f,.124f),new Vector2(1464,118));
+            settingsSystem=Text("Estado sistema",footer,"",new Vector2(.5f,.68f),new Vector2(1430,48),Vector2.zero,25,Color.white);
+            commandFeedbackLabel=Text("Confirmacion boton",footer,"",new Vector2(.5f,.27f),new Vector2(1430,38),Vector2.zero,23,SettingsCyan);
             RefreshBleStatus();
         }
 
@@ -1600,12 +1567,16 @@ namespace Biofit.GeomeTryOriginal
                 "REGISTRO NO INICIADO · REVISÁ ESTADO");
         }
 
-        private void StopCapture()
+        private void CapturePrimaryAction()
         {
-            BiofitBLEMonitor monitor = GetMonitor();
-            bool stopped = monitor != null && monitor.StopGameCapture();
-            ShowCommandFeedback(stopped ? "FINALIZANDO CSV · ESPERÁ ARCHIVO GUARDADO" :
-                "NO SE FINALIZÓ NINGUNA CAPTURA");
+            var monitor=GetMonitor();
+            if(monitor==null)return;
+            if(monitor.GameCaptureActive)
+            {
+                bool started=monitor.FinishAndExportCapture();
+                ShowCommandFeedback(started?"FINALIZANDO Y DESCARGANDO SESIÓN":"NO SE PUDO FINALIZAR · REVISÁ ESTADO");
+            }
+            else if(monitor.CanStartCapture)StartCapture();
         }
 
         private void ToggleRawCapture()
@@ -1643,7 +1614,7 @@ namespace Biofit.GeomeTryOriginal
                 return;
             }
             bool blocked = monitor.GameCaptureActive || monitor.CaptureSaving ||
-                monitor.ExportBusy;
+                monitor.ExportBusy || monitor.BmdBusy;
             monitor.RequestExport(saf);
             ShowCommandFeedback(blocked ? "EXPORTACIÓN NO DISPONIBLE · FINALIZÁ PRIMERO" :
                 (saf ? "SAF" : "DESCARGAS") +
@@ -1652,48 +1623,37 @@ namespace Biofit.GeomeTryOriginal
 
         private void RefreshBleStatus()
         {
-            if (connectionLabel == null || eventLabel == null ||
-                captureLabel == null || performanceLabel == null ||
-                statusLabel == null) return;
-            var m = GetMonitor();
-            var bridge = FindFirstObjectByType<BiofitGeomeTryLegacyBridge>();
-            if(connectTrackersButton!=null)connectTrackersButton.interactable=m!=null&&m.CanRequestTrackerConnection;
-            if (m == null)
-            {
-                connectionLabel.text = "RECEPTOR BLE SIN INICIAR";
-                eventLabel.text = "PARES: 0\nSALTOS CUBO: 0";
-                captureLabel.text = "CAPTURA: INACTIVA  |  RAW: OFF";
-                statusLabel.text = "Reabrí Main Menu para iniciar la conexión.";
-            }
-            else
-            {
-                connectionLabel.text =
-                    "TRACKERS: "+m.ConnectedTrackerCount+" / 2 CONECTADOS"+
-                    "\nRELOJES: "+(m.ClockAlignmentReady?"SINCRONIZADOS":"ESPERANDO STATUS")+
-                    "\n"+m.TrackerConnectionStatus;
-                eventLabel.text =
-                    "PARES RECIBIDOS: " + (bridge == null ?
-                        "0" : bridge.AcceptedPairs.ToString()) +
-                    (BiofitThreeModesBootstrap.Active ? "\nACCIONES PERSONAJE: " : "\nSALTOS CUBO: ") + (bridge == null ?
-                        "0" : bridge.ExecutedJumps.ToString());
-                captureLabel.text =
-                    "CAPTURA: " + (m.GameCaptureActive ? "ACTIVA" : "INACTIVA") +
-                    "    |    " + m.RawButtonLabel;
-                statusLabel.text = m.CaptureBanner;
-            }
-#if UNITY_EDITOR
-            // An uncapped Editor can report 300-500+ FPS even if the actual
-            // Android phone cannot sustain 60. This value is not a device test.
-            performanceLabel.text = "EDITOR · FPS observados: " +
-                (fpsSamples == 0 ? "calculando..." :
-                 Mathf.RoundToInt(sampledFps).ToString()) +
-                "\nNO equivale a FPS de la APK";
-#else
-            performanceLabel.text = "ANDROID · FPS observados: " +
-                (fpsSamples == 0 ? "calculando..." :
-                 Mathf.RoundToInt(sampledFps).ToString()) +
-                "\nObjetivo solicitado: 60 FPS (no garantizados)";
-#endif
+            if(connectionLabel==null||captureLabel==null||statusLabel==null||settingsMainButton==null)return;
+            var m=GetMonitor();
+            bool left=m!=null&&m.LeftTrackerConnected,right=m!=null&&m.RightTrackerConnected;
+            trackerLeftLabel.text=left?"CONECTADO\nFW "+(m.LeftTrackerFirmware>0?m.LeftTrackerFirmware.ToString():"PENDIENTE"):"DESCONECTADO";
+            trackerRightLabel.text=right?"CONECTADO\nFW "+(m.RightTrackerFirmware>0?m.RightTrackerFirmware.ToString():"PENDIENTE"):"DESCONECTADO";
+            trackerLeftLabel.color=left?Lime:Ice;trackerRightLabel.color=right?Lime:Ice;
+            connectTrackersButton.interactable=m!=null&&m.CanRequestTrackerConnection;
+            connectionLabel.text=m==null?"RECEPTOR BLE NO DISPONIBLE":m.TrackerConnectionStatus;
+            bool active=m!=null&&m.GameCaptureActive,saving=m!=null&&m.CaptureSaving,exporting=m!=null&&m.ExportBusy;
+            bool closed=m!=null&&!string.IsNullOrEmpty(m.SavedCapturePath);
+            string export=m==null?"Sin receptor":m.ExportStatus;
+            bool error=export.StartsWith("ERROR",StringComparison.OrdinalIgnoreCase)||(m!=null&&m.CaptureFileStatus.StartsWith("ERROR",StringComparison.OrdinalIgnoreCase));
+            bool done=!exporting&&!saving&&!active&&(export.StartsWith("EXPORTADO Y VERIFICADO",StringComparison.Ordinal)||export.StartsWith("EDITOR:",StringComparison.Ordinal));
+            captureLabel.text=active?"GRABANDO SESIÓN":saving?"FINALIZANDO":exporting?"EXPORTANDO":error?"REVISAR ARCHIVOS":done?"EXPORTACIÓN COMPLETADA":closed?"REGISTRO GUARDADO":"REGISTRO INACTIVO";
+            captureLabel.color=active?new Color32(255,117,117,255):error?new Color32(255,190,100,255):done?Lime:SettingsCyan;
+            int seconds=m==null?0:m.CaptureElapsedSeconds;
+            settingsTimer.text=(seconds/60).ToString("D2")+":"+(seconds%60).ToString("D2");
+            settingsDetails.text=m==null?"CSV: INACTIVO\nRAW: OFF\nGFA: NO DISPONIBLE":
+                "CSV: "+(active?"GRABANDO":saving?"CERRANDO":closed?"GUARDADO":"INACTIVO")+"  |  "+m.RawButtonLabel+
+                "\nGFA AUTO: "+(m.BmdAutoEnabled?"ON":"OFF")+"  |  PERFIL: "+(m.BmdMask>=0?m.BmdMask.ToString():"--")+
+                "\nUBICACIÓN: "+m.BmdPlacement+"  |  SYNC: "+m.CaptureSyncCount+
+                "\nEVENTOS: "+m.CapturedEventCount+"  |  RAW I/D: "+m.RawCount;
+            statusLabel.text=m==null?"Sin receptor BLE":active?m.RawStatus:saving?"Cerrando y verificando archivos privados":exporting||error||done?export+"\n"+m.CaptureFileStatus:m.CaptureFileStatus;
+            settingsMainText.text=active?"FINALIZAR Y DESCARGAR":saving?"FINALIZANDO...":exporting?"EXPORTANDO...":"INICIAR REGISTRO";
+            settingsMainButton.interactable=m!=null&&(active?!m.BmdBusy&&!exporting:!saving&&!exporting&&m.CanStartCapture);
+            settingsRawText.text=m==null?"RAW: OFF":m.RawButtonLabel;
+            settingsRawButton.interactable=active&&!saving&&!exporting&&m!=null&&!m.BmdBusy&&!m.BmdAutoSession&&m.RawOperation.IsCompleted&&(m.RawActive||m.BothTrackersConnected);
+            settingsSyncButton.interactable=active;
+            settingsSafButton.interactable=settingsReexportButton.interactable=m!=null&&m.CanExportCapture;
+            settingsCooldownText.text=m==null?"COOLDOWN":"COOLDOWN: "+m.PairCooldownMilliseconds+" ms";
+            settingsSystem.text=m==null?"0/2 TRACKERS · RECEPTOR NO DISPONIBLE":m.ConnectedTrackerCount+"/2 TRACKERS · RELOJES "+(m.ClockAlignmentReady?"SINCRONIZADOS":"PENDIENTES")+" · "+(m.BmdControlBlocked?"CONTROL BLE BLOQUEADO":m.BothTrackersConnected?"CONTROL BLE HABILITADO":"ESPERANDO TRACKERS");
         }
 
         private void BuildOtherScene(string scene)

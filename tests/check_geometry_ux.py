@@ -134,59 +134,44 @@ for screen_w, screen_h in [(1280, 720), (2400, 1080), (800, 600),
     scale = min(virtual_w / 1600, 1)
     assert scale * 1600 <= virtual_w + 1e-7
     assert scale * 900 <= 900 + 1e-7
-logo_top = .915 * 900 + 137 / 2
-logo_bottom = .915 * 900 - 137 / 2
-title_top = .793 * 900 + 66 / 2
-title_bottom = .793 * 900 - 66 / 2
-first_row_top = .614 * 900 + 164 / 2
-assert logo_top < 900 and logo_bottom > title_top
-assert title_bottom - first_row_top > 25
-trackers_bottom = .614 * 900 - 164 / 2
-second_row_top = .411 * 900 + 139 / 2
-assert trackers_bottom - second_row_top > 20
-second_row_bottom = .411 * 900 - 139 / 2
-buttons_top = .269 * 900 + 66 / 2
-assert second_row_bottom - buttons_top > 20
-last_button_bottom = .078 * 900 - 62 / 2
-assert last_button_bottom > 30
-
-# 7. Structured BLE/recording/performance cards; no one giant status dump.
-for section in [
-    '"Conexion BLE"', '"Eventos BLE"', '"Captura y archivos"',
-    '"FPS medicion"', '"CONEXIÓN WAVESHARE"',
-    '"DETECCIÓN DE MOVIMIENTOS"', '"REGISTRO Y EXPORTACIÓN"',
-]:
-    assert section in ui, section
-for variable in ["connectionLabel", "eventLabel", "captureLabel",
-                 "performanceLabel", "statusLabel"]:
-    assert variable in ui
-for action in [
-    "StartGameCapture()", "StopGameCapture()",
-    "ToggleRawCapture()", "MarkVideoSync()", "RequestExport(saf)",
-]:
-    assert action in ui, action
-
-# 7b. A finger press has visible feedback without duplicating a BLE action.
+# 7. Modular settings; panels and footer fit the safe stage.
+settings_ui=ui[ui.index("private void BuildSettings()"):ui.index("private void BuildBmd()")]
+assert 'Resources.Load<Texture2D>("BiofitUi/SettingsMenu/settings_menu_bg")' in settings_ui
+for absent in ("ArcadeCorners(", "ArcadeLogo(", "BILATERAL LEGACY", "DETECCIÓN DE MOVIMIENTOS", "FPS medicion"):
+    assert absent not in settings_ui
+for section in ('"Conexion BLE"', '"Captura y archivos"', '"Herramientas configuracion"', '"CONEXIÓN WAVESHARE"', '"REGISTRO Y EXPORTACIÓN"', '"CONFIGURACIÓN"'):
+    assert section in settings_ui
+assert 'new Vector2(.18f,.54f),new Vector2(440,574)' in settings_ui
+assert 'new Vector2(.5f,.54f),new Vector2(536,574)' in settings_ui
+assert 'new Vector2(.82f,.54f),new Vector2(440,574)' in settings_ui
+assert .18*1600+220 < .5*1600-268
+assert .5*1600+268 < .82*1600-220
+assert .54*900+287 < .91*900-41
+assert .54*900-287 > .124*900+59
+assert all(574*.135>68 for _ in range(5))
+for token in ("StartGameCapture()", "FinishAndExportCapture()", "ToggleRawCapture()", "MarkVideoSync()", "RequestExport(saf)", "m.CaptureElapsedSeconds", "m.LeftTrackerConnected", "m.RightTrackerConnected", "m.CaptureSyncCount"):
+    assert token in ui,token
+monitor=(root/"Assets/BIOFIT/Scripts/BiofitBLEMonitor.cs").read_text()
+combined=monitor[monitor.index("public bool FinishAndExportCapture()"):monitor.index("public void OnBiofitExportResult(")]
+assert combined.index("StopGameCapture()") < combined.index("ExportBusy=true") < combined.index("await CaptureCompletion") < combined.index("await RequestExportAsync(false,expected)")
+assert "SavedCapturePath,expected,StringComparison.Ordinal" in combined
+assert "FindNewestValid" not in combined
+assert "ExportBusy=false" in combined
+assert "exactPath??" in monitor
 press = (root / "Assets/BIOFIT/GeomeTry/BiofitSettingsButtonFeedback.cs").read_text()
 assert "frame.gameObject.AddComponent<BiofitSettingsButtonFeedback>()" in ui
 for token in ["IPointerDownHandler", "IPointerUpHandler", "IPointerExitHandler",
               "Time.unscaledDeltaTime", "Vector3.one * .92f", "1.04f"]:
     assert token in press, token
-for action in ["StartCapture", "StopCapture", "ToggleRawCapture",
-               "MarkSync", "ExportCapture"]:
+for action in ["StartCapture", "CapturePrimaryAction", "ToggleRawCapture", "MarkSync", "ExportCapture"]:
     assert ("private void " + action + "(") in ui, action
 assert "commandFeedbackLabel.text = message;" in ui
 assert '"SYNC NO MARCADO · INICIÁ REGISTRO"' in ui
 assert '" SOLICITADA · ESPERÁ CONFIRMACIÓN"' in ui
-
-# 8. FPS means actual frame delta count; distinguish uncapped Editor from APK.
+# FPS instrumentation remains available internally; no misleading settings card.
 assert "fpsFrames / fpsElapsed" in ui
 assert "Time.unscaledDeltaTime" in ui
 assert "fpsElapsed >= .75f" in ui
-assert '"EDITOR · FPS observados: "' in ui
-assert "NO equivale a FPS de la APK" in ui
-assert '"ANDROID · FPS observados: "' in ui
-assert "Objetivo solicitado: 60 FPS (no garantizados)" in ui
 assert "Application.targetFrameRate = 60;" in ui
 
 # Source import: HD exact geometry, CPU-readable texture, original URP 2D.

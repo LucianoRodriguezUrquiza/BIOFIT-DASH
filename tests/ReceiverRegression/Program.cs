@@ -196,6 +196,31 @@ class Program {
     UnityEngine.Application.persistentDataPath=originalPath;
     System.IO.File.Delete(obstructed);
   }
+  // Combined stop/export never exports an older session on failed close.
+  string combinedRoot=UnityEngine.Application.persistentDataPath;
+  string combinedDir=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"biofit-combined-"+Guid.NewGuid().ToString("N"));
+  System.IO.Directory.CreateDirectory(combinedDir);
+  try {
+    UnityEngine.Application.persistentDataPath=combinedDir;
+    var combined=new BiofitBLEMonitor();
+    Check(!combined.FinishAndExportCapture(),"combined rejects idle");
+    Check(combined.StartGameCapture(),"combined starts");
+    Check(combined.FinishAndExportCapture(),"combined stops");
+    Check(!combined.FinishAndExportCapture(),"combined rejects duplicate");
+    combined.FinishAndExportCompletion.GetAwaiter().GetResult();
+    Check(!combined.ExportBusy&&combined.ExportStatus.StartsWith("EDITOR:")&&BiofitCaptureArchive.VerifyFileStreaming(combined.SavedCapturePath),"combined exports current verified CSV");
+    string old=combined.SavedCapturePath;
+    string obstruct=System.IO.Path.Combine(combinedDir,"blocked");
+    System.IO.File.WriteAllText(obstruct,"blocked");
+    UnityEngine.Application.persistentDataPath=obstruct;
+    Check(combined.StartGameCapture(),"combined failure starts");
+    Check(combined.FinishAndExportCapture(),"combined failure stops");
+    combined.FinishAndExportCompletion.GetAwaiter().GetResult();
+    Check(!combined.ExportBusy&&combined.ExportStatus.StartsWith("ERROR")&&string.IsNullOrEmpty(combined.SavedCapturePath)&&System.IO.File.Exists(old),"combined failed save never exports old session");
+  } finally {
+    UnityEngine.Application.persistentDataPath=combinedRoot;
+    System.IO.Directory.Delete(combinedDir,true);
+  }
   CycleIntegration();
   BmdIntegration.Run().GetAwaiter().GetResult();
    ReconnectIntegration.Run().GetAwaiter().GetResult();

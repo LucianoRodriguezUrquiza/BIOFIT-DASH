@@ -87,6 +87,16 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     public Task CaptureCompletion { get; private set; } = Task.CompletedTask;
     public Task RawOperation { get; private set; } = Task.CompletedTask;
     public bool CaptureSaving => !CaptureCompletion.IsCompleted;
+    private float captureStartedAt,captureStoppedAt;
+    public int CaptureElapsedSeconds => Mathf.Max(0,Mathf.FloorToInt((gameCaptureActive?Time.realtimeSinceStartup:captureStoppedAt)-captureStartedAt));
+    public int CaptureSyncCount => syncNumber;
+    public bool LeftTrackerConnected => left.connection==ConnectedLabel;
+    public bool RightTrackerConnected => right.connection==ConnectedLabel;
+    public int LeftTrackerFirmware => LeftTrackerConnected?left.firmwareVersion:0;
+    public int RightTrackerFirmware => RightTrackerConnected?right.firmwareVersion:0;
+    public bool CanStartCapture => !gameCaptureActive&&!eventCapture.Recording&&!CaptureSaving&&!ExportBusy&&!BmdBusy&&!busy&&RawOperation.IsCompleted;
+    public bool CanExportCapture => !gameCaptureActive&&!CaptureSaving&&!ExportBusy&&!BmdBusy;
+    public Task FinishAndExportCompletion {get;private set;}=Task.CompletedTask;
 
     public void MarkVideoSync()
     {
@@ -253,8 +263,8 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     {
         get
         {
-            if (ExportBusy) return "EXPORTANDO CSV - " + ExportStatus;
             if (CaptureSaving) return "FINALIZANDO - esperando cierre de archivos";
+            if (ExportBusy) return "EXPORTANDO CSV - " + ExportStatus;
             if (gameCaptureActive) return "GRABANDO - ETAPA " + CaptureStage;
             if (CaptureFileStatus.StartsWith("ERROR",StringComparison.Ordinal)) return "ERROR - " + CaptureFileStatus;
             if (!string.IsNullOrEmpty(SavedCapturePath)) return "ARCHIVO PRIVADO GUARDADO - exportar";
@@ -333,12 +343,12 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         ExportStatus=alternate?"Validando para selector Android...":"Validando para Descargas...";
         _=RequestExportAsync(alternate);
     }
-    private async Task RequestExportAsync(bool alternate)
+    private async Task RequestExportAsync(bool alternate,string exactPath=null)
     {
         try
         {
-            string selected=selectedStoredSession>=0 && selectedStoredSession<storedSessions.Length
-                ?storedSessions[selectedStoredSession].MainPath:SavedCapturePath;
+            string selected=exactPath??(selectedStoredSession>=0 && selectedStoredSession<storedSessions.Length
+                ?storedSessions[selectedStoredSession].MainPath:SavedCapturePath);
             string root=Application.persistentDataPath;
             if(string.IsNullOrEmpty(selected))
                 selected=await Task.Run(()=>BiofitCaptureArchive.FindNewestValid(root));
@@ -376,6 +386,35 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         catch(System.Exception ex)
         {
             ExportStatus="ERROR exportacion: "+ex.Message+" (archivos privados conservados)";
+            ExportBusy=false;
+        }
+    }
+    // Combined UI command owns the export lock from stop to Android callback.
+    // Never fall back to a previous archive when the just-recorded session fails.
+    public bool FinishAndExportCapture()
+    {
+        if(!gameCaptureActive||ExportBusy||CaptureSaving||BmdBusy)return false;
+        string expected=sessionFile?.Path;
+        if(string.IsNullOrEmpty(expected)||!StopGameCapture())return false;
+        ExportBusy=true;
+        ExportStatus="Esperando cierre de la sesion actual...";
+        FinishAndExportCompletion=FinishAndExportAsync(expected);
+        return true;
+    }
+    private async Task FinishAndExportAsync(string expected)
+    {
+        try
+        {
+            await CaptureCompletion;
+            if(!string.Equals(SavedCapturePath,expected,StringComparison.Ordinal)||
+                CaptureFileStatus.StartsWith("ERROR",StringComparison.Ordinal))
+                throw new System.IO.IOException("La sesion actual no se guardo correctamente");
+            ExportStatus="Validando sesion actual para Descargas...";
+            await RequestExportAsync(false,expected);
+        }
+        catch(Exception ex)
+        {
+            ExportStatus="ERROR finalizacion/exportacion: "+ex.Message+" (datos privados conservados)";
             ExportBusy=false;
         }
     }
@@ -538,7 +577,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     /// <summary>Una sola sesion para reposo, marcha, carrera, elevacion y juego.</summary>
     public bool StartGameCapture()
     {
-        if(gameCaptureActive || eventCapture.Recording || CaptureSaving || ExportBusy || BmdBusy || !RawOperation.IsCompleted) return false;
+        if(!CanStartCapture) return false;
         string name="BIOFIT_v0911_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv";
         sessionFile=new BiofitSessionFile(System.IO.Path.Combine(Application.persistentDataPath,name),eventCapture.Csv.Split('\n')[0].TrimEnd('\r'));
         eventCapture.RowSink=row=>sessionFile.Add(row);
@@ -546,6 +585,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         RawStatus="RAW OFF: sesion iniciada, pulsar RAW para activar";
         if (!eventCapture.BeginGame(Time.realtimeSinceStartup)) return false;
         gameCaptureActive = true;
+        captureStartedAt=captureStoppedAt=Time.realtimeSinceStartup;
         GfaBegin();
         bmdShadow.Begin(PairCooldownMilliseconds,jumpDetector.MaxPairGapWindowSeconds);
         if(BmdTraceArmed&&string.IsNullOrEmpty(bmdTraceOwner))bmdTraceOwner=sessionFile.Path;
@@ -678,6 +718,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         RecordControlDiagnostic("GFA_SUMMARY "+GfaSummary);
         if(!eventCapture.FinishGame(Time.realtimeSinceStartup))return false;
         gameCaptureActive = false;
+        captureStoppedAt=Time.realtimeSinceStartup;
         autoAcceptMarkers=false;
         lastGameSummary = "BIOFIT DASH | RESUMEN EXPERIMENTAL\n" +
             "IZQ MOV_ON=" + (left.movOn - gLeftOn) +
