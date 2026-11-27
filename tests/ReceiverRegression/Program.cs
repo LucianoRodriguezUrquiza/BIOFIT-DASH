@@ -198,6 +198,7 @@ class Program {
   }
   CycleIntegration();
   BmdIntegration.Run().GetAwaiter().GetResult();
+   ReconnectIntegration.Run().GetAwaiter().GetResult();
   Console.WriteLine("PASS: "+checks+" receiver integration checks using API shims (not a Unity build).");
  }
 }

@@ -221,6 +221,8 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     private void OnDestroy()
     {
         CancelBmd();
+        if(leftDevice!=null&&left.connectionHandler!=null)leftDevice.OnConnectionStateChanged-=left.connectionHandler;
+        if(rightDevice!=null&&right.connectionHandler!=null)rightDevice.OnConnectionStateChanged-=right.connectionHandler;
         if(gameCaptureActive)StopGameCapture(); else RawOperation=SetRawCaptureAsync(false);
     }
 
@@ -461,9 +463,21 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     public event Action<MotionObservation> MotionObserved;
 
     // Se mantiene una unica instancia BLE mientras alternamos diagnostico y Dash.
-    public bool BothTrackersConnected =>
-        left.connection == "CONECTADO - NOTIFICACIONES ACTIVAS" &&
-        right.connection == "CONECTADO - NOTIFICACIONES ACTIVAS";
+    private const string ConnectedLabel="CONECTADO - NOTIFICACIONES ACTIVAS";
+    public int ConnectedTrackerCount => (left.connection==ConnectedLabel?1:0)+(right.connection==ConnectedLabel?1:0);
+    public bool BothTrackersConnected => ConnectedTrackerCount==2;
+    public bool TrackerConnectionBusy => busy;
+    public string TrackerConnectionStatus => connectionStatus;
+    private string connectionStatus="LISTO PARA BUSCAR";
+    public bool CanRequestTrackerConnection => !busy&&!GameCaptureActive&&!CaptureSaving&&!BmdBusy&&!BmdAutoSession&&!ExportBusy&&!rawActive&&RawOperation.IsCompleted;
+    public void RequestTrackerConnection()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        _=ConnectBothAsync();
+#else
+        connectionStatus="VISTA PREVIA: USAR APK ANDROID";
+#endif
+    }
 
     [SerializeField] private bool showDiagnostics = true;
     public bool ShowDiagnostics
@@ -753,6 +767,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         public bool hasStatus;
         public uint lastStatusMs;
         public int generation;
+        public Action<BleConnectionState> connectionHandler;
         public readonly BiofitEventGate statusGate = new BiofitEventGate();
         public double statusWindowStart, lastStatusCallback, statusHz, maxStatusGapMs;
         public int statusInWindow;
@@ -787,8 +802,9 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
 
     private async Task ConnectBothAsync()
     {
-        if (busy) return;
-        busy = true;
+        if(busy)return;
+        if(!CanRequestTrackerConnection){connectionStatus="FINALIZAR REGISTRO U OPERACION PRIMERO";return;}
+        busy = true;connectionStatus="BUSCANDO TRACKERS...";
         try
         {
             // Android 12+ requiere BLUETOOTH_CONNECT antes de consultar
@@ -797,16 +813,19 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             // aunque el Bluetooth este encendido.
             message = "Solicitando permisos de Dispositivos cercanos...";
             IBleAdapter adapter = BleManager.Adapter;
-            if (!await adapter.RequestPermissionAsync())
+            using var permissionDeadline=new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(45));
+            if (!await adapter.RequestPermissionAsync(permissionDeadline.Token))
             {
-                message = "Permiso Bluetooth denegado. En Android: Ajustes > Aplicaciones > BIOFIT-GAME-UNITY > Permisos > Dispositivos cercanos > Permitir. Luego cerra y abri la app.";
+                connectionStatus="PERMITIR DISPOSITIVOS CERCANOS";
+                message = "Permiso Bluetooth denegado. En Android: Ajustes > Aplicaciones > BIOFIT > Permisos > Dispositivos cercanos > Permitir. Luego pulsa BUSCAR Y CONECTAR.";
                 return;
             }
 
             message = "Comprobando Bluetooth con permisos autorizados...";
-            if (!await adapter.IsAvailableAsync())
+            if (!await adapter.IsAvailableAsync(permissionDeadline.Token))
             {
-                message = "Bluetooth no disponible o apagado. Activalo desde Android y volve a abrir la app.";
+                connectionStatus="ACTIVAR BLUETOOTH Y REINTENTAR";
+                message = "Bluetooth no disponible o apagado. Activalo desde Android y pulsa BUSCAR Y CONECTAR.";
                 return;
             }
 
@@ -814,39 +833,62 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             // No es necesario escanear ni emparejar desde Ajustes de Android.
             await ConnectOneAsync(adapter, leftAddress, left);
             await ConnectOneAsync(adapter, rightAddress, right);
-            message = "Prueba BLE: mové un tobillo y observá los eventos.";
+            if(BothTrackersConnected&&rawMayBeStreaming)await SetRawCaptureAsync(false);
+            connectionStatus=BothTrackersConnected?"AMBOS CONECTADOS":ConnectedTrackerCount==1?"FALTA UN TRACKER · REINTENTAR":"SIN TRACKERS · REINTENTAR";
+            message=connectionStatus;
         }
         catch (Exception ex)
         {
+            connectionStatus="ERROR BLE · REINTENTAR";
             message = "Error al iniciar BLE: " + ex.Message;
-            Debug.LogException(ex);
+            Debug.LogWarning(message);
         }
         finally { busy = false; }
     }
 
     private async Task ConnectOneAsync(IBleAdapter adapter, string address, Tracker tracker)
     {
+        IBleDevice device=tracker.id==1?leftDevice:rightDevice;
+        if(device!=null&&device.ConnectionState==BleConnectionState.Connected&&tracker.connection==ConnectedLabel)return;
+        using var deadline=new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var token=deadline.Token;
         try
         {
-            tracker.connection = "Conectando " + address + "...";
-            IBleDevice device = await adapter.GetDeviceAsync(address);
-            if (tracker.id == 1) leftDevice = device;
-            else rightDevice = device;
-
-            device.OnConnectionStateChanged += state =>
+            connectionStatus="BUSCANDO "+tracker.name+"...";
+            // UniBLE caches a device by MAC; a timed-out native connect may still
+            // be pending. Never launch a second native connect until it settles.
+            device=await adapter.GetDeviceAsync(address,token);
+            if(device.ConnectionState==BleConnectionState.Connecting||device.ConnectionState==BleConnectionState.Disconnecting)
+            {tracker.connection="ENLACE PENDIENTE";return;}
+            var previous=tracker.id==1?leftDevice:rightDevice;
+            if(previous!=null&&tracker.connectionHandler!=null)previous.OnConnectionStateChanged-=tracker.connectionHandler;
+            tracker.connectionHandler=null;
+            if(tracker.id==1)leftDevice=device;else rightDevice=device;
+            // Partial GATT setup can leave a connected device without EVENT.
+            // Close it before replacing subscriptions, rather than duplicate them.
+            if(device.ConnectionState==BleConnectionState.Connected)
+                await device.DisconnectAsync(token);
+            ResetTrackerConnection(tracker);
+            int attemptGeneration=System.Threading.Interlocked.Increment(ref tracker.generation);
+            tracker.connection="Conectando "+address+"...";
+            tracker.connectionHandler=state=>
             {
-                tracker.connection = state.ToString();
-                if (state == BleConnectionState.Disconnected)
+                if(device!=(tracker.id==1?leftDevice:rightDevice))return;
+                if(state==BleConnectionState.Disconnected)
                 {
-                    System.Threading.Interlocked.Increment(ref tracker.generation);
-                    Enqueue(new Packet { expectedId = tracker.id, reset = true });
+                    tracker.connection=state.ToString();
+                    connectionStatus="TRACKER DESCONECTADO · REINTENTAR";
+                    int g=System.Threading.Interlocked.Increment(ref tracker.generation);
+                    Enqueue(new Packet {expectedId=tracker.id,reset=true,generation=g});
                 }
             };
-
-            await device.ConnectAsync();
+            device.OnConnectionStateChanged+=tracker.connectionHandler;
+            await device.ConnectAsync(token);
+            if(attemptGeneration!=tracker.generation||device.ConnectionState!=BleConnectionState.Connected)
+                throw new InvalidOperationException("Conexion interrumpida");
             tracker.connection = "Buscando el servicio GATT...";
-            IBleService service = await device.GetServiceAsync(ServiceUuid);
-            IBleCharacteristic characteristic = await service.GetCharacteristicAsync(EventUuid);
+            IBleService service = await device.GetServiceAsync(ServiceUuid,token);
+            IBleCharacteristic characteristic = await service.GetCharacteristicAsync(EventUuid,token);
 
             if (tracker.id == 1) leftEvents = characteristic;
             else rightEvents = characteristic;
@@ -869,7 +911,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
                         callbackTicks = ticksAtCallback
                     });
                 }
-            });
+            },token);
 
             // El firmware ya emite STATUS con millis del sensor.
             // Se usa para aproximar los relojes sin reflashear placas.
@@ -877,7 +919,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             try
             {
                 IBleCharacteristic status =
-                    await service.GetCharacteristicAsync(StatusUuid);
+                    await service.GetCharacteristicAsync(StatusUuid,token);
                 if (tracker.id == 1) leftStatus = status;
                 else rightStatus = status;
                 await status.SubscribeAsync(bytes =>
@@ -894,7 +936,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
                             isStatus = true
                         });
                     }
-                });
+                },token);
             }
             catch (Exception statusError)
             {
@@ -905,7 +947,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             // Optional extension; older V2 firmware remains readable.
             try
             {
-                var transport = await service.GetCharacteristicAsync(TransportUuid);
+                var transport = await service.GetCharacteristicAsync(TransportUuid,token);
                 if (id == 1) leftTransport = transport; else rightTransport = transport;
                 await transport.SubscribeAsync(bytes =>
                 {
@@ -913,26 +955,47 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
                         expectedId = id, generation = generation, isTransport = true,
                         bytes = (byte[])bytes.Clone(),
                         callbackTicks = System.Diagnostics.Stopwatch.GetTimestamp() });
-                });
+                },token);
             }
             catch (Exception ex) { Debug.LogWarning("BIOFIT TX opcional: " + ex.Message); }
             try
             {
-                var raw=await service.GetCharacteristicAsync(RawUuid);
-                var config=await service.GetCharacteristicAsync(ConfigUuid);
+                var raw=await service.GetCharacteristicAsync(RawUuid,token);
+                var config=await service.GetCharacteristicAsync(ConfigUuid,token);
                 if(id==1)leftBmd=new BiofitBmdLink(config);else rightBmd=new BiofitBmdLink(config);
                 var link=new BiofitRawLink(raw,config);
                 await link.SetAsync(false,null);
                 if(id==1)leftRaw=link;else rightRaw=link;
             }
             catch(Exception ex) { RawStatus="RAW no disponible: "+ex.Message; }
-            tracker.connection = "CONECTADO - NOTIFICACIONES ACTIVAS";
+            token.ThrowIfCancellationRequested();
+            if(attemptGeneration!=tracker.generation||device.ConnectionState!=BleConnectionState.Connected)
+                throw new InvalidOperationException("Conexion interrumpida durante GATT");
+            tracker.connection = ConnectedLabel;
         }
         catch (Exception ex)
         {
-            tracker.connection = "ERROR: " + ex.Message;
+            tracker.connection = "ERROR: " + (ex is OperationCanceledException?"tiempo de espera BLE":ex.Message);
+            System.Threading.Interlocked.Increment(ref tracker.generation);
+            ResetTrackerConnection(tracker);
             Debug.LogWarning("BIOFIT " + tracker.name + ": " + ex);
         }
+    }
+
+    private void ResetTrackerConnection(Tracker tracker)
+    {
+        if(rawActive) RawOperation=SetRawCaptureAsync(false);
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,tracker.id,"DESCONEXION: STREAM,0 best effort; sin enlace no se confirma apagado remoto");
+        tracker.moving = false; tracker.hasLastTimestamp = false;
+        tracker.hasStatus = false; tracker.gate.Reset(); tracker.statusGate.Reset();
+        tracker.readiness.Reset(); Array.Clear(tracker.configPages,0,tracker.configPages.Length);
+        tracker.statusWindowStart = 0; tracker.lastStatusCallback = 0;
+        tracker.statusInWindow = 0; tracker.statusHz = 0;
+        inputEngine.ProcessEvent(tracker.id, 2, Time.realtimeSinceStartup);
+        BmdDisconnected(tracker);
+        timeAligner.Reset(tracker.id); InvalidateControl(); tracker.firmwareVersion=0;
+        if(tracker.id==1){leftEvents=null;leftStatus=null;leftTransport=null;leftRaw=null;}
+        else{rightEvents=null;rightStatus=null;rightTransport=null;rightRaw=null;}
     }
 
     private void Enqueue(Packet packet)
@@ -958,16 +1021,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             Tracker tracker = packet.expectedId == 1 ? left : right;
             if (packet.reset)
             {
-                if(rawActive) RawOperation=SetRawCaptureAsync(false);
-                eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,packet.expectedId,"DESCONEXION: STREAM,0 best effort; sin enlace no se confirma apagado remoto");
-                tracker.moving = false; tracker.hasLastTimestamp = false;
-                tracker.hasStatus = false; tracker.gate.Reset(); tracker.statusGate.Reset();
-                tracker.readiness.Reset(); Array.Clear(tracker.configPages,0,tracker.configPages.Length);
-                tracker.statusWindowStart = 0; tracker.lastStatusCallback = 0;
-                tracker.statusInWindow = 0; tracker.statusHz = 0;
-                inputEngine.ProcessEvent(packet.expectedId, 2, Time.realtimeSinceStartup);
-                BmdDisconnected(tracker);
-                timeAligner.Reset(packet.expectedId); InvalidateControl(); tracker.firmwareVersion=0;
+                if(packet.generation==tracker.generation)ResetTrackerConnection(tracker);
                 continue;
             }
             if (packet.generation != tracker.generation) continue;

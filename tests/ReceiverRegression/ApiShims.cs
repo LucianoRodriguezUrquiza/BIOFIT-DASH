@@ -39,8 +39,8 @@ namespace UniBLE {
  // Surface checked against UniBLE v0.1.1 dba3f296; this does not execute BLE.
  public enum BleConnectionState { Disconnected,Connecting,Connected,Disconnecting }
  public interface IBleCharacteristic { Task SubscribeAsync(Action<byte[]> a, System.Threading.CancellationToken cancellationToken=default); Task UnsubscribeAsync(System.Threading.CancellationToken cancellationToken=default); Task WriteAsync(byte[] data,bool withResponse=true,System.Threading.CancellationToken cancellationToken=default); }
- public interface IBleService { Task<IBleCharacteristic> GetCharacteristicAsync(string s); }
- public interface IBleDevice { event Action<BleConnectionState> OnConnectionStateChanged; Task ConnectAsync(); Task<IBleService> GetServiceAsync(string s); }
- public interface IBleAdapter { Task<bool> RequestPermissionAsync(); Task<bool> IsAvailableAsync(); Task<IBleDevice> GetDeviceAsync(string s); }
+ public interface IBleService { Task<IBleCharacteristic> GetCharacteristicAsync(string s,System.Threading.CancellationToken token=default); }
+ public interface IBleDevice { BleConnectionState ConnectionState {get;} event Action<BleConnectionState> OnConnectionStateChanged; Task ConnectAsync(System.Threading.CancellationToken token=default); Task DisconnectAsync(System.Threading.CancellationToken token=default); Task<IBleService> GetServiceAsync(string s,System.Threading.CancellationToken token=default); }
+ public interface IBleAdapter { Task<bool> RequestPermissionAsync(System.Threading.CancellationToken token=default); Task<bool> IsAvailableAsync(System.Threading.CancellationToken token=default); Task<IBleDevice> GetDeviceAsync(string s,System.Threading.CancellationToken token=default); }
  public static class BleManager { public static IBleAdapter Adapter; }
 }

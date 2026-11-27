@@ -67,6 +67,7 @@ namespace Biofit.GeomeTryOriginal
         private float bmdRefreshAt;
         // Discovery only: listen to legacy Unity input while the Joystick diagnostic
         // page is open. No gameplay binding is changed until Android HID codes are known.
+        private Button connectTrackersButton;
         private bool joystickPage;
         private TMP_Text joystickDevicesLabel;
         private TMP_Text joystickEventsLabel;
@@ -1189,11 +1190,17 @@ namespace Biofit.GeomeTryOriginal
                 canvasRoot, new Vector2(.310f, .614f),
                 new Vector2(596f, 164f), Vector2.zero);
             Text("Seccion trackers", trackers, "CONEXIÓN WAVESHARE",
-                new Vector2(.5f, .80f), new Vector2(528f, 44f),
-                Vector2.zero, 29, Lime);
+                new Vector2(.5f, .85f), new Vector2(528f, 32f),
+                Vector2.zero, 26, Lime);
             connectionLabel = Text("Estado trackers", trackers, "",
-                new Vector2(.5f, .38f), new Vector2(536f, 100f),
-                Vector2.zero, 25, Color.white);
+                new Vector2(.5f, .53f), new Vector2(536f, 65f),
+                Vector2.zero, 19, Color.white);
+            connectTrackersButton=Button("Buscar y conectar trackers",trackers,"BUSCAR Y CONECTAR",
+                new Vector2(.5f,.15f),new Vector2(460f,40f),Vector2.zero,()=>{
+                    var monitor=GetMonitor();
+                    if(monitor!=null)monitor.RequestTrackerConnection();
+                    RefreshBleStatus();
+                },Lime,20);
 
             RectTransform movements = ArcadePanel("Eventos BLE",
                 canvasRoot, new Vector2(.690f, .614f),
@@ -1597,6 +1604,7 @@ namespace Biofit.GeomeTryOriginal
                 statusLabel == null) return;
             var m = GetMonitor();
             var bridge = FindFirstObjectByType<BiofitGeomeTryLegacyBridge>();
+            if(connectTrackersButton!=null)connectTrackersButton.interactable=m!=null&&m.CanRequestTrackerConnection;
             if (m == null)
             {
                 connectionLabel.text = "RECEPTOR BLE SIN INICIAR";
@@ -1607,10 +1615,9 @@ namespace Biofit.GeomeTryOriginal
             else
             {
                 connectionLabel.text =
-                    "TRACKERS: " + (m.BothTrackersConnected ?
-                        "2 / 2 CONECTADOS" : "ESPERANDO 2 TRACKERS") +
-                    "\nRELOJES: " + (m.ClockAlignmentReady ?
-                        "SINCRONIZADOS" : "ESPERANDO STATUS");
+                    "TRACKERS: "+m.ConnectedTrackerCount+" / 2 CONECTADOS"+
+                    "\nRELOJES: "+(m.ClockAlignmentReady?"SINCRONIZADOS":"ESPERANDO STATUS")+
+                    "\n"+m.TrackerConnectionStatus;
                 eventLabel.text =
                     "PARES RECIBIDOS: " + (bridge == null ?
                         "0" : bridge.AcceptedPairs.ToString()) +
