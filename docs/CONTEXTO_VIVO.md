@@ -157,3 +157,5 @@ La versión V6.3 fue aprobada como estable de trabajo por el usuario el 24/11/20
 
 ## 27/11/2026 — BMD físico, GFA y locomoción universal
 Ver [registro RCA y hoja de ruta](RCA_20261127_BMD_GFA_LOCOMOCION.md): perfiles remotos y adquisición/exportación verificados por usuario, transferencia lenta, ensayos CSV pendientes, próxima revisión BMD/GFA y futuro motor común STEP/WALK/RUN/JUMP. Solo documentación, sin cambio de código ni promoción.
+
+- Seguimiento CI: el primer ensayo de configuración modular (46059376309) pasó los contratos del nuevo layout, navegación, sintaxis C#, exportador Android y compatibilidad Windows, pero falló un contrato histórico que exigía coordenadas del antiguo botón JOYSTICK. Se actualiza a verificar posición nueva y navegación preservada; no se modifica la lógica HID. El cronómetro usa Math.Floor/Max para compatibilidad con shims y se prueba avance real y congelación. Se distinguen cancelaciones y relojes pendientes. Validación final Unity/Android pendiente.

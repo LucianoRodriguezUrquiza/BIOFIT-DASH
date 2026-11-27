@@ -20,7 +20,10 @@ assert "m_Name: BIOFIT VR Stick X" in axes and "m_Name: BIOFIT VR Stick Y" in ax
 assert "m_Name: BIOFIT VR Stick X" in axes and "type: 2" in axes
 
 assert "if (scene == Settings && (cooldownPage || joystickPage))" in ux
-assert 'new Vector2(.820f, .078f)' in ux
+main_settings=ux[ux.index("private void BuildSettings()"):ux.index("private void BuildBmd()")]
+assert 'SettingsButton("Abrir joystick",tools,"JOYSTICK"' in main_settings
+assert 'cooldownPage=false;joystickPage=true;BuildScreen(Settings);' in main_settings
+assert 'new Vector2(.5f,.39f),new Vector2(400,68)' in main_settings
 assert '"COOLDOWN"' in ux and "CooldownOptionsMs = { 900, 800, 700, 600, 500, 400 }" in ux
 assert 'Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)' not in ux, "Do not add gameplay input to UX diagnostic."
 assert '"BIOFIT JOYSTICK DIAGNOSTIC (Unity KeyCode): "' in ux
