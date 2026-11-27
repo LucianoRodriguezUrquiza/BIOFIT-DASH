@@ -16,3 +16,6 @@ Se encontró que el verificador de archivos existente solo aceptaba 15 columnas;
 
 ## RCA — integración bilateral host
 Se añade prueba con el BiofitBLEMonitor real y dos características CONFIG simuladas: lectura FW230 inicialmente bloqueada, aplicación bilateral, fallo parcial deliberado, restauración, captura/descarga de ambos pies con archivo SHA, cancelación y desconexión. Las pruebas simulan GATT y no garantizan comportamiento Android. No se puede exportar un trace anterior como resultado de una descarga nueva fallida; archivos anteriores conservados en BMD/.
+
+## RCA — resultado de validación
+CI [45914541751](https://github.com/LucianoRodriguezUrquiza/BIOFIT-GAME-UNITY/actions/runs/45914541751), commit `040fccadb241c1189dec19e51315f7b1ac860a5b`: 5/5 jobs aprobados. Incluye ReceiverRegression real con GATT simulado y BmdRegression, regresiones de navegación, geometría, Android fuente y compatibilidad Windows. Firmware V230 3/3 (run 45912745315 y cierre documental 45912863384). No se compiló una APK real ni se probó Android/ESP32 conjuntamente. Autorizado para instalar rama experimental en el proyecto local y comprobar compilación Unity antes de cargar los trackers. Main no modificada.

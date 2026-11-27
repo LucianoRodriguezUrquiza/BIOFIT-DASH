@@ -1,0 +1,43 @@
+{
+  "version": "BMD V1 EXP",
+  "verified_commit": "040fccadb241c1189dec19e51315f7b1ac860a5b",
+  "stable_main": "3ed95b2dc2ddfab081c587c68283221c206bf00b",
+  "run": 45914541751,
+  "jobs": [
+    {
+      "name": "geometry-csharp-syntax",
+      "result": "success"
+    },
+    {
+      "name": "geometry-windows-compat",
+      "result": "success"
+    },
+    {
+      "name": "android-export-source",
+      "result": "success"
+    },
+    {
+      "name": "regression",
+      "result": "success"
+    },
+    {
+      "name": "phase-firmware-replay",
+      "result": "success"
+    }
+  ],
+  "evidence": [
+    "PASS: Original repo isolated outside Unity Assets; maps intact; BIOFIT legacy receiver/physics preserved.",
+    "PASS BMD real monitor integration: bilateral apply, partial failure, restore, two-foot trace, cancellation, disconnect",
+    "PASS: 50 receiver integration checks using API shims (not a Unity build).",
+    "PASS BMD strict protocol, ACK/readback, trace decode, isolated shadow state, archive SHA/schema"
+  ],
+  "firmware": {
+    "version": "2.3.0 EXP",
+    "commit": "2a21b406a5d3a29171af82baaf60540efb74c54d",
+    "run": 45912863384,
+    "result": "success"
+  },
+  "apk_compiled": false,
+  "physical_validation": false,
+  "notes": "Only host and source checks; final documentation descendant does not change executable sources."
+}
