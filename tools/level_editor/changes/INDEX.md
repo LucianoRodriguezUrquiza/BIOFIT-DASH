@@ -19,3 +19,5 @@ Base histórica V6.3: cinco mapas locales y manifiesto inalterados. Los deltas d
 ## Verificación local V6.5 (26/11/2026)
 
 El usuario aportó captura de PowerShell: HEAD local/remoto ffa907d, diff versionado vacío y los cinco hashes Active.json coinciden con referencias publicadas. Nivel 3: 2074 registros; total campaña 12207. Ver [consolidación V6.5](../../../docs/CONSOLIDACION_V65.md). No subir mapas completos ni recursos originales; conservar los deltas y bases locales.
+
+- [BIOFIT_level_3_20261127_155739.json](BIOFIT_level_3_20261127_155739.json) — ranura 3; 163 ediciones, 723 altas, 767 bajas; base 6313a59c0eac4bfdc281ac210226aa079f2ed4fcf5ae6b11e6b7838c078d2a33; objetivo e124ad3a5fdf05e13c59ca8d2910a50e8df6253cf610341c9179a87bb4517b3e. Edición experimental desde BIOFIT Level Editor; validación de jugabilidad pendiente.
