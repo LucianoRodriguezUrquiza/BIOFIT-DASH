@@ -104,3 +104,7 @@ V6.3 sigue siendo la versión estable de main. El último avance experimental es
 
 # BIOFIT DASH — relevo de desarrollo V6.3
 La versión V6.3 fue aprobada como estable de trabajo por el usuario el 24/11/2026. Leer primero [CONTEXTO_ACTUAL.md](CONTEXTO_ACTUAL.md), [ACEPTACION_V63.md](ACEPTACION_V63.md), [ASSET_SOURCES.md](ASSET_SOURCES.md), [referencias de diseño](referencias/V63/README.md) y [validación](../tools/campaign_v63/VALIDACION_V63.json). Verificar el SHA remoto de main antes de afirmar que está consolidada. El menú V6.1 es runtime; la escena antigua en Edit Mode es normal. Los mapas 2–5 conservan V5 y Stereo Madness tiene 3015 registros. DIPL, ICC, RFD, BRO y FLM obligatorios. Usar siempre el mismo proyecto local, preservar BLE BILATERAL LEGACY, firmware y cooldown, no modificar exclusiones. Contexto histórico: [V5](history/CONTEXTO_ACTUAL_V5.md), [relevo V5](history/CONTEXTO_VIVO_V5.md). La siguiente tarea la define el usuario.
+
+
+## 27/11/2026 — BMD físico, GFA y locomoción universal
+Ver [registro RCA y hoja de ruta](RCA_20261127_BMD_GFA_LOCOMOCION.md): perfiles remotos y adquisición/exportación verificados por usuario, transferencia lenta, ensayos CSV pendientes, próxima revisión BMD/GFA y futuro motor común STEP/WALK/RUN/JUMP. Solo documentación, sin cambio de código ni promoción.
