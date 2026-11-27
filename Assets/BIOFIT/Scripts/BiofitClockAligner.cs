@@ -122,6 +122,18 @@ public sealed class BiofitClockAligner
         return true;
     }
 
+    // Inverse of the EXISTING estimated clock. No new anchors or changes to
+    // gameplay timing. Used only to tag an event-triggered diagnostic window.
+    public bool TryMapPhoneTime(byte trackerId,double phoneSeconds,out uint sensorMillis)
+    {
+        sensorMillis=0;
+        Clock c=GetClock(trackerId);
+        if(c==null||!Ready(c,phoneSeconds)||double.IsNaN(phoneSeconds)||double.IsInfinity(phoneSeconds))return false;
+        double delta=(phoneSeconds-c.BestOffset-c.SensorSeconds)*1000d;
+        if(delta<int.MinValue||delta>int.MaxValue)return false;
+        sensorMillis=unchecked(c.LastSensor+(uint)(int)Math.Round(delta));
+        return true;
+    }
     public void Reset(byte id)
     {
         Clock state = GetClock(id);

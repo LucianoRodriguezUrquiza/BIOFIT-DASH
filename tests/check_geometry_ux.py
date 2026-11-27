@@ -441,9 +441,9 @@ assert 'body.gravityScale=flipped?-BallSpiderGravity:BallSpiderGravity;' in grav
 assert 'if(Mode==BiofitMode.Spider) icon.flipY=flipped;' in gravity_method
 assert 'SetMode(' not in gravity_method and 'body.position' not in gravity_method
 pulse=motor.split('public bool TryPulse()',1)[1].split('private IEnumerator GravityFlipEffect',1)[0]
-assert pulse.index('Time.unscaledTime - lastManualAction < .12f') < pulse.index('interaction.TryBallSpiderOrb(cube)') < pulse.index('if (!SurfaceContact(support)) return false;')
+assert pulse.index('Time.unscaledTime - lastManualAction < .12f') < pulse.index('interaction.TryBallSpiderOrb(cube)') < pulse.index('if (!SurfaceContact(support)) return RejectPulse("NO_SUPPORT");')
 assert 'lastManualAction=Time.unscaledTime;\n                        return true;' in pulse
-assert 'if (Vector2.Distance(destination, body.position) < 1.0f) return false;' in pulse
+assert 'if (Vector2.Distance(destination, body.position) < 1.0f) return RejectPulse("DESTINATION_TOO_CLOSE");' in pulse
 assert 'body.position = destination;' in pulse and 'StartCoroutine(SpiderEffect(oldPosition, transform.position));' in pulse
 assert 'bool applied = motor.TryPulse();' in orb_bridge
 print("PASS: Ball/Spider pad and orb dispatch, actual contact, priority and preserved teleport contracts")

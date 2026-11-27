@@ -103,7 +103,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         rawActive ? "RAW: ON" : "RAW: OFF";
     public void ToggleRawCapture()
     {
-        if(BmdBusy){RawStatus="RAW: BMD ocupado";return;}
+        if(BmdBusy||BmdAutoSession){RawStatus="RAW: BMD/GFA ocupado";return;}
         if(CaptureSaving)
         {
             RawStatus="RAW: esperar FINALIZANDO; no cambiar durante el cierre";
@@ -199,6 +199,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     }
     private async Task CompleteCaptureAsync()
     {
+        await FinishAutoSession();
         await SetRawCaptureAsync(false);
         if(rawCapture!=null)await rawCapture.FinishAsync();
         // Include final RAW quality even though gameplay recording has ended.
@@ -539,6 +540,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         eventCapture.RecordDiagnostic(Time.realtimeSinceStartup, 0,
             "COOLDOWN_MS=" + PairCooldownMilliseconds +
             " source=INICIO_REGISTRO mode=BILATERAL_LEGACY");
+        BeginAutoSession();
         return true;
     }
 
@@ -646,6 +648,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         RecordControlDiagnostic("GFA_SUMMARY "+GfaSummary);
         if(!eventCapture.FinishGame(Time.realtimeSinceStartup))return false;
         gameCaptureActive = false;
+        autoAcceptMarkers=false;
         lastGameSummary = "BIOFIT DASH | RESUMEN EXPERIMENTAL\n" +
             "IZQ MOV_ON=" + (left.movOn - gLeftOn) +
             " UP=" + (left.upImpulses - gLeftUp) + "\n" +

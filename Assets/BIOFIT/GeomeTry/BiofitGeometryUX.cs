@@ -1288,20 +1288,21 @@ namespace Biofit.GeomeTryOriginal
                 int action=i;
                 Button("BMD accion "+i,canvasRoot,commands[i],new Vector2(.14f+(i%4)*.24f,.282f-(i/4)*.103f),new Vector2(350,72),Vector2.zero,()=>BmdAction(action),i==7?Ice:Lime,22);
             }
-            Button("BMD duracion",canvasRoot,"DURACION TRACE",new Vector2(.25f,.07f),new Vector2(575,55),Vector2.zero,()=>{GetMonitor()?.CycleBmdDuration();RefreshBmd();},Ice,20);
-            Button("BMD montaje",canvasRoot,"UBICACION SENSOR",new Vector2(.75f,.07f),new Vector2(575,55),Vector2.zero,()=>{GetMonitor()?.CycleBmdPlacement();RefreshBmd();},Ice,20);
+            Button("BMD duracion",canvasRoot,"DURACION TRACE",new Vector2(.25f,.07f),new Vector2(400,55),Vector2.zero,()=>{GetMonitor()?.CycleBmdDuration();RefreshBmd();},Ice,18);
+            Button("BMD montaje",canvasRoot,"UBICACION SENSOR",new Vector2(.51f,.07f),new Vector2(400,55),Vector2.zero,()=>{GetMonitor()?.CycleBmdPlacement();RefreshBmd();},Ice,18);
+            Button("BMD auto",canvasRoot,"GFA AUTO ON/OFF",new Vector2(.77f,.07f),new Vector2(400,55),Vector2.zero,()=>{GetMonitor()?.ToggleBmdAuto();RefreshBmd();},Ice,18);
             RefreshBmd();
         }
         private void BmdAction(int action)
         {
             var m=GetMonitor();if(m==null)return;
-            switch(action){case 0:m.RequestBmd("query");break;case 1:m.RequestBmd("profile",bmdSelected);break;case 2:bmdSelected=0;m.RequestBmd("profile",0);break;case 3:m.RequestBmd("start");break;case 4:m.RequestBmd("freeze");break;case 5:m.RequestBmd("downloadExport");break;case 6:m.ExportBmdTrace();break;case 7:m.CancelBmd();break;}
+            switch(action){case 0:m.RequestBmd("query");break;case 1:m.RequestBmd("profile",bmdSelected);break;case 2:bmdSelected=0;m.RequestBmd("profile",0);break;case 3:m.RequestBmd("start");break;case 4:m.RequestBmd("freeze");break;case 5:m.RequestBmd(m.BmdAutoEnabled?"autoDownloadExport":"downloadExport");break;case 6:m.ExportBmdTrace();break;case 7:m.CancelBmd();break;}
             RefreshBmd();
         }
         private void RefreshBmd()
         {
             var m=GetMonitor();
-            if(bmdStatusLabel!=null)bmdStatusLabel.text=m==null?"Receptor no disponible":m.BmdTrackerSummary+"\n"+m.BmdDetectorSummary+"\n"+m.BmdShadowSummary+" | "+m.GfaSummary+"\n"+m.BmdStatus+"\n"+m.ExportStatus;
+            if(bmdStatusLabel!=null)bmdStatusLabel.text=m==null?"Receptor no disponible":m.BmdTrackerSummary+"\n"+m.BmdDetectorSummary+"\n"+m.GfaSummary+" | "+(m.BmdAutoEnabled?"AUTO ON":"AUTO OFF")+"\n"+m.BmdStatus+" ("+(m.BmdProgress*100).ToString("F0")+"%)\n"+m.BmdAutoStatus+" | "+m.ExportStatus;
             if(bmdSelectedLabel!=null)bmdSelectedLabel.text="SELECCIÓN: "+bmdSelected+" · "+(bmdSelected==0?"LEGACY":"EXPERIMENTAL")+" · "+(m==null?"":(m.BmdTraceSeconds==0?"4.6s":m.BmdTraceSeconds+"s")+" · "+m.BmdPlacement);
             for(int i=0;i<bmdOptions.Length;i++)if(bmdOptions[i]!=null)
             {

@@ -75,6 +75,7 @@ public static class BiofitCaptureArchive
                     if(!header)
                     {
                         if(line=="foot;generation;index;sensor_ms;up_mg;velocity_mm_s;activity_mg;gyro_x10;ax_mg;ay_mg;az_mg;gx_x10;gy_x10;gz_x10;flags;block_mask;profile;events;legacy_up_mg;adaptive_up_mg;dt_us")columns=21;
+                        else if(line=="foot;generation;index;sensor_ms;up_mg;velocity_mm_s;activity_mg;gyro_x10;ax_mg;ay_mg;az_mg;gx_x10;gy_x10;gz_x10;flags;block_mask;profile;events;legacy_up_mg;adaptive_up_mg;dt_us;failure_id;target_ms;receipt_ms;capture_flags;snapshot_state;snapshot_count;record_type")columns=28;
                         else if(!line.StartsWith("tipo;etapa;",StringComparison.Ordinal))return false;
                         header=true;
                     }

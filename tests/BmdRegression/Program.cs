@@ -54,6 +54,12 @@ class Program
         Check(!BiofitBmdProtocol.TryTrace(Encoding.ASCII.GetBytes("T,2,1025,1"),out _),"invalid count");
         Check(BiofitBmdProtocol.TryTrace(Encoding.ASCII.GetBytes("T,2,13452,1"),out _,BiofitBmdProtocol.MaxTrace),"extended trace");
         Check((BiofitBmdProtocol.CrcUpdate(0xffffffffu,Encoding.ASCII.GetBytes("123456789"))^0xffffffffu)==0xcbf43926u,"CRC vector");
+        Check(BiofitBmdProtocol.TryNonce(Encoding.ASCII.GetBytes("N,4294967295"),out uint nonce)&&nonce==uint.MaxValue,"nonce uint");
+        Check(BiofitBmdProtocol.TryAuto(Encoding.ASCII.GetBytes("A,7,16,0"),out var astate)&&astate.Count==16&&!astate.Armed,"auto state");
+        Check(!BiofitBmdProtocol.TryAuto(Encoding.ASCII.GetBytes("A,7,17,1"),out _),"auto cap");
+        var meta=new byte[20];meta[0]=0xd5;meta[1]=1;meta[3]=3;meta[5]=0x80;meta[6]=7;meta[16]=1;meta[18]=2;
+        Check(BiofitBmdProtocol.TrySnapshot(meta,1,0,out var snap)&&snap.FailureId==7&&snap.Flags==2&&snap.Generation==32768,"snapshot metadata");
+        Check(BiofitBmdProtocol.AutoMetadata(1,snap,"SNAPSHOT").Split(';').Length==28,"auto metadata schema");
         var shadow=new BiofitBmdShadow();shadow.Begin(400,.18f);
         shadow.Observe(1,1,.105f,400,.18f);shadow.Observe(2,1.03,.105f,400,.18f);
         string s=shadow.Summary();Check(s.Contains("100mg=1")&&s.Contains("110mg=0")&&s.Contains("120mg=0"),s);
@@ -68,6 +74,10 @@ class Program
             Check(archive.Error==""&&BiofitCaptureArchive.VerifyFileStreaming(path),"trace SHA "+archive.Error);
             System.IO.File.AppendAllText(path,"tamper");
             Check(!BiofitCaptureArchive.VerifyFileStreaming(path),"reject tamper");
+            string auto=System.IO.Path.Combine(dir,"auto.csv");
+            var autoFile=new BiofitSessionFile(auto,BiofitBmdProtocol.AutoHeader);
+            autoFile.Add(BiofitBmdProtocol.AutoMetadata(1,snap,"SNAPSHOT"));await autoFile.Finish();
+            Check(autoFile.Error==""&&BiofitCaptureArchive.VerifyFileStreaming(auto),"auto archive schema");
             string bad=System.IO.Path.Combine(dir,"bad.csv");
             var invalid=new BiofitSessionFile(bad,BiofitBmdProtocol.TraceHeader);
             invalid.Add("1;7;3");await invalid.Finish();

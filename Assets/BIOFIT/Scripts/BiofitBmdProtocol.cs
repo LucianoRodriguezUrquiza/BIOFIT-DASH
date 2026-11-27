@@ -36,7 +36,34 @@ public static class BiofitBmdProtocol
         if(!Fields(bytes,"P",4,out var f)||f[0]>15||f[1]>15||f[3]>2)return false;
         p=new Profile{Active=f[0],Target=f[1],Token=f[2],State=f[3]};return true;
     }
-    public const int MaxTrace=13452, MaxBlock=16;
+    public const int MaxTrace=13452, MaxBlock=16, MaxAutoSlots=16;
+    public struct AutoState {public int Token,Count;public bool Armed;}
+    public struct Snapshot
+    {
+        public int Slot,State,Generation,FailureId,Count,Flags;
+        public uint Target,Received;
+    }
+    public static bool TryAuto(byte[] bytes,out AutoState s)
+    {
+        s=default;
+        if(!Fields(bytes,"A",3,out var f)||f[1]>MaxAutoSlots||f[2]>1||(f[0]==0&&(f[1]!=0||f[2]!=0)))return false;
+        s=new AutoState{Token=f[0],Count=f[1],Armed=f[2]==1};return true;
+    }
+    public static bool TryNonce(byte[] bytes,out uint nonce)
+    {
+        nonce=0;
+        if(bytes==null||bytes.Length<3||bytes.Length>12)return false;
+        string s=Encoding.ASCII.GetString(bytes);
+        return s.StartsWith("N,",StringComparison.Ordinal)&&uint.TryParse(s.Substring(2),NumberStyles.None,CultureInfo.InvariantCulture,out nonce)&&nonce!=0;
+    }
+    public static bool TrySnapshot(byte[] b,byte foot,int slot,out Snapshot s)
+    {
+        s=default;
+        if(b==null||b.Length!=20||b[0]!=0xD5||b[1]!=foot||b[2]!=slot||b[3]<1||b[3]>4||U16(b,4)<32768||U16(b,6)==0||
+            U16(b,16)>1024||(b[18]&~31)!=0||b[19]!=0||(b[3]==3&&U16(b,16)==0)||(b[3]==4&&U16(b,16)!=0))return false;
+        s=new Snapshot{Slot=slot,State=b[3],Generation=U16(b,4),FailureId=U16(b,6),Target=U32(b,8),Received=U32(b,12),Count=U16(b,16),Flags=b[18]};
+        return true;
+    }
     public static bool TryTrace(byte[] bytes,out Trace t,int maximum=1024)
     {
         t=default;
@@ -59,6 +86,13 @@ public static class BiofitBmdProtocol
         b!=null&&b.Length==20&&b[0]==0xD4&&b[1]==foot&&b[2]==count&&b[3]==1&&
         U16(b,4)==gen&&U16(b,6)==start;
     public const string TraceHeader="foot;generation;index;sensor_ms;up_mg;velocity_mm_s;activity_mg;gyro_x10;ax_mg;ay_mg;az_mg;gx_x10;gy_x10;gz_x10;flags;block_mask;profile;events;legacy_up_mg;adaptive_up_mg;dt_us";
+    public const string AutoHeader=TraceHeader+";failure_id;target_ms;receipt_ms;capture_flags;snapshot_state;snapshot_count;record_type";
+    public static string AutoSuffix(Snapshot s,string type)=>FormattableString.Invariant($";{s.FailureId};{s.Target};{s.Received};{s.Flags};{s.State};{s.Count};{type}");
+    public static string AutoMetadata(byte foot,Snapshot s,string type)
+    {
+        var fields=new string[21];fields[0]=foot.ToString(CultureInfo.InvariantCulture);fields[1]=s.Generation.ToString(CultureInfo.InvariantCulture);fields[2]="-1";
+        return string.Join(";",fields)+AutoSuffix(s,type);
+    }
     public static string TraceRow(byte foot,int gen,int index,byte[] a,byte[] b,byte[] c)
     {
         if(!PageMatches(a,foot,gen,index,0)||!PageMatches(b,foot,gen,index,1)||!PageMatches(c,foot,gen,index,2))
@@ -134,6 +168,38 @@ public sealed class BiofitBmdLink
             finally {lock(gate){reply=null;matches=null;}}
         }
         throw new TimeoutException("Sin respuesta CONFIG: "+command);
+    }
+    public async Task<uint> GetNonce(CancellationToken token)
+    {
+        var b=await Send("D,N",x=>BiofitBmdProtocol.TryNonce(x,out _),token);
+        BiofitBmdProtocol.TryNonce(b,out var n);return n;
+    }
+    public async Task<BiofitBmdProtocol.AutoState> AutoCommand(string command,CancellationToken token)
+    {
+        var b=await Send(command,x=>BiofitBmdProtocol.TryAuto(x,out var s)&&
+            (command=="D,A,0"?!s.Armed:command=="D,A"||s.Armed&&command=="D,A,"+s.Token),token);
+        BiofitBmdProtocol.TryAuto(b,out var state);return state;
+    }
+    public async Task MarkFailure(int id,uint target,CancellationToken token)
+    {
+        string cmd=FormattableString.Invariant($"D,M,{id},{target}");
+        string prefix="M,"+id+",";
+        await Send(cmd,x=>{
+            string ack=Encoding.ASCII.GetString(x);
+            return ack.StartsWith(prefix,StringComparison.Ordinal)&&int.TryParse(ack.Substring(prefix.Length),NumberStyles.None,CultureInfo.InvariantCulture,out int slot)&&slot>=0&&slot<BiofitBmdProtocol.MaxAutoSlots;
+        },token);
+    }
+    public async Task<BiofitBmdProtocol.Snapshot> GetSnapshot(byte foot,int slot,CancellationToken token)
+    {
+        var watch=System.Diagnostics.Stopwatch.StartNew();
+        while(watch.Elapsed.TotalSeconds<12)
+        {
+            var b=await Send("D,I,"+slot,x=>BiofitBmdProtocol.TrySnapshot(x,foot,slot,out _),token);
+            BiofitBmdProtocol.TrySnapshot(b,foot,slot,out var result);
+            if(result.State>=3)return result;
+            await Task.Delay(100,token);
+        }
+        throw new TimeoutException("GFA snapshot pendiente: "+slot);
     }
     public async Task<BiofitBmdProtocol.Profile> GetProfile(CancellationToken token)
     {
