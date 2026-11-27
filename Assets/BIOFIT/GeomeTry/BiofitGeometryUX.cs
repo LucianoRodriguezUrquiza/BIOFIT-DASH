@@ -1273,7 +1273,7 @@ namespace Biofit.GeomeTryOriginal
         private void BuildBmd()
         {
             Fill("BMD fondo",canvasRoot,Blue);ArcadeCorners(canvasRoot);
-            Text("BMD titulo",canvasRoot,"BMD · BIOFIT MOTION DIAGNOSTICS",new Vector2(.5f,.90f),new Vector2(1200,65),Vector2.zero,36,Lime);
+            Text("BMD titulo",canvasRoot,"BMD V1.1 · BIOFIT MOTION DIAGNOSTICS",new Vector2(.5f,.90f),new Vector2(1200,65),Vector2.zero,36,Lime);
             bmdStatusLabel=Text("BMD estado",canvasRoot,"",new Vector2(.5f,.748f),new Vector2(1380,176),Vector2.zero,22,Color.white);
             string[] labels={"UMBRAL 0,12 g","REARME SUPERVISADO","GRAVEDAD ADAPTATIVA","AISLAR LIFT TX"};
             for(int i=0;i<4;i++)
@@ -1282,26 +1282,27 @@ namespace Biofit.GeomeTryOriginal
                 bmdOptions[i]=Button("BMD opcion "+bit,canvasRoot,labels[i],new Vector2(.25f+(i%2)*.5f,.57f-(i/2)*.10f),new Vector2(675,68),Vector2.zero,()=>{var m=GetMonitor();if(m!=null&&m.BmdBusy)return;bmdSelected^=bit;RefreshBmd();},Ice,24);
             }
             bmdSelectedLabel=Text("BMD seleccion",canvasRoot,"",new Vector2(.5f,.39f),new Vector2(1280,42),Vector2.zero,24,Lime);
-            string[] commands={"CONSULTAR","APLICAR AMBOS","RESTAURAR 0","INICIAR TRACE","CONGELAR TRACE","DESCARGAR TRACE","EXPORTAR TRACE","CANCELAR"};
+            string[] commands={"CONSULTAR","APLICAR AMBOS","RESTAURAR 0","INICIAR TRACE","CONGELAR TRACE","DESCARGAR + EXPORTAR","EXPORTAR TRACE","CANCELAR"};
             for(int i=0;i<commands.Length;i++)
             {
                 int action=i;
                 Button("BMD accion "+i,canvasRoot,commands[i],new Vector2(.14f+(i%4)*.24f,.282f-(i/4)*.103f),new Vector2(350,72),Vector2.zero,()=>BmdAction(action),i==7?Ice:Lime,22);
             }
-            Text("BMD aviso",canvasRoot,"RAW OFF · CAMBIAR PERFIL EN REPOSO · FINALIZAR CSV ANTES DE DESCARGAR",new Vector2(.5f,.069f),new Vector2(1450,48),Vector2.zero,19,Ice);
+            Button("BMD duracion",canvasRoot,"DURACION TRACE",new Vector2(.25f,.07f),new Vector2(575,55),Vector2.zero,()=>{GetMonitor()?.CycleBmdDuration();RefreshBmd();},Ice,20);
+            Button("BMD montaje",canvasRoot,"UBICACION SENSOR",new Vector2(.75f,.07f),new Vector2(575,55),Vector2.zero,()=>{GetMonitor()?.CycleBmdPlacement();RefreshBmd();},Ice,20);
             RefreshBmd();
         }
         private void BmdAction(int action)
         {
             var m=GetMonitor();if(m==null)return;
-            switch(action){case 0:m.RequestBmd("query");break;case 1:m.RequestBmd("profile",bmdSelected);break;case 2:bmdSelected=0;m.RequestBmd("profile",0);break;case 3:m.RequestBmd("start");break;case 4:m.RequestBmd("freeze");break;case 5:m.RequestBmd("download");break;case 6:m.ExportBmdTrace();break;case 7:m.CancelBmd();break;}
+            switch(action){case 0:m.RequestBmd("query");break;case 1:m.RequestBmd("profile",bmdSelected);break;case 2:bmdSelected=0;m.RequestBmd("profile",0);break;case 3:m.RequestBmd("start");break;case 4:m.RequestBmd("freeze");break;case 5:m.RequestBmd("downloadExport");break;case 6:m.ExportBmdTrace();break;case 7:m.CancelBmd();break;}
             RefreshBmd();
         }
         private void RefreshBmd()
         {
             var m=GetMonitor();
             if(bmdStatusLabel!=null)bmdStatusLabel.text=m==null?"Receptor no disponible":m.BmdTrackerSummary+"\n"+m.BmdDetectorSummary+"\n"+m.BmdShadowSummary+"\n"+m.BmdStatus+"\n"+m.ExportStatus;
-            if(bmdSelectedLabel!=null)bmdSelectedLabel.text="SELECCIÓN: "+bmdSelected+" · "+(bmdSelected==0?"LEGACY":"EXPERIMENTAL")+" · APLICAR PARA CONFIRMAR";
+            if(bmdSelectedLabel!=null)bmdSelectedLabel.text="SELECCIÓN: "+bmdSelected+" · "+(bmdSelected==0?"LEGACY":"EXPERIMENTAL")+" · "+(m==null?"":(m.BmdTraceSeconds==0?"4.6s":m.BmdTraceSeconds+"s")+" · "+m.BmdPlacement);
             for(int i=0;i<bmdOptions.Length;i++)if(bmdOptions[i]!=null)
             {
                 Color color=(bmdSelected&(1<<i))!=0?Lime:Ice;

@@ -16,9 +16,24 @@ public sealed partial class BiofitBLEMonitor
     private double bmdResumeAfter;
     private int bmdMask=-1;
     public bool BmdBusy=>bmdCancel!=null;
-    public bool BmdFirmwareReady=>BothTrackersConnected&&left.firmwareVersion==230&&right.firmwareVersion==230&&leftBmd!=null&&rightBmd!=null;
+    private static bool DiagnosticFirmware(int v)=>v==230||v==231;
+    public bool BmdFirmwareReady=>BothTrackersConnected&&DiagnosticFirmware(left.firmwareVersion)&&left.firmwareVersion==right.firmwareVersion&&leftBmd!=null&&rightBmd!=null;
+    public bool BmdFastTrace=>BmdFirmwareReady&&left.firmwareVersion==231;
+    public int BmdTraceSeconds {get;private set;}=0; // 0 = compatible legacy ring
+    public string BmdPlacement {get;private set;}="SIN_ETIQUETAR";
+    private string bmdTraceOwner="";
+    private int bmdQueryLeft=-1,bmdQueryRight=-1;
+    public void CycleBmdDuration(){if(!BmdBusy&&!GameCaptureActive&&!BmdTraceArmed)BmdTraceSeconds=BmdTraceSeconds==0?5:BmdTraceSeconds==5?15:BmdTraceSeconds==15?30:BmdTraceSeconds==30?60:0;}
+    public void CycleBmdPlacement(){if(!GameCaptureActive&&!BmdBusy)BmdPlacement=BmdPlacement=="SIN_ETIQUETAR"?"BANCO":BmdPlacement=="BANCO"?"MANOS":BmdPlacement=="MANOS"?"TOBILLOS":BmdPlacement=="TOBILLOS"?"MIXTO":"SIN_ETIQUETAR";}
+    private void BmdAutoQuery()
+    {
+        if(!BmdFirmwareReady||bmdVerified||GameCaptureActive||BmdBusy||busy||!RawOperation.IsCompleted||rawActive||rawMayBeStreaming||CaptureSaving||ExportBusy)return;
+        if(bmdQueryLeft==left.generation&&bmdQueryRight==right.generation)return;
+        bmdQueryLeft=left.generation;bmdQueryRight=right.generation;
+        RequestBmd("query");
+    }
     public bool BmdControlBlocked=>BmdBusy||bmdUncertain||
-        ((left.firmwareVersion==230||right.firmwareVersion==230)&&(!BmdFirmwareReady||!bmdVerified));
+        ((DiagnosticFirmware(left.firmwareVersion)||DiagnosticFirmware(right.firmwareVersion))&&(!BmdFirmwareReady||!bmdVerified));
     private bool BmdEventAllowed(double callback)=>!BmdControlBlocked&&callback>=bmdResumeAfter;
     public string BmdStatus {get;private set;}="BMD: consultar ambos trackers";
     public string BmdTracePath {get;private set;}="";
@@ -33,8 +48,8 @@ public sealed partial class BiofitBLEMonitor
     private void BmdDisconnected(Tracker tracker)
     {
         if(tracker.id==1)leftBmd=null;else rightBmd=null;
-        if(bmdVerified||bmdUncertain||tracker.firmwareVersion==230){bmdUncertain=true;bmdVerified=false;}
-        BmdTraceArmed=false;CancelBmd();
+        if(bmdVerified||bmdUncertain||DiagnosticFirmware(tracker.firmwareVersion)){bmdUncertain=true;bmdVerified=false;}
+        BmdTraceArmed=false;bmdQueryLeft=bmdQueryRight=-1;ClearBmdDownloadCache();CancelBmd();
     }
     private void BmdResetBoundary()
     {
@@ -45,23 +60,27 @@ public sealed partial class BiofitBLEMonitor
     {
         if(BmdBusy||busy||!RawOperation.IsCompleted||rawActive||rawMayBeStreaming||CaptureSaving||ExportBusy)
         {BmdStatus="BMD: esperar BLE/RAW/exportación; RAW debe estar OFF";return false;}
-        if(!BmdFirmwareReady){BmdStatus="BMD: conectar ambos FW230 y esperar versión";return false;}
+        if(!BmdFirmwareReady){BmdStatus="BMD: conectar ambos FW230 o ambos FW231 y esperar versión";return false;}
         if((op=="profile"||op=="download")&&GameCaptureActive)
         {BmdStatus="BMD: FINALIZÁ el CSV antes de cambiar perfil o descargar";return false;}
         return true;
     }
     public void RequestBmd(string op,int mask=0)
     {
+        bool autoExport=op=="downloadExport";
+        if(autoExport)op="download";
         if(op!="query"&&op!="profile"&&op!="start"&&op!="freeze"&&op!="download")return;
         if(mask<0||mask>15||!BmdCanOperate(op))return;
         if((op=="start"||op=="freeze"||op=="download")&&!bmdVerified)
         {BmdStatus="BMD: consultá y confirmá perfiles primero";return;}
         bmdCancel=new CancellationTokenSource();
-        _=RunBmd(op,mask,bmdCancel);
+        _=RunBmd(op,mask,bmdCancel,autoExport);
     }
-    private async Task RunBmd(string op,int mask,CancellationTokenSource operation)
+    private readonly Dictionary<string,List<string>> bmdDownloadCache=new Dictionary<string,List<string>>();
+    private void ClearBmdDownloadCache()=>bmdDownloadCache.Clear();
+    private async Task RunBmd(string op,int mask,CancellationTokenSource operation,bool autoExport)
     {
-        bool acquired=false;
+        bool acquired=false,downloaded=false;
         var l=leftBmd;var r=rightBmd;int lg=left.generation,rg=right.generation;
         var token=operation.Token;
         try
@@ -98,11 +117,16 @@ public sealed partial class BiofitBLEMonitor
             }
             else if(op=="start"||op=="freeze")
             {
-                string cmd=op=="start"?"D,T,1":"D,T,0";
-                if(op=="start")BmdTraceArmed=true; // may be partially delivered; keep freeze accessible
+                bool fast=BmdFastTrace;
+                if(op=="start"&&BmdTraceSeconds!=0&&!fast)throw new InvalidOperationException("Duración ampliada requiere FW231");
+                string cmd=op=="start"?(BmdTraceSeconds==0?"D,T,1":"D,S,"+BmdTraceSeconds):"D,T,0";
+                if(op=="start"){
+                    if(!BmdTraceArmed){ClearBmdDownloadCache();BmdTracePath="";bmdTraceOwner=GameCaptureActive&&sessionFile!=null?sessionFile.Path:"";}
+                    BmdTraceArmed=true; // partial delivery: freeze remains available
+                }
                 BiofitBmdProtocol.Trace a=default,b=default;
-                await l.Batch(async x=>a=await x.TraceCommand(cmd,token),token);
-                await r.Batch(async x=>b=await x.TraceCommand(cmd,token),token);
+                await l.Batch(async x=>a=await x.TraceCommand(cmd,token,fast),token);
+                await r.Batch(async x=>b=await x.TraceCommand(cmd,token,fast),token);
                 CheckBmdConnection(l,r,lg,rg,token);
                 if(op=="freeze"&&(a.State!=2||b.State!=2))throw new InvalidOperationException("No hay dos trazas congeladas");
                 BmdTraceArmed=op=="start";
@@ -112,29 +136,41 @@ public sealed partial class BiofitBLEMonitor
             else
             {
                 BmdTracePath=""; // never export an earlier trace as the result of this download
-                var rows=new List<string>(2048);
-                int side=0;
+                bool fast=BmdFastTrace;
+                var rows=new List<string>(fast?2*BiofitBmdProtocol.MaxTrace:2048);
+                var watch=System.Diagnostics.Stopwatch.StartNew();
+                int newRows=0,side=0;
                 foreach(var link in new[]{l,r})
                 {
                     byte foot=(byte)(++side);
                     await link.Batch(async x=>{
-                        var t=await x.TraceCommand("D,T",token);
+                        var t=await x.TraceCommand("D,T",token,fast);
                         if(t.State!=2||t.Count<1)throw new InvalidOperationException("Congelar ambas trazas primero");
-                        for(int i=0;i<t.Count;i++)
+                        string key=foot+":"+t.Generation+":"+t.Count;
+                        if(!bmdDownloadCache.TryGetValue(key,out var cached)){cached=new List<string>(t.Count);bmdDownloadCache[key]=cached;}
+                        while(cached.Count<t.Count)
                         {
                             token.ThrowIfCancellationRequested();
-                            rows.Add(await x.GetRow(foot,t.Generation,i,token));
-                            BmdStatus="Descarga "+foot+"/2: "+(i+1)+"/"+t.Count+" muestras";
+                            CheckBmdConnection(l,r,lg,rg,token);
+                            int i=cached.Count;
+                            var block=fast?await x.GetBlock(foot,t.Generation,i,Math.Min(BiofitBmdProtocol.MaxBlock,t.Count-i),token):
+                                new[]{await x.GetRow(foot,t.Generation,i,token)};
+                            CheckBmdConnection(l,r,lg,rg,token);
+                            cached.AddRange(block);newRows+=block.Length;
+                            double rate=newRows/Math.Max(.001,watch.Elapsed.TotalSeconds);
+                            BmdStatus=FormattableString.Invariant($"Descarga {foot}/2: {cached.Count}/{t.Count} muestras | {rate:F1} m/s | resta pie ~{(t.Count-cached.Count)/rate:F0}s");
                         }
+                        rows.AddRange(cached);
                     },token);
                 }
                 CheckBmdConnection(l,r,lg,rg,token);
-                string path=Path.Combine(Application.persistentDataPath,"BMD","BIOFIT_BMD_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss")+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv");
-                var file=new BiofitSessionFile(path,BiofitBmdProtocol.TraceHeader);
-                foreach(string row in rows)file.Add(row);
+                string stem=string.IsNullOrEmpty(bmdTraceOwner)?"BIOFIT_BMD_"+DateTime.UtcNow.ToString("yyyyMMdd_HHmmss"):Path.GetFileNameWithoutExtension(bmdTraceOwner)+"_TRACE";
+                string path=Path.Combine(Application.persistentDataPath,"BMD",stem+"_"+Guid.NewGuid().ToString("N").Substring(0,8)+".csv");
+                var file=new BiofitSessionFile(path,BiofitBmdProtocol.TraceHeader,Math.Max(8192,rows.Count+1));
+                foreach(string row in rows)if(!file.Add(row)){await file.Finish();throw new IOException("Cola TRACE: "+file.Error);}
                 await file.Finish();
                 if(file.Error.Length!=0||!BiofitCaptureArchive.VerifyFileStreaming(path))throw new IOException("Trace no verificado: "+file.Error);
-                BmdTracePath=path;BmdStatus="Trace guardado y SHA256 OK: "+rows.Count+" muestras";
+                BmdTracePath=path;downloaded=true;ClearBmdDownloadCache();BmdStatus="Trace guardado y SHA256 OK: "+rows.Count+" muestras";
             }
         }
         catch(Exception ex)
@@ -149,6 +185,10 @@ public sealed partial class BiofitBLEMonitor
             if(acquired)rawTransition.Release();
             BmdResetBoundary();bmdCancel=null;operation.Dispose();
         }
+        if(downloaded&&autoExport){
+            if(!string.IsNullOrEmpty(bmdTraceOwner)&&bmdTraceOwner==SavedCapturePath)RequestExport(false);
+            else ExportBmdTrace();
+        }
     }
     private void CheckBmdConnection(BiofitBmdLink l,BiofitBmdLink r,int lg,int rg,CancellationToken token)
     {
@@ -158,6 +198,13 @@ public sealed partial class BiofitBLEMonitor
     }
     public void ExportBmdTrace()
     {
+        if(!BmdBusy&&!GameCaptureActive&&!CaptureSaving&&string.IsNullOrEmpty(BmdTracePath)&&!string.IsNullOrEmpty(SavedCapturePath))
+        {
+            string folder=Path.Combine(Application.persistentDataPath,"BMD");
+            if(Directory.Exists(folder))
+                foreach(string candidate in Directory.GetFiles(folder,Path.GetFileNameWithoutExtension(SavedCapturePath)+"_TRACE_*.csv"))
+                    if(BiofitCaptureArchive.VerifyFileStreaming(candidate))BmdTracePath=candidate;
+        }
         if(BmdBusy||ExportBusy||GameCaptureActive||CaptureSaving||string.IsNullOrEmpty(BmdTracePath))
         {BmdStatus="BMD: descargar trace y finalizar registro primero";return;}
         ExportBusy=true;

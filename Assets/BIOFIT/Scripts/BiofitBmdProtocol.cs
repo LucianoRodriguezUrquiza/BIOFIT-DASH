@@ -36,10 +36,11 @@ public static class BiofitBmdProtocol
         if(!Fields(bytes,"P",4,out var f)||f[0]>15||f[1]>15||f[3]>2)return false;
         p=new Profile{Active=f[0],Target=f[1],Token=f[2],State=f[3]};return true;
     }
-    public static bool TryTrace(byte[] bytes,out Trace t)
+    public const int MaxTrace=13452, MaxBlock=16;
+    public static bool TryTrace(byte[] bytes,out Trace t,int maximum=1024)
     {
         t=default;
-        if(!Fields(bytes,"T",3,out var f)||f[0]>2||f[1]>1024||
+        if(!Fields(bytes,"T",3,out var f)||f[0]>2||f[1]>maximum||
            (f[0]==0&&(f[1]!=0||f[2]!=0))||(f[0]!=0&&f[2]==0))return false;
         t=new Trace{State=f[0],Count=f[1],Generation=f[2]};return true;
     }
@@ -49,6 +50,14 @@ public static class BiofitBmdProtocol
     public static bool PageMatches(byte[] b,byte foot,int gen,int index,int page) =>
         b!=null&&b.Length==20&&b[0]==0xD3&&b[1]==foot&&b[2]==page&&b[3]==1&&
         U16(b,4)==gen&&U16(b,6)==index;
+    public static uint CrcUpdate(uint crc,byte[] data)
+    {
+        foreach(byte b in data){crc^=b;for(int i=0;i<8;i++)crc=(crc>>1)^(0xedb88320u & unchecked(0u-(crc&1u)));}
+        return crc;
+    }
+    public static bool BlockEndMatches(byte[] b,byte foot,int gen,int start,int count)=>
+        b!=null&&b.Length==20&&b[0]==0xD4&&b[1]==foot&&b[2]==count&&b[3]==1&&
+        U16(b,4)==gen&&U16(b,6)==start;
     public const string TraceHeader="foot;generation;index;sensor_ms;up_mg;velocity_mm_s;activity_mg;gyro_x10;ax_mg;ay_mg;az_mg;gx_x10;gy_x10;gz_x10;flags;block_mask;profile;events;legacy_up_mg;adaptive_up_mg;dt_us";
     public static string TraceRow(byte foot,int gen,int index,byte[] a,byte[] b,byte[] c)
     {
@@ -131,11 +140,44 @@ public sealed class BiofitBmdLink
         var b=await Send("D,GET",x=>BiofitBmdProtocol.TryProfile(x,out _),token);
         BiofitBmdProtocol.TryProfile(b,out var p);return p;
     }
-    public async Task<BiofitBmdProtocol.Trace> TraceCommand(string command,CancellationToken token)
+    public async Task<BiofitBmdProtocol.Trace> TraceCommand(string command,CancellationToken token,bool extended=false)
     {
-        var b=await Send(command,x=>BiofitBmdProtocol.TryTrace(x,out var t)&&
-            (command=="D,T,1"?t.State==1:command=="D,T,0"?t.State==2||t.State==0:true),token);
-        BiofitBmdProtocol.TryTrace(b,out var result);return result;
+        int maximum=extended?BiofitBmdProtocol.MaxTrace:1024;
+        var b=await Send(command,x=>BiofitBmdProtocol.TryTrace(x,out var t,maximum)&&
+            (command=="D,T,1"||command.StartsWith("D,S,",StringComparison.Ordinal)?t.State==1:command=="D,T,0"?t.State==2||t.State==0:true),token);
+        BiofitBmdProtocol.TryTrace(b,out var result,maximum);return result;
+    }
+    // D3 pages retain legacy framing. D4 is the authoritative block CRC.
+    // Repair missing pages only, and repeat the block once on CRC mismatch.
+    public async Task<string[]> GetBlock(byte foot,int gen,int start,int count,CancellationToken token)
+    {
+        if(count<1||count>BiofitBmdProtocol.MaxBlock||start<0||start+count>BiofitBmdProtocol.MaxTrace||gen<1||gen>65535)
+            throw new ArgumentOutOfRangeException(nameof(count));
+        for(int attempt=0;attempt<2;attempt++)
+        {
+            var pages=new byte[count*3][];
+            byte[] end=await Send("D,B,"+gen+","+start+","+count,b=>{
+                if(BiofitBmdProtocol.BlockEndMatches(b,foot,gen,start,count))return true;
+                if(b.Length!=20||b[0]!=0xD3)return false;
+                int index=BiofitBmdProtocol.U16(b,6),page=b[2];
+                if(index>=start&&index<start+count&&page<3&&BiofitBmdProtocol.PageMatches(b,foot,gen,index,page))
+                    pages[(index-start)*3+page]=(byte[])b.Clone();
+                return false;
+            },token);
+            for(int k=0;k<pages.Length;k++)
+                if(pages[k]==null)
+                {
+                    int i=start+k/3,pg=k%3;
+                    pages[k]=await Send("D,R,"+gen+","+i+","+pg,b=>BiofitBmdProtocol.PageMatches(b,foot,gen,i,pg),token);
+                }
+            uint crc=0xffffffffu;
+            foreach(var bytes in pages)crc=BiofitBmdProtocol.CrcUpdate(crc,bytes);
+            if((crc^0xffffffffu)!=BiofitBmdProtocol.U32(end,8))continue;
+            var rows=new string[count];
+            for(int i=0;i<count;i++)rows[i]=BiofitBmdProtocol.TraceRow(foot,gen,start+i,pages[i*3],pages[i*3+1],pages[i*3+2]);
+            return rows;
+        }
+        throw new InvalidOperationException("CRC32 de bloque incorrecto: "+start);
     }
     public async Task RequestProfile(int mask,int id,CancellationToken token)
     {

@@ -321,7 +321,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
     // picker (SAF). Both retain the original private source even on error.
     public void RequestExport(bool alternate)
     {
-        if(gameCaptureActive || CaptureSaving || ExportBusy)
+        if(gameCaptureActive || CaptureSaving || ExportBusy || BmdBusy)
         {
             ExportStatus="Finalizar antes de exportar";
             return;
@@ -345,10 +345,13 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
             {
                 if(!System.IO.File.Exists(selected) || !BiofitCaptureArchive.VerifyFileStreaming(selected))
                     throw new System.IO.InvalidDataException("CSV principal incompleto o SHA incorrecto");
-                if(!System.IO.File.Exists(raw))return new[]{selected};
-                if(!BiofitCaptureArchive.VerifyFileStreaming(raw))
-                    return new[]{selected}; // Preserve invalid RAW; allow rescuing valid master.
-                return new[]{selected,raw};
+                var files=new System.Collections.Generic.List<string>{selected};
+                if(System.IO.File.Exists(raw)&&BiofitCaptureArchive.VerifyFileStreaming(raw))files.Add(raw);
+                string traceDir=System.IO.Path.Combine(root,"BMD");
+                if(System.IO.Directory.Exists(traceDir))
+                    foreach(string trace in System.IO.Directory.GetFiles(traceDir,System.IO.Path.GetFileNameWithoutExtension(selected)+"_TRACE_*.csv"))
+                        if(BiofitCaptureArchive.VerifyFileStreaming(trace))files.Add(trace);
+                return files.ToArray();
             });
 #if UNITY_ANDROID && !UNITY_EDITOR
             using(var player=new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
@@ -513,7 +516,9 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
         if (!eventCapture.BeginGame(Time.realtimeSinceStartup)) return false;
         gameCaptureActive = true;
         bmdShadow.Begin(PairCooldownMilliseconds,jumpDetector.MaxPairGapWindowSeconds);
-        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,"BMD_CAPTURE profile="+BmdMask+" verified="+bmdVerified);
+        if(BmdTraceArmed&&string.IsNullOrEmpty(bmdTraceOwner))bmdTraceOwner=sessionFile.Path;
+        eventCapture.RecordDiagnostic(Time.realtimeSinceStartup,0,"BMD_CAPTURE profile="+BmdMask+" verified="+bmdVerified+
+            " placement="+BmdPlacement+" traceSeconds="+BmdTraceSeconds+" fwI="+left.firmwareVersion+" fwD="+right.firmwareVersion+" build=BMD1.1_EXP");
         gLeftOn = left.movOn; gRightOn = right.movOn;
         gLeftUp = left.upImpulses; gRightUp = right.upImpulses;
         gPairs = jumpDetector.BilateralCandidates;
@@ -965,6 +970,7 @@ public sealed partial class BiofitBLEMonitor : MonoBehaviour
                 RawOperation=SetRawCaptureAsync(false);
             }
         }
+        BmdAutoQuery();
         inputEngine.Update(Time.realtimeSinceStartup);
         sessionLogger.ObserveCadence(inputEngine.EstimatedCadence);
     }
