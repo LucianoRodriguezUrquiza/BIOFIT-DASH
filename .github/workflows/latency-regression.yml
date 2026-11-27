@@ -58,6 +58,34 @@ jobs:
         run: |
           .\tools\apply_geometry_compat.ps1
           if ($LASTEXITCODE -ne 0) { throw "Compatibility patch rerun failed" }
+      - name: Migrate existing V6.5 practice guard and reject unknown edits
+        shell: powershell
+        run: |
+          $path = Join-Path (Get-Location) 'Assets/GeomeTryOriginal/Assets/Scripts/GameMechanics/CharacterType/Character.cs'
+          $enc = New-Object System.Text.UTF8Encoding($false)
+          $final = [IO.File]::ReadAllText($path)
+          $guard = 'Biofit.GeomeTryOriginal.BiofitStereoPracticeButton.BlocksGameplayPointer()'
+          if (([regex]::Matches($final,[regex]::Escape($guard))).Count -ne 1) { throw 'Practice guard missing or duplicated' }
+          $prior = [regex]::Replace($final,'(?m)^.*NotifyGfaSpawn\(this\); // BIOFIT_GFA_SPAWN\r?\n','')
+          $prior = [regex]::Replace($prior,'(?m)^.*NotifyGfaDeath\(this\); // BIOFIT_GFA_DEATH\r?\n','')
+          if ($prior.Contains('BIOFIT_GFA_') -or !$prior.Contains($guard)) { throw 'Invalid V6.5 fixture' }
+          [IO.File]::WriteAllText($path,$prior,$enc)
+          .\tools\apply_geometry_compat.ps1
+          if ([IO.File]::ReadAllText($path) -cne $final) { throw 'V6.5 migration changed known content' }
+          $oldGfa = $final.Replace('Input.GetKey(KeyCode.Space) || (Input.GetMouseButton(0) && !Biofit.GeomeTryOriginal.BiofitStereoPracticeButton.BlocksGameplayPointer())','Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)')
+          [IO.File]::WriteAllText($path,$oldGfa,$enc)
+          .\tools\apply_geometry_compat.ps1
+          if ([IO.File]::ReadAllText($path) -cne $final) { throw 'First GFA revision migration failed' }
+          $unexpected = $final + "`n// unknown local change`n"
+          [IO.File]::WriteAllText($path,$unexpected,$enc)
+          $rejected = $false
+          try { .\tools\apply_geometry_compat.ps1 } catch {
+            if ($_.Exception.Message -notlike 'GFA: Character.cs tiene cambios inesperados*') { throw }
+            $rejected = $true
+          }
+          if (!$rejected -or [IO.File]::ReadAllText($path) -cne $unexpected) { throw 'Unknown modification not preserved' }
+          [IO.File]::WriteAllText($path,$final,$enc)
+          Write-Host 'PASS V6.5 practice migration, GFA migration and unknown-edit protection'
       - name: Verify user-asset installer PowerShell syntax (no private PNGs in CI)
         shell: powershell
         run: |

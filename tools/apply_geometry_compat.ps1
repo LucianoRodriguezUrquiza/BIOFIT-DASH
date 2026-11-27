@@ -274,10 +274,21 @@ $spawnAnchor = 'rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 $deathAnchor = 'isAlive = false;'
 if (($gfaExpected.Split([string[]]@($spawnAnchor),[StringSplitOptions]::None)).Count -ne 2 -or
     ($gfaExpected.Split([string[]]@($deathAnchor),[StringSplitOptions]::None)).Count -ne 2) { throw "GFA: anclas de Character inesperadas" }
-$gfaPatched = $gfaExpected.Replace($spawnAnchor,$spawnAnchor+"`n        Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.NotifyGfaSpawn(this); // BIOFIT_GFA_SPAWN")
-$gfaPatched = $gfaPatched.Replace($deathAnchor,"Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.NotifyGfaDeath(this); // BIOFIT_GFA_DEATH`n        "+$deathAnchor)
-if ($gfaCode -eq $gfaExpected) { [IO.File]::WriteAllText($gfaChar,$gfaPatched,(New-Object System.Text.UTF8Encoding($false))) }
-elseif ($gfaCode -ne $gfaPatched) { throw "GFA: Character.cs tiene cambios inesperados; no se sobrescribe" }
+# V6.5 existing installations also contain the practice checkpoint pointer guard.
+# Recognize only exact known predecessors, including the first GFA-only revision.
+$practiceBefore = 'Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)'
+$practiceAfter = 'Input.GetKey(KeyCode.Space) || (Input.GetMouseButton(0) && !Biofit.GeomeTryOriginal.BiofitStereoPracticeButton.BlocksGameplayPointer())'
+if (([regex]::Matches($gfaExpected,[regex]::Escape($practiceBefore))).Count -ne 1) { throw "GFA: ancla de entrada de practica inesperada" }
+$gfaWithPractice = $gfaExpected.Replace($practiceBefore,$practiceAfter)
+$gfaOnly = $gfaExpected.Replace($spawnAnchor,$spawnAnchor+"`n        Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.NotifyGfaSpawn(this); // BIOFIT_GFA_SPAWN")
+$gfaOnly = $gfaOnly.Replace($deathAnchor,"Biofit.GeomeTryOriginal.BiofitGeomeTryLegacyBridge.NotifyGfaDeath(this); // BIOFIT_GFA_DEATH`n        "+$deathAnchor)
+$gfaPatched = $gfaOnly.Replace($practiceBefore,$practiceAfter)
+if ($gfaCode -ceq $gfaPatched) { Write-Host "OK: Character GFA y proteccion de practica ya integrados." }
+elseif ($gfaCode -ceq $gfaExpected -or $gfaCode -ceq $gfaWithPractice -or $gfaCode -ceq $gfaOnly) {
+    [IO.File]::WriteAllText($gfaChar,$gfaPatched,(New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "OK: Character GFA integrado; proteccion de practica conservada."
+}
+else { throw "GFA: Character.cs tiene cambios inesperados; no se sobrescribe" }
 $gfaCube = Join-Path $imported "Scripts\GameMechanics\CharacterType\Cube.cs"
 $gfaCubeOriginal = Join-Path $original "Scripts\GameMechanics\CharacterType\Cube.cs"
 $cubeExpected = [IO.File]::ReadAllText($gfaCubeOriginal).Replace("`r`n","`n")
