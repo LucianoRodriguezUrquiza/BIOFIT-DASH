@@ -77,8 +77,9 @@ namespace Biofit.GeomeTryOriginal
         private float joystickRefreshAt;
         private float refreshCooldownAt;
         private float commandFeedbackUntil;
-        private TMP_Text skinLabel;
-        private RectTransform skinSelectionOutline;
+        private const int SkinColumns=10, SkinRows=3, SkinsPerPage=SkinColumns*SkinRows;
+        private Texture2D skinGradient;
+        private readonly int[] skinPages=new int[3];
         private TMP_FontAsset fallbackFont;
         private Texture2D atlas;
         private Texture2D levelBackdrop;
@@ -95,7 +96,7 @@ namespace Biofit.GeomeTryOriginal
         private int fpsFrames;
         private int fpsSamples;
         private int skinIndex;
-        private int skinTab,skinPage;
+        private int skinTab;
         private int focusLevel;
         private readonly Button[] selectorHotspots = new Button[5];
         private RectTransform selectorContentRoot;
@@ -159,6 +160,7 @@ namespace Biofit.GeomeTryOriginal
             if (artwork != null) { artwork.Dispose(); artwork = null; }
             if (dotSprite != null) Destroy(dotSprite);
             if (dotTexture != null) Destroy(dotTexture);
+            if (skinGradient != null) Destroy(skinGradient);
             if (instance == this) instance = null;
         }
 
@@ -171,6 +173,7 @@ namespace Biofit.GeomeTryOriginal
                 joystickPage = false;
             }
             if (paused) RestorePause();
+            if(scene.name==Custom)for(int i=0;i<3;i++)skinPages[i]=SkinSelected(i)/SkinsPerPage;
             BuildScreen(scene.name);
         }
 
@@ -271,6 +274,23 @@ namespace Biofit.GeomeTryOriginal
         {
             if (atlas == null || index < 0 || index >= 70) return null;
             if (cachedSkins.TryGetValue(index, out Sprite cached)) return cached;
+            Rect region=CubeSkinRegion(index);
+            if(region.width<=0||region.height<=0)return null;
+            // Match the footprint of the ORIGINAL cuboid sprite in world units.
+            float originalWidth = baseCubeSprite == null ? 1f :
+                Mathf.Max(0.1f, baseCubeSprite.bounds.size.x);
+            float ppu = region.width / originalWidth;
+            Sprite value = Sprite.Create(atlas, region,
+                new Vector2(0.5f, 0.5f), ppu, 0, SpriteMeshType.FullRect);
+            cachedSkins[index] = value;
+            return value;
+        }
+
+        // Shared exact source rectangles: UI and game read the same atlas cells.
+        // UI never creates/changes the gameplay Sprite or its pixels-per-unit.
+        private Rect CubeSkinRegion(int index)
+        {
+            if(atlas==null||index<0||index>=70)return new Rect();
             int col = index % 10, row = index / 10;
             // The collage is not an exact 128x126 grid. These cuts follow the
             // actual transparent gutters of the user's 1280x887 source art,
@@ -293,17 +313,7 @@ namespace Biofit.GeomeTryOriginal
                 y0 = Mathf.RoundToInt((6 - row) * atlas.height / 7f);
                 y1 = Mathf.RoundToInt((7 - row) * atlas.height / 7f);
             }
-            if (y1 <= y0 || x1 <= x0) return null;
-            // Match the footprint of the ORIGINAL cuboid sprite in world units.
-            float originalWidth = baseCubeSprite == null ? 1f :
-                Mathf.Max(0.1f, baseCubeSprite.bounds.size.x);
-            float ppu = (x1 - x0) / originalWidth;
-            Sprite value = Sprite.Create(atlas,
-                new Rect(x0, y0, x1 - x0, y1 - y0),
-                new Vector2(0.5f, 0.5f), ppu, 0,
-                SpriteMeshType.FullRect);
-            cachedSkins[index] = value;
-            return value;
+            return new Rect(x0,y0,x1-x0,y1-y0);
         }
 
         private void SetSkin(int index)
@@ -315,9 +325,7 @@ namespace Biofit.GeomeTryOriginal
             // Recreate the sprite only after knowing the original cuboid width.
             foreach (Sprite s in cachedSkins.Values) if (s != null) Destroy(s);
             cachedSkins.Clear();
-            if (skinLabel != null)
-                skinLabel.text = "PERSONAJE " + (skinIndex + 1) + " DE 70  ·  GUARDADO";
-            UpdateSkinSelectionOutline();
+
         }
 
         private void BuildScreen(string sceneName)
@@ -341,8 +349,7 @@ namespace Biofit.GeomeTryOriginal
             eventLabel = null;
             captureLabel = null;
             performanceLabel = null;
-            skinLabel = null;
-            skinSelectionOutline = null;
+            connectTrackersButton = null;
             selectorContentRoot = null;
             selectorFocusCard = null;
             selectorFocusArt = null;
@@ -395,7 +402,7 @@ namespace Biofit.GeomeTryOriginal
             // background. Never add this background while playing a level:
             // it could cover the original GeomeTry world behind the HUD.
             if (sceneName != LevelScene)
-                Fill("Fondo exterior BIOFIT", hostRect, Blue);
+                Fill("Fondo exterior BIOFIT", hostRect, sceneName==Custom?new Color32(75,75,75,255):Blue);
             safeRoot = Rect("BIOFIT Android safe area", hostRect,
                 new Vector2(.5f, .5f), Vector2.zero, Vector2.zero);
             designStage = Rect("BIOFIT 16:9 responsive design", safeRoot,
@@ -1053,122 +1060,145 @@ namespace Biofit.GeomeTryOriginal
             image.raycastTarget = false;
         }
 
+        // Customisation only. Reference: user's GD menu screenshots, 27/11.
+        // Background is a clean reconstruction, not a flattened screenshot.
+        private Texture2D SkinBackground()
+        {
+            if(skinGradient!=null)return skinGradient;
+            skinGradient=new Texture2D(2,256,TextureFormat.RGBA32,false);
+            skinGradient.name="BIOFIT selector gris";
+            skinGradient.wrapMode=TextureWrapMode.Clamp;
+            skinGradient.filterMode=FilterMode.Bilinear;
+            var colors=new Color32[512];
+            for(int y=0;y<256;y++){
+                byte v=(byte)Mathf.RoundToInt(Mathf.Lerp(66f,149f,y/255f));
+                colors[y*2]=colors[y*2+1]=new Color32(v,v,v,255);
+            }
+            skinGradient.SetPixels32(colors);skinGradient.Apply(false,false);
+            return skinGradient;
+        }
+        private BiofitMode SkinMode(int tab)=>tab==1?BiofitMode.Ball:BiofitMode.Spider;
+        private int SkinCount(int tab)=>tab==0?(atlas==null?0:70):BiofitV65Skins.Names(SkinMode(tab)).Length;
+        private int SkinSelected(int tab)=>tab==0?skinIndex:BiofitV65Skins.Selected(SkinMode(tab));
+
+        private void SkinArt(string name,Transform parent,int tab,int index,Vector2 anchor,Vector2 bounds)
+        {
+            if(tab==0){
+                Rect region=CubeSkinRegion(index);
+                if(region.width<=0||region.height<=0)return;
+                float scale=Mathf.Min(bounds.x/region.width,bounds.y/region.height);
+                var raw=Rect(name,parent,anchor,new Vector2(region.width*scale,region.height*scale),Vector2.zero).gameObject.AddComponent<RawImage>();
+                raw.texture=atlas;
+                raw.uvRect=new Rect(region.x/atlas.width,region.y/atlas.height,region.width/atlas.width,region.height/atlas.height);
+                raw.raycastTarget=false;
+            }else{
+                var sprite=BiofitV65Skins.Get(SkinMode(tab),index);
+                if(sprite==null)return;
+                var img=Rect(name,parent,anchor,bounds,Vector2.zero).gameObject.AddComponent<Image>();
+                img.sprite=sprite;img.preserveAspect=true;img.raycastTarget=false;
+            }
+        }
+        private void SkinCategoryIcon(Transform parent,int tab)
+        {
+            if(SkinCount(tab)>0){SkinArt("Icono categoria",parent,tab,0,new Vector2(.5f,.5f),new Vector2(65,65));return;}
+            var sprite=BiofitThreeModeArt.Make(tab==0?BiofitMode.Cube:SkinMode(tab),false);
+            if(sprite!=null){
+                var img=Rect("Icono reserva",parent,new Vector2(.5f,.5f),new Vector2(65,65),Vector2.zero).gameObject.AddComponent<Image>();
+                img.sprite=sprite;img.preserveAspect=true;img.raycastTarget=false;
+            }
+        }
+        private void SkinDisc(string name,Transform parent,Vector2 size,Color color)
+        {
+            var rim=Rect(name+" borde",parent,new Vector2(.5f,.5f),size,Vector2.zero).gameObject.AddComponent<Image>();
+            rim.sprite=GetDotSprite();rim.color=Color.black;rim.raycastTarget=false;
+            var inner=Rect(name+" centro",rim.transform,new Vector2(.5f,.5f),size-new Vector2(8,8),Vector2.zero).gameObject.AddComponent<Image>();
+            inner.sprite=GetDotSprite();inner.color=color;inner.raycastTarget=false;
+        }
+        private void SkinFrame(Transform parent)
+        {
+            // Eight white corner strokes, not a lock or a disabled state.
+            for(int x=0;x<2;x++)for(int y=0;y<2;y++){
+                Vector2 at=new Vector2(x,y);
+                AddSkinStroke(parent,at,new Vector2(25,4),new Vector2(x==0?14:-14,y==0?3:-3));
+                AddSkinStroke(parent,at,new Vector2(4,25),new Vector2(x==0?3:-3,y==0?14:-14));
+            }
+        }
+        private void AddSkinStroke(Transform parent,Vector2 anchor,Vector2 size,Vector2 offset)
+        {
+            var image=Rect("Marco seleccion",parent,anchor,size,offset).gameObject.AddComponent<Image>();
+            image.color=Color.white;image.raycastTarget=false;
+        }
+        private void SkinArrow(string name,int direction,int pages)
+        {
+            int target=skinPages[skinTab]+direction;
+            bool available=target>=0&&target<pages;
+            // Existing back artwork points left; mirror only the image for Next.
+            var btn=ImageButton(name,canvasRoot,backIcon,direction<0?"<":">",
+                new Vector2(direction<0?.125f:.875f,.305f),new Vector2(76,76),Vector2.zero,
+                ()=>{skinPages[skinTab]=Mathf.Clamp(target,0,pages-1);BuildScreen(Custom);});
+            btn.interactable=available;
+            var raw=btn.GetComponentInChildren<RawImage>();
+            if(raw!=null){
+                if(direction>0)raw.uvRect=new Rect(1,0,-1,1);
+                raw.color=available?Color.white:new Color(1,1,1,.25f);
+            }
+        }
+
         private void BuildSkinSelection()
         {
-            Fill("BIOFIT personalizacion azul", canvasRoot, Blue);
+            // Rebuilds in the existing 1600x900 safe-area stage, only this scene.
+            var bg=Rect("Fondo gris personalizacion",canvasRoot,new Vector2(.5f,.5f),new Vector2(1600,900),Vector2.zero).gameObject.AddComponent<RawImage>();
+            bg.texture=SkinBackground();bg.raycastTarget=false;
             ArcadeCorners(canvasRoot);
-            ArcadeLogo(canvasRoot);
-            for(int tab=0;tab<3;tab++)
-            {
-                int choice=tab;string label=new[]{"CUBO","BOLA","SPIDER"}[tab];
-                Button("V65 skin tab "+label,canvasRoot,label,new Vector2(.17f,.67f-tab*.12f),new Vector2(190,62),Vector2.zero,()=>{skinTab=choice;skinPage=0;BuildScreen(Custom);},skinTab==tab?Lime:Ice,24);
+            Text("Titulo personajes",canvasRoot,"PERSONAJE",new Vector2(.5f,.89f),new Vector2(820,80),Vector2.zero,65,Color.white);
+            string[] labels={"CUBO","BALL","SPIDER"};
+            int count=SkinCount(skinTab),selected=SkinSelected(skinTab);
+            int pages=Mathf.Max(1,Mathf.CeilToInt(count/(float)SkinsPerPage));
+            int page=skinPages[skinTab]=Mathf.Clamp(skinPages[skinTab],0,pages-1);
+            if(count>0)SkinArt("Vista previa personaje",canvasRoot,skinTab,selected,new Vector2(.5f,.745f),new Vector2(142,142));
+            Text("Skin actual",canvasRoot,count>0?labels[skinTab]+" "+(selected+1)+" / "+count:labels[skinTab],
+                new Vector2(.5f,.641f),new Vector2(600,27),Vector2.zero,21,Color.white);
+            var separator=Rect("Separador categorias",canvasRoot,new Vector2(.5f,.615f),new Vector2(1100,3),Vector2.zero).gameObject.AddComponent<Image>();
+            separator.color=new Color(1,1,1,.55f);separator.raycastTarget=false;
+            for(int tab=0;tab<3;tab++){
+                int choice=tab;
+                Vector2 pos=new Vector2(.5f+(tab-1)*.125f,.549f);
+                var button=Hotspot("Categoria "+labels[tab],canvasRoot,pos,new Vector2(95,95),()=>{
+                    skinTab=choice;
+                    // When changing category, return to the selected skin's page.
+                    skinPages[choice]=SkinSelected(choice)/SkinsPerPage;
+                    BuildScreen(Custom);
+                });
+                SkinDisc("Categoria",button.transform,new Vector2(86,86),skinTab==tab?new Color32(25,221,229,255):new Color32(171,171,171,255));
+                SkinCategoryIcon(button.transform,tab);
+                Text("Nombre categoria",canvasRoot,labels[tab],new Vector2(pos.x,.48f),new Vector2(175,26),Vector2.zero,21,Color.white);
             }
-            if(skinTab!=0){BuildV65VehicleSkins();return;}
-
-            RectTransform title = ArcadePanel("Titulo personalizacion",
-                canvasRoot, new Vector2(.5f, .794f),
-                new Vector2(710f, 63f), Vector2.zero);
-            Text("titulo skin", title, "PERSONALIZAR CUBO",
-                new Vector2(.5f, .5f), new Vector2(665f, 53f),
-                Vector2.zero, 36, Color.white);
-
-            skinLabel = Text("skin actual", canvasRoot,
-                "PERSONAJE " + (skinIndex + 1) + " DE 70",
-                new Vector2(.5f, .707f), new Vector2(760f, 40f),
-                Vector2.zero, 28, Ice);
-            if (atlas == null)
-            {
-                Text("missing atlas", canvasRoot,
-                    "NO SE ENCONTRO SKINS.PNG",
-                    new Vector2(.5f, .39f), new Vector2(950f, 160f),
-                    Vector2.zero, 32, Ice);
-                return;
+            var panel=Rect("Panel de skins",canvasRoot,new Vector2(.5f,.295f),new Vector2(1100,300),Vector2.zero);
+            var panelImage=panel.gameObject.AddComponent<Image>();panelImage.color=new Color(0,0,0,.31f);panelImage.raycastTarget=false;
+            if(count==0){
+                Text("Arte ausente",panel,skinTab==0?"NO SE ENCONTRO SKINS.PNG":"IMPORTA EL ARTE LOCAL V6.5",new Vector2(.5f,.5f),new Vector2(970,90),Vector2.zero,28,Color.white);
+            }else{
+                for(int j=0;j<SkinsPerPage;j++){
+                    int index=page*SkinsPerPage+j;if(index>=count)break;
+                    int col=j%SkinColumns,row=j/SkinColumns;
+                    var tile=Hotspot("Elegir skin "+(index+1),panel,
+                        new Vector2((col+.5f)/SkinColumns,1f-(row+.5f)/SkinRows),
+                        new Vector2(98,94),()=>{
+                            if(skinTab==0)SetSkin(index);else BiofitV65Skins.Select(SkinMode(skinTab),index);
+                            BuildScreen(Custom);
+                        });
+                    SkinArt("Skin",tile.transform,skinTab,index,new Vector2(.5f,.5f),new Vector2(84,80));
+                    if(index==selected)SkinFrame(tile.transform);
+                }
             }
-
-            // Display the COMPLETE original 1280x887 collage instead of
-            // cropping 70 independent RawImages. The source image is not a
-            // uniform grid: several outlines spill across calculated cell
-            // borders. Displaying one RawImage prevents visible cutoffs.
-            // Keep visible margins under the label AND above the bottom edge.
-            // Width 790 creates >50px bottom clearance at 1600x900.
-            float width = 790f;
-            float height = width * atlas.height / atlas.width;
-            RectTransform sheet = Rect("70 SKINS SIN RECORTE",
-                canvasRoot, new Vector2(.5f, .364f),
-                new Vector2(width, height), Vector2.zero);
-            RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();
-            wholeAtlas.texture = atlas;
-            wholeAtlas.raycastTarget = false;
-            wholeAtlas.color = Color.white;
-
-            // Each picture is a functional touch zone over the intact atlas.
-            for (int i = 0; i < 70; i++)
-            {
-                int index = i;
-                int col = i % 10;
-                int row = i / 10;
-                Hotspot("Elegir skin " + (i + 1), sheet,
-                    new Vector2((col + .5f) / 10f,
-                                1f - (row + .5f) / 7f),
-                    new Vector2(width / 10f, height / 7f),
-                    () => SetSkin(index));
+            SkinArrow("Pagina anterior",-1,pages);SkinArrow("Pagina siguiente",1,pages);
+            for(int i=0;i<pages;i++){
+                int target=i;
+                var dot=Hotspot("Pagina "+(i+1),canvasRoot,new Vector2(.5f+(i-(pages-1)*.5f)*.041f,.083f),
+                    new Vector2(53,53),()=>{skinPages[skinTab]=target;BuildScreen(Custom);});
+                SkinDisc("Pagina",dot.transform,new Vector2(44,44),i==page?new Color32(25,221,229,255):new Color32(151,151,151,255));
             }
-
-            skinSelectionOutline = Rect("Borde de skin seleccionada",
-                sheet, new Vector2(.5f, .5f),
-                new Vector2(width / 10f, height / 7f), Vector2.zero);
-            float cellW = width / 10f, cellH = height / 7f;
-            AddSelectionStroke(skinSelectionOutline, "Superior",
-                new Vector2(.5f, 1f), new Vector2(cellW - 6f, 5f),
-                new Vector2(0f, -3f));
-            AddSelectionStroke(skinSelectionOutline, "Inferior",
-                new Vector2(.5f, 0f), new Vector2(cellW - 6f, 5f),
-                new Vector2(0f, 3f));
-            AddSelectionStroke(skinSelectionOutline, "Izquierdo",
-                new Vector2(0f, .5f), new Vector2(5f, cellH - 6f),
-                new Vector2(3f, 0f));
-            AddSelectionStroke(skinSelectionOutline, "Derecho",
-                new Vector2(1f, .5f), new Vector2(5f, cellH - 6f),
-                new Vector2(-3f, 0f));
-            UpdateSkinSelectionOutline();
-        }
-
-        private void BuildV65VehicleSkins()
-        {
-            BiofitMode mode=skinTab==1?BiofitMode.Ball:BiofitMode.Spider;
-            var names=BiofitV65Skins.Names(mode);
-            Text("V65 skin title",canvasRoot,skinTab==1?"PERSONALIZAR BOLA":"PERSONALIZAR SPIDER",new Vector2(.55f,.76f),new Vector2(780,60),Vector2.zero,36,Color.white);
-            if(names.Length==0){Text("V65 sin arte",canvasRoot,"IMPORTÁ EL ARTE LOCAL V6.5",new Vector2(.55f,.45f),new Vector2(780,110),Vector2.zero,30,Ice);return;}
-            int pages=Mathf.CeilToInt(names.Length/12f);skinPage=Mathf.Clamp(skinPage,0,pages-1);
-            for(int j=0;j<12;j++)
-            {
-                int index=skinPage*12+j;if(index>=names.Length)break;
-                var sprite=BiofitV65Skins.Get(mode,index);Vector2 pos=new Vector2(.36f+(j%4)*.13f,.62f-(j/4)*.17f);
-                var btn=Button("V65 skin "+index,canvasRoot,"",pos,new Vector2(145,130),Vector2.zero,()=>{BiofitV65Skins.Select(mode,index);BuildScreen(Custom);},index==BiofitV65Skins.Selected(mode)?Lime:Ice);
-                if(sprite!=null){var img=Rect("V65 icon",btn.transform,new Vector2(.5f,.58f),new Vector2(83,83),Vector2.zero).gameObject.AddComponent<RawImage>();img.texture=sprite.texture;img.raycastTarget=false;}
-                Text("V65 index",btn.transform,(index+1).ToString(),new Vector2(.5f,.13f),new Vector2(120,24),Vector2.zero,18,Navy);
-            }
-            Button("V65 prev",canvasRoot,"<",new Vector2(.38f,.12f),new Vector2(80,55),Vector2.zero,()=>{skinPage=Mathf.Max(0,skinPage-1);BuildScreen(Custom);},Lime);
-            Button("V65 next",canvasRoot,">",new Vector2(.73f,.12f),new Vector2(80,55),Vector2.zero,()=>{skinPage=Mathf.Min(pages-1,skinPage+1);BuildScreen(Custom);},Lime);
-            Text("V65 pages",canvasRoot,(skinPage+1)+" / "+pages,new Vector2(.55f,.12f),new Vector2(250,50),Vector2.zero,26,Color.white);
-        }
-        private void AddSelectionStroke(Transform root, string name,
-            Vector2 anchor, Vector2 size, Vector2 offset)
-        {
-            RectTransform stroke = Rect(name, root, anchor, size, offset);
-            Image image = stroke.gameObject.AddComponent<Image>();
-            image.color = Color.white;
-            image.raycastTarget = false;
-        }
-
-        private void UpdateSkinSelectionOutline()
-        {
-            if (skinSelectionOutline == null) return;
-            int col = skinIndex % 10;
-            int row = skinIndex / 10;
-            skinSelectionOutline.anchorMin = skinSelectionOutline.anchorMax =
-                new Vector2((col + .5f) / 10f, 1f - (row + .5f) / 7f);
-            skinSelectionOutline.anchoredPosition = Vector2.zero;
+            Text("Pagina actual",canvasRoot,(page+1)+" / "+pages,new Vector2(.5f,.035f),new Vector2(300,25),Vector2.zero,17,Color.white);
         }
 
         private void BuildSettings()

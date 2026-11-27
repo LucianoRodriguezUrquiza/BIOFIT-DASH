@@ -59,23 +59,35 @@ assert "EraseStrip(clean, pixels, 424, 1245, 695, 771" in art
 assert "BuildArcadeDots(board);" in ui
 assert 'new Color(1f, .82f, .02f, 1f)' in ui
 
-# 3. The entire original skin atlas is displayed as one uncut image;
-# individual selection is an invisible hit region and never truncates row 7.
-assert '"70 SKINS SIN RECORTE"' in ui
-assert "RawImage wholeAtlas = sheet.gameObject.AddComponent<RawImage>();" in ui
-assert 'Hotspot("Elegir skin " + (i + 1)' in ui
-assert "for (int i = 0; i < 70; i++)" in ui
-assert "PlayerPrefs.SetInt(PrefSkin, skinIndex);" in ui
-assert "PlayerPrefs.Save();" in ui
-assert "Sprite.Create(atlas" in ui
-assert "cubeRenderer.sprite = selected;" in ui
+# 3. One paged selector for all three modes. The exact atlas source cuts
+# remain shared by UI UVs and the gameplay sprite. No lock or economy gate.
+assert 'SkinColumns=10, SkinRows=3, SkinsPerPage=SkinColumns*SkinRows' in ui
+assert 'int index=page*SkinsPerPage+j;if(index>=count)break;' in ui
+assert 'PlayerPrefs.SetInt(PrefSkin, skinIndex);' in ui
+assert 'PlayerPrefs.Save();' in ui
+assert 'Sprite.Create(atlas, region' in ui
+assert 'cubeRenderer.sprite = selected;' in ui
+assert 'CubeSkinRegion(index)' in ui and 'raw.uvRect=new Rect(region.x/atlas.width' in ui
+assert 'BiofitV65Skins.Select(SkinMode(skinTab),index)' in ui
+assert 'string[] labels={"CUBO","BALL","SPIDER"}' in ui
+assert 'skinPages[choice]=SkinSelected(choice)/SkinsPerPage' in ui
+assert 'SkinArrow("Pagina anterior",-1,pages);SkinArrow("Pagina siguiente",1,pages);' in ui
+assert 'if(index==selected)SkinFrame(tile.transform);' in ui
+assert 'SkinBackground()' in ui
+selector=ui[ui.index("private void BuildSkinSelection()"):ui.index("private void BuildSettings()")]
+for excluded in ("Lock", "Shop", "Monedas", "Diamond", "Unlock", "PlayerName"):
+    assert excluded not in selector
+for count in (0,1,30,31,69,70,119):
+    pages=max(1,(count+29)//30)
+    assert [page*30+j for page in range(pages) for j in range(30) if page*30+j<count]==list(range(count))
+# Canonical geometry: grid, tabs, preview and dots do not overlap.
+assert .295*900+150 < .48*900-13
+assert .549*900+47.5 < .615*900
+assert .745*900-71 > .641*900+13.5
+assert .295*900-150 > .083*900+26.5
+assert .125*1600+38 < .5*1600-550
+assert .875*1600-38 > .5*1600+550
 assert "GridLayoutGroup layout" not in ui
-atlas_width, atlas_height = 790, 790 * 887 / 1280
-atlas_bottom = .364 * 900 - atlas_height / 2
-atlas_top = .364 * 900 + atlas_height / 2
-skin_label_bottom = .707 * 900 - 40 / 2
-assert atlas_bottom > 45, "Skin row seven extends off the design stage"
-assert skin_label_bottom - atlas_top > 10, "Atlas touches/overlaps skin caption"
 
 # 4. Truly alpha-keyed artwork: no hard-coded blue rectangles behind the logo.
 assert "IsBlueBackground(Color32 c)" in art
@@ -340,7 +352,7 @@ assert 'OriginalSpeed = 6.5f' in motor and 'BallSpiderGravity = 4f' in motor
 assert 'if(IsMini||wasMini)' in motor and "MiniSupport()" in motor
 assert '"miniPortal"' in runtime and '"normalSizePortal"' in runtime
 assert "BIOFIT_V65_BALL_SKIN" in skins and "BIOFIT_V65_SPIDER_SKIN" in skins
-assert "BuildV65VehicleSkins" in ui and "%7" in skins
+assert "SkinArt" in ui and "%7" in skins
 import py_compile
 py_compile.compile(str(root / "tools/level_editor/importar_arte_v65.py"), doraise=True)
 print("PASS: V6.5 static editor isolation, Red Pad, Mini Cube, catalog and skin contracts")
