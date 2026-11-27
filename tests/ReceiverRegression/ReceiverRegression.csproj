@@ -19,5 +19,6 @@
 <Compile Include="../../Assets/BIOFIT/Scripts/BiofitLiftPairDetector.cs" />
 <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBLEMonitor.Bmd.cs" />
   <Compile Include="../../Assets/BIOFIT/Scripts/BiofitBmdProtocol.cs" />
+  <Compile Include="BmdIntegration.cs"/>
 </ItemGroup>
 </Project>

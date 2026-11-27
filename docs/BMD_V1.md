@@ -13,3 +13,6 @@
 
 ## RCA — revisión de exportación y captura
 Se encontró que el verificador de archivos existente solo aceptaba 15 columnas; se amplía exclusivamente para el encabezado exacto BMD de 21 columnas, conservando el formato legado. Prueba real de cierre, SHA, corrupción y número de campos. Se agrega congelado desde pausa de nivel si el trace está armado; evita recorrer menús durante el corto buffer (no garantiza conservar el primer fallo si el usuario tarda). Se mantiene bloqueo de reanudación durante operación. Resumen de sombra añadido al CSV final.
+
+## RCA — integración bilateral host
+Se añade prueba con el BiofitBLEMonitor real y dos características CONFIG simuladas: lectura FW230 inicialmente bloqueada, aplicación bilateral, fallo parcial deliberado, restauración, captura/descarga de ambos pies con archivo SHA, cancelación y desconexión. Las pruebas simulan GATT y no garantizan comportamiento Android. No se puede exportar un trace anterior como resultado de una descarga nueva fallida; archivos anteriores conservados en BMD/.

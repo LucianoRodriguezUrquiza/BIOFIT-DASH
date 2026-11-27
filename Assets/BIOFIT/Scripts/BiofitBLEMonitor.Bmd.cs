@@ -111,6 +111,7 @@ public sealed partial class BiofitBLEMonitor
             }
             else
             {
+                BmdTracePath=""; // never export an earlier trace as the result of this download
                 var rows=new List<string>(2048);
                 int side=0;
                 foreach(var link in new[]{l,r})

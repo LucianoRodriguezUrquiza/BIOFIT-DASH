@@ -197,6 +197,7 @@ class Program {
     System.IO.File.Delete(obstructed);
   }
   CycleIntegration();
+  BmdIntegration.Run().GetAwaiter().GetResult();
   Console.WriteLine("PASS: "+checks+" receiver integration checks using API shims (not a Unity build).");
  }
 }
