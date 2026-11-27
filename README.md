@@ -1,3 +1,9 @@
+# BIOFIT DASH — V6.6 estable de trabajo (Unity y APK aprobadas)
+
+**27/11/2026:** el usuario confirma que la APK V6.6 funciona correctamente y la da por validada. Main consolidada y sincronizada en su PC a `154311691c4aae0af39aae25ecf7f7e24f329d49`; CI 5/5. Repositorio oficial [BIOFIT-DASH](https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH). **Para una nueva conversación: leer primero [RELEVO_PROYECTO.md](docs/RELEVO_PROYECTO.md)** y [CONSOLIDACION_V66.md](docs/CONSOLIDACION_V66.md). Se preservan código, niveles, recursos y firmware; validación biomecánica específica pendiente. Runner será repositorio independiente. Las notas siguientes son históricas.
+
+---
+
 # BIOFIT DASH — V6.6 (cierre de trabajo Unity)
 
 Repositorio oficial: [BIOFIT-DASH](https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH). Versión aprobada por el usuario; consolidación solicitada en main. [Registro V6.6](docs/CONSOLIDACION_V66.md). El cierre conserva los recursos locales, los deltas y la infraestructura BMD V1.1/GFA; la APK definitiva y la validación física siguen pendientes. La rama de trabajo histórica feat/bmd-v231 se conserva. Las secciones siguientes son historial, no instrucciones vigentes. No clonar ni reinstalar el proyecto existente.

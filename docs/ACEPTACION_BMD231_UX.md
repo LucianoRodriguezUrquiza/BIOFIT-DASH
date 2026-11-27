@@ -9,3 +9,7 @@
 
 ## Cierre posterior
 El usuario renombró el repositorio y autorizó la consolidación de esta versión en main. Ver [CONSOLIDACION_V66.md](CONSOLIDACION_V66.md). Se mantiene el alcance de aceptación Unity, no APK ni validación biomecánica.
+
+## Cierre confirmado — 27/11/2026
+
+El usuario presenta la salida completa de PowerShell: origin apunta a BIOFIT-DASH, fast-forward de feat/bmd-v231 a 1543116, switch main y fast-forward de 29 commits, HEAD = origin/main = origin/feat/bmd-v231 = `154311691c4aae0af39aae25ecf7f7e24f329d49`; sin modificaciones versionadas ni staged. Se conservan BiofitUi/, Songs/, sus .meta y dos exportaciones locales antiguas sin seguimiento. Luego confirma expresamente «LA APK anda re bien, dala por validada». V6.6 queda aceptada funcionalmente en Unity y Android como versión estable de trabajo. CI 5/5 en main [46077282902](https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH/actions/runs/46077282902), también éxito en feat/bmd-v231 [46077255447](https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH/actions/runs/46077255447). No se dispone de SHA del binario APK, hashes actuales de Active.json ni matriz exhaustiva de pruebas físicas; no afirmar que GFA/TRACE/PSRAM, latencia BLE o detección de movimientos están certificados. El cierre posterior es exclusivamente documental, no exige recompilar APK. No se elimina ninguna rama, no se altera firmware, mapas, físicas, assets ni detector. Leer [RELEVO_PROYECTO.md](RELEVO_PROYECTO.md) al iniciar otra conversación.

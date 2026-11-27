@@ -1,3 +1,9 @@
+# Entrada vigente — V6.6
+
+[RELEVO_PROYECTO.md](RELEVO_PROYECTO.md) contiene las referencias actuales, reglas, arquitectura y tareas pendientes. V6.6 aprobada en Unity y APK; no reinstalar. Las secciones siguientes son históricas.
+
+---
+
 # Estado vigente — V6.6
 
 Consultar [CONSOLIDACION_V66.md](CONSOLIDACION_V66.md) y [CONTEXTO_VIVO.md](CONTEXTO_VIVO.md). Repositorio oficial https://github.com/LucianoRodriguezUrquiza/BIOFIT-DASH; proyecto local único sin reinstalación. Las secciones siguientes son historial.
