@@ -11,6 +11,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - run: python3 tests/check_level_delta_publish.py
       - run: python3 tests/check_geometry_original.py
       - run: python3 tests/check_geometry_navigation.py
       - run: python3 tests/check_geometry_ux.py

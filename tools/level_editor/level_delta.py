@@ -2,7 +2,7 @@
 """BIOFIT V6.4: delta exacto, local y publicación selectiva. Python 3.9+."""
 import argparse, hashlib, json, os, re, subprocess, sys, tempfile
 from pathlib import Path
-PUBLISH_BRANCHES={'main','niveles-mejorados','v6.5-desarrollo'}
+PUBLISH_BRANCHES={'main','niveles-mejorados','v6.5-desarrollo','feat/bmd-v231'}
 REPO='lucianorodriguezurquiza/biofit-game-unity'
 DEC=json.JSONDecoder()
 FIELDS=set('index id layer order kind xGD yGD rotationGD widthGD heightGD flipX flipY frames r g b duration portalMinGD portalMaxGD collisionMode deathMask editorScaleX editorScaleY'.split())
