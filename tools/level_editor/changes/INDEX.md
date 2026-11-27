@@ -23,3 +23,5 @@ El usuario aportó captura de PowerShell: HEAD local/remoto ffa907d, diff versio
 - [BIOFIT_level_3_20261127_155739.json](BIOFIT_level_3_20261127_155739.json) — ranura 3; 163 ediciones, 723 altas, 767 bajas; base 6313a59c0eac4bfdc281ac210226aa079f2ed4fcf5ae6b11e6b7838c078d2a33; objetivo e124ad3a5fdf05e13c59ca8d2910a50e8df6253cf610341c9179a87bb4517b3e. Edición experimental desde BIOFIT Level Editor; validación de jugabilidad pendiente.
 
 - [BIOFIT_level_1_20261127_161858.json](BIOFIT_level_1_20261127_161858.json) — ranura 1; 35 ediciones, 60 altas, 73 bajas; base 8c7adbe0f89959dcf86b89e70c10ed62f084ebbb2407420a56a4ffb159798f0f; objetivo eca30db6300626cf8e471a2c4270ef2baecdf99b99fb5574ed2b35b498b5d9b7. Edición experimental desde BIOFIT Level Editor; validación de jugabilidad pendiente.
+
+- [BIOFIT_level_2_20261127_162058.json](BIOFIT_level_2_20261127_162058.json) — ranura 2; 135 ediciones, 268 altas, 85 bajas; base db175d2b95a020ffcca792ea2b6d0b79dd103af3b8ec8b980ca02e2a7f04da5c; objetivo 8aef48ef4f1858816f176c47086a54d92a44e29ed4ef0a46a546951562c6f100. Edición experimental desde BIOFIT Level Editor; validación de jugabilidad pendiente.
